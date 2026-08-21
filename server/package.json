@@ -1,0 +1,25 @@
+{
+  "name": "repo-context-server",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "MCP server backing the GitHub Repo Context extension",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "start": "node src/index.js",
+    "test": "node test/api.mjs",
+    "smoke": "node test/smoke.mjs",
+    "build": "npm run build:deps && npm run validate && npm test && npm run build:pack",
+    "build:deps": "npm install --omit=dev --no-audit --no-fund",
+    "build:pack": "node -e \"require('node:fs').mkdirSync('../../dist',{recursive:true})\" && npx --yes @anthropic-ai/mcpb pack .. ../../dist/repo-context.mcpb",
+    "validate": "npx --yes @anthropic-ai/mcpb validate ../manifest.json",
+    "info": "npx --yes @anthropic-ai/mcpb info ../../dist/repo-context.mcpb"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/ext-apps": "^1.7.5",
+    "@modelcontextprotocol/sdk": "^1.30.0",
+    "zod": "^4.4.3"
+  }
+}

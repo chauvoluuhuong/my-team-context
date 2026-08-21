@@ -1,0 +1,36 @@
+{
+  "$schema": "https://raw.githubusercontent.com/anthropics/mcpb/main/schemas/mcpb-manifest-v0.4.schema.json",
+  "manifest_version": "0.4",
+  "name": "innostaas-repo-context",
+  "display_name": "GitHub Repo Context",
+  "version": "0.1.0",
+  "description": "Read your GitHub code as context: sign in with a personal access token in a panel, pick a repo, then browse, read, and search that repo's files",
+  "long_description": "Adds an in-chat panel for pasting a GitHub personal access token, lists every repo that token can see, and lets you pick one as the active repo. From then on Claude can list the repo's file tree, read individual files, and search its code — so it can answer questions about a codebase that is not checked out locally.\n\nThe token is validated against GitHub and stored in this machine's OS keychain. It is never written into the conversation.",
+  "author": {
+    "name": "Innostaas",
+    "email": "lucas.luu@innostaas.com"
+  },
+  "keywords": ["github", "code", "context", "repository", "search"],
+  "server": {
+    "type": "node",
+    "entry_point": "server/src/index.js",
+    "mcp_config": {
+      "command": "node",
+      "args": ["${__dirname}/server/src/index.js"]
+    }
+  },
+  "tools": [
+    { "name": "connect_github_repo", "description": "Open the panel to sign in with a GitHub token and pick the active repo" },
+    { "name": "github_repo_status", "description": "Report sign-in state and which repo is active" },
+    { "name": "repo_overview", "description": "Summarize the active repo: branch, languages, top-level layout, README" },
+    { "name": "list_repo_files", "description": "List files and directories in the active repo" },
+    { "name": "read_repo_file", "description": "Read one file from the active repo" },
+    { "name": "search_repo_code", "description": "Search code in the active repo" },
+    { "name": "set_active_repo", "description": "Set the active repo by name, without the panel" },
+    { "name": "github_disconnect", "description": "Delete the stored token and clear the active repo" }
+  ],
+  "compatibility": {
+    "platforms": ["darwin", "win32", "linux"],
+    "runtimes": { "node": ">=20" }
+  }
+}
