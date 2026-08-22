@@ -58,6 +58,7 @@ export async function getAuthState() {
   };
 }
 
+
 /**
  * Check connection status across all integrated services.
  */
@@ -124,8 +125,7 @@ export async function getTeamContextStatus(): Promise<TeamContextStatusResult> {
 export function registerInitTools(server: McpServer): void {
   /* ---------------------- Unified Panel Launcher ---------------------- */
 
-  registerAppTool(
-    server,
+  server.registerTool(
     "connect_team_context",
     {
       title: "Connect Team Context",
@@ -155,7 +155,20 @@ export function registerInitTools(server: McpServer): void {
 
   registerAppTool(
     server,
-    "panel_get_config",
+    "panel_get_auth_state",
+    {
+      title: "Get Panel Auth State",
+      description: "Internal: check if user account is configured and session is authenticated.",
+      annotations: { title: "Get Auth State", readOnlyHint: true },
+      inputSchema: {},
+      _meta: { ui: { visibility: ["app"] } },
+    },
+    guarded(async () => text(await getAuthState())),
+  );
+
+  registerAppTool(
+    server,
+    "panel_load_config",
     {
       title: "Load Team Context Settings",
       description: "Internal: load .env and existing connection configurations for the settings panel.",
@@ -221,10 +234,10 @@ export function registerInitTools(server: McpServer): void {
       const inputUser = args.username?.trim() || "";
       const inputPass = args.password?.trim() || "";
 
-      if (inputUser !== storedUser) {
+      if (inputUser.toLowerCase() !== storedUser.toLowerCase()) {
         return text({
           success: false,
-          reason: "Username does not exist.",
+          reason: `Username "${inputUser}" does not exist. (Configured user is "${storedUser}")`,
           userNotFound: true,
         });
       }
@@ -236,11 +249,11 @@ export function registerInitTools(server: McpServer): void {
         });
       }
 
-      currentSessionUser = inputUser;
+      currentSessionUser = storedUser;
       return text({
         success: true,
-        message: `Logged in successfully as ${inputUser}.`,
-        username: inputUser,
+        message: `Logged in successfully as ${storedUser}.`,
+        username: storedUser,
       });
     }),
   );
@@ -331,48 +344,49 @@ export function registerInitTools(server: McpServer): void {
     }) => {
       if (args.service === "github") {
         if (!args.githubToken?.trim()) {
-          return text({ valid: false, reason: "GitHub token is empty." });
+          return text({ ok: false, valid: false, reason: "GitHub token is empty." });
         }
         const check = await validateToken(args.githubToken.trim());
-        return text(check);
+        return text({ ok: check.valid, ...check });
       }
 
       if (args.service === "notion") {
         if (!args.notionApiKey?.trim()) {
-          return text({ valid: false, reason: "Notion API key is empty." });
+          return text({ ok: false, valid: false, reason: "Notion API key is empty." });
         }
         const check = await validateNotionKey(args.notionApiKey.trim());
-        return text(check);
+        return text({ ok: check.valid, ...check });
       }
 
       if (args.service === "qdrant") {
         if (!args.qdrantUrl?.trim()) {
-          return text({ valid: false, reason: "Qdrant endpoint URL is empty." });
+          return text({ ok: false, valid: false, reason: "Qdrant endpoint URL is empty." });
         }
         const check = await validateQdrantConnection(
           args.qdrantUrl.trim(),
           args.qdrantApiKey?.trim(),
         );
-        return text(check);
+        return text({ ok: check.valid, ...check });
       }
 
       if (args.service === "sql") {
         if (!args.databaseUrl?.trim()) {
-          return text({ valid: false, reason: "Database connection string is empty." });
+          return text({ ok: false, valid: false, reason: "Database connection string is empty." });
         }
         const check = await validateSqlConnection(args.databaseUrl.trim());
-        return text(check);
+        return text({ ok: check.valid, ...check });
       }
 
       if (args.service === "gemini") {
         if (!args.geminiApiKey?.trim()) {
-          return text({ valid: false, reason: "Gemini API key is empty." });
+          return text({ ok: false, valid: false, reason: "Gemini API key is empty." });
         }
         const check = await validateGeminiKey(args.geminiApiKey.trim());
-        return text(check);
+        return text({ ok: check.valid, ...check });
       }
 
-      return text({ valid: false, reason: "Unknown service." });
+      return text({ ok: false, valid: false, reason: "Unknown service." });
+
     }),
   );
 
