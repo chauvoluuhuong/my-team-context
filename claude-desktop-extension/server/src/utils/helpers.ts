@@ -49,10 +49,8 @@ export function guarded<TArgs extends Record<string, any>, TExtra = unknown>(
  * inlined into the HTML rather than imported. The rewrite turns the bundle's
  * trailing `export{...}` into a global assignment the widget can read.
  * ------------------------------------------------------------------ */
-export function buildPanel(): string {
-  const here = path.dirname(fileURLToPath(import.meta.url));
-
-  const bundle = readFileSync(
+function loadBundle(): string {
+  return readFileSync(
     require.resolve("@modelcontextprotocol/ext-apps/app-with-deps"),
     "utf8",
   ).replace(/export\{([^}]+)\};?\s*$/, (_: string, body: string) => {
@@ -62,16 +60,30 @@ export function buildPanel(): string {
     });
     return `globalThis.ExtApps={${pairs.join(",")}};`;
   });
+}
 
+function resolveWidgetPath(widgetFileName: string): string {
+  const here = path.dirname(fileURLToPath(import.meta.url));
   const candidatePaths = [
-    path.resolve(here, "..", "widgets", "panel.html"),
-    path.resolve(here, "..", "..", "widgets", "panel.html"),
+    path.resolve(here, "..", "widgets", widgetFileName),
+    path.resolve(here, "..", "..", "widgets", widgetFileName),
   ];
 
-  const widgetPath = candidatePaths.find((p) => existsSync(p));
-  if (!widgetPath) {
-    throw new Error(`Could not find panel.html in candidates: ${candidatePaths.join(", ")}`);
+  const found = candidatePaths.find((p) => existsSync(p));
+  if (!found) {
+    throw new Error(`Could not find ${widgetFileName} in candidates: ${candidatePaths.join(", ")}`);
   }
+  return found;
+}
 
+export function buildPanel(): string {
+  const bundle = loadBundle();
+  const widgetPath = resolveWidgetPath("panel.html");
+  return readFileSync(widgetPath, "utf8").replace("/*__EXT_APPS_BUNDLE__*/", () => bundle);
+}
+
+export function buildSkillsPanel(): string {
+  const bundle = loadBundle();
+  const widgetPath = resolveWidgetPath("skills.html");
   return readFileSync(widgetPath, "utf8").replace("/*__EXT_APPS_BUNDLE__*/", () => bundle);
 }

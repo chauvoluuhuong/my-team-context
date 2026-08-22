@@ -1,17 +1,8 @@
 /**
  * Per-user credential and selection storage.
  *
- * The GitHub token is a credential for private source code, so it stays out of
- * the transcript and out of `ps` output. Nothing here passes the token as a
- * command-line argument — the OS keychain helpers read it from stdin instead,
- * because argv is world-readable on both macOS and Linux.
- *
- * Backends, in order of preference:
- *   macOS   → login keychain via `security`
- *   Linux   → libsecret via `secret-tool` (when installed)
- *   neither → a 0600 file, with a warning surfaced to the user
- *
- * The active repo is not a secret and lives in a plain JSON file next to it.
+ * Credentials for GitHub, Notion, Qdrant, and SQL are stored in OS keychain helpers
+ * (macOS security / Linux secret-tool) or fallback to 0600 files.
  */
 
 import { spawn } from "node:child_process";
@@ -20,24 +11,30 @@ import os from "node:os";
 import path from "node:path";
 import type { BackendKind, ProcessRunResult, SaveTokenResult, StoreState } from "../types.js";
 
-const SERVICE = "claude-repo-context";
-const ACCOUNT = "github-pat";
+const SERVICE = "claude-team-context";
+
+const ACCOUNTS = {
+  GITHUB: "github-pat",
+  NOTION: "notion-api-key",
+  QDRANT_KEY: "qdrant-api-key",
+  SQL_CONN: "sql-connection-string",
+  GEMINI: "gemini-api-key",
+} as const;
 
 /**
- * Writable per-extension directory. Claude sets CLAUDE_PLUGIN_DATA for plugin
- * processes; outside that we fall back to a stable path so the server still
- * works when run by hand.
+ * Writable per-extension directory.
  */
 export function dataDir(): string {
   return (
+    process.env.TEAM_CONTEXT_DATA ||
     process.env.REPO_CONTEXT_DATA ||
     process.env.CLAUDE_PLUGIN_DATA ||
-    path.join(os.homedir(), ".claude", "repo-context")
+    path.join(os.homedir(), ".claude", "team-context")
   );
 }
 
 /* ------------------------------------------------------------------ *
- * Token
+ * Process Runner & Keychain Backends
  * ------------------------------------------------------------------ */
 
 /** Run a command, feed it stdin, capture stdout. Never logs stdin. */
@@ -64,25 +61,27 @@ async function has(cmd: string): Promise<boolean> {
 }
 
 async function backend(): Promise<BackendKind> {
+  if (process.env.REPO_CONTEXT_BACKEND === "file") return "file";
   if (process.platform === "darwin") return "security";
   if (process.platform === "linux" && (await has("secret-tool"))) return "secret-tool";
   return "file";
 }
 
-function tokenPath(): string {
-  return path.join(dataDir(), "token");
+function secretPath(account: string): string {
+  return path.join(dataDir(), `secret_${account}`);
 }
 
-export async function saveToken(token: string): Promise<SaveTokenResult> {
+/* ------------------------------------------------------------------ *
+ * Generic Secret Storage
+ * ------------------------------------------------------------------ */
+
+export async function saveSecret(account: string, value: string): Promise<SaveTokenResult> {
   const kind = await backend();
 
   if (kind === "security") {
-    // `-U` must precede `-w`; `-w` with no value makes `security` read the
-    // password from stdin (twice — it asks for confirmation).
     const { code } = await run(
       "security",
-      ["add-generic-password", "-U", "-a", ACCOUNT, "-s", SERVICE, "-w"],
-      `${token}\n${token}\n`,
+      ["add-generic-password", "-U", "-a", account, "-s", SERVICE, "-w", value],
     );
     if (code === 0) return { stored: "keychain" };
   }
@@ -90,35 +89,31 @@ export async function saveToken(token: string): Promise<SaveTokenResult> {
   if (kind === "secret-tool") {
     const { code } = await run(
       "secret-tool",
-      ["store", "--label=Claude repo-context", "service", SERVICE, "account", ACCOUNT],
-      `${token}\n`,
+      ["store", `--label=Claude team-context ${account}`, "service", SERVICE, "account", account],
+      `${value}\n`,
     );
     if (code === 0) return { stored: "keychain" };
   }
 
+  const filePath = secretPath(account);
   await fs.mkdir(dataDir(), { recursive: true, mode: 0o700 });
-  await fs.writeFile(tokenPath(), token, { mode: 0o600 });
+  await fs.writeFile(filePath, value, { mode: 0o600 });
   return {
     stored: "file",
     warning:
-      `No OS keychain available on this platform, so the token was written to ` +
-      `${tokenPath()} with 0600 permissions. Install libsecret (secret-tool) for ` +
-      `keychain storage.`,
+      `No OS keychain available on this platform, so the credential was written to ` +
+      `${filePath} with 0600 permissions. Install libsecret (secret-tool) for keychain storage.`,
   };
 }
 
-export async function readToken(): Promise<string | null> {
-  // Escape hatch for headless runs and tests, where prompting through a panel
-  // isn't possible and the keychain may not be unlocked.
-  if (process.env.REPO_CONTEXT_TOKEN) return process.env.REPO_CONTEXT_TOKEN.trim();
-
+export async function readSecret(account: string): Promise<string | null> {
   const kind = await backend();
 
   if (kind === "security") {
     const { code, stdout } = await run("security", [
       "find-generic-password",
       "-a",
-      ACCOUNT,
+      account,
       "-s",
       SERVICE,
       "-w",
@@ -132,64 +127,177 @@ export async function readToken(): Promise<string | null> {
       "service",
       SERVICE,
       "account",
-      ACCOUNT,
+      account,
     ]);
     if (code === 0 && stdout.trim()) return stdout.trim();
   }
 
   try {
-    const token = await fs.readFile(tokenPath(), "utf8");
-    return token.trim() || null;
+    const content = await fs.readFile(secretPath(account), "utf8");
+    return content.trim() || null;
   } catch {
     return null;
   }
 }
 
-export async function clearToken(): Promise<void> {
+export async function clearSecret(account: string): Promise<void> {
   const kind = await backend();
   if (kind === "security") {
-    await run("security", ["delete-generic-password", "-a", ACCOUNT, "-s", SERVICE]);
+    await run("security", ["delete-generic-password", "-a", account, "-s", SERVICE]);
   }
   if (kind === "secret-tool") {
-    await run("secret-tool", ["clear", "service", SERVICE, "account", ACCOUNT]);
+    await run("secret-tool", ["clear", "service", SERVICE, "account", account]);
   }
-  await fs.rm(tokenPath(), { force: true });
+  await fs.rm(secretPath(account), { force: true });
 }
 
 /* ------------------------------------------------------------------ *
- * Active repo
- *
- * Survives restarts on purpose: the point of picking a repo once is that every
- * later session already knows which codebase the user means.
+ * GitHub Credentials
+ * ------------------------------------------------------------------ */
+
+export async function saveToken(token: string): Promise<SaveTokenResult> {
+  return saveSecret(ACCOUNTS.GITHUB, token);
+}
+
+export async function readToken(): Promise<string | null> {
+  if (process.env.REPO_CONTEXT_TOKEN) return process.env.REPO_CONTEXT_TOKEN.trim();
+  if (process.env.GITHUB_TOKEN) return process.env.GITHUB_TOKEN.trim();
+  return readSecret(ACCOUNTS.GITHUB);
+}
+
+export async function clearToken(): Promise<void> {
+  return clearSecret(ACCOUNTS.GITHUB);
+}
+
+/* ------------------------------------------------------------------ *
+ * Notion Credentials
+ * ------------------------------------------------------------------ */
+
+export async function saveNotionKey(apiKey: string): Promise<SaveTokenResult> {
+  return saveSecret(ACCOUNTS.NOTION, apiKey);
+}
+
+export async function readNotionKey(): Promise<string | null> {
+  if (process.env.NOTION_API_KEY) return process.env.NOTION_API_KEY.trim();
+  return readSecret(ACCOUNTS.NOTION);
+}
+
+export async function clearNotionKey(): Promise<void> {
+  return clearSecret(ACCOUNTS.NOTION);
+}
+
+/* ------------------------------------------------------------------ *
+ * Qdrant Credentials & Settings
+ * ------------------------------------------------------------------ */
+
+export async function saveQdrantConfig(
+  endpoint: string,
+  apiKey?: string,
+): Promise<{ stored: "keychain" | "file"; warning?: string }> {
+  const state = await readState();
+  await writeState({ ...state, qdrantEndpoint: endpoint.trim() });
+  if (apiKey) {
+    return saveSecret(ACCOUNTS.QDRANT_KEY, apiKey.trim());
+  }
+  return { stored: "file" };
+}
+
+export async function readQdrantConfig(): Promise<{ endpoint?: string; apiKey?: string }> {
+  const state = await readState();
+  const endpoint =
+    process.env.QDRANT_URL?.trim() ||
+    process.env.QDRANT_ENDPOINT?.trim() ||
+    state.qdrantEndpoint;
+  const apiKey =
+    process.env.QDRANT_API_KEY?.trim() ||
+    (await readSecret(ACCOUNTS.QDRANT_KEY)) ||
+    undefined;
+  return { endpoint, apiKey };
+}
+
+export async function clearQdrantConfig(): Promise<void> {
+  const state = await readState();
+  const { qdrantEndpoint, ...rest } = state;
+  await writeState(rest);
+  await clearSecret(ACCOUNTS.QDRANT_KEY);
+}
+
+/* ------------------------------------------------------------------ *
+ * SQL Database Connection String
+ * ------------------------------------------------------------------ */
+
+export async function saveSqlConnectionString(connectionString: string): Promise<SaveTokenResult> {
+  return saveSecret(ACCOUNTS.SQL_CONN, connectionString);
+}
+
+export async function readSqlConnectionString(): Promise<string | null> {
+  if (process.env.DATABASE_URL) return process.env.DATABASE_URL.trim();
+  return readSecret(ACCOUNTS.SQL_CONN);
+}
+
+export async function clearSqlConnectionString(): Promise<void> {
+  return clearSecret(ACCOUNTS.SQL_CONN);
+}
+
+/* ------------------------------------------------------------------ *
+ * Gemini API Key
+ * ------------------------------------------------------------------ */
+
+export async function saveGeminiKey(apiKey: string): Promise<SaveTokenResult> {
+  return saveSecret(ACCOUNTS.GEMINI, apiKey);
+}
+
+export async function readGeminiKey(): Promise<string | null> {
+  if (process.env.GEMINI_API_KEY) return process.env.GEMINI_API_KEY.trim();
+  return readSecret(ACCOUNTS.GEMINI);
+}
+
+export async function clearGeminiKey(): Promise<void> {
+  return clearSecret(ACCOUNTS.GEMINI);
+}
+
+/* ------------------------------------------------------------------ *
+ * State Storage
  * ------------------------------------------------------------------ */
 
 function statePath(): string {
   return path.join(dataDir(), "state.json");
 }
 
-export async function readState(): Promise<StoreState> {
+export interface ExtendedStoreState extends StoreState {
+  qdrantEndpoint?: string;
+  sqlDialect?: string;
+}
+
+export async function readState(): Promise<ExtendedStoreState> {
   try {
-    return JSON.parse(await fs.readFile(statePath(), "utf8")) as StoreState;
+    return JSON.parse(await fs.readFile(statePath(), "utf8")) as ExtendedStoreState;
   } catch {
     return {};
   }
 }
 
-async function writeState(state: StoreState): Promise<void> {
+async function writeState(state: ExtendedStoreState): Promise<void> {
   await fs.mkdir(dataDir(), { recursive: true, mode: 0o700 });
   await fs.writeFile(statePath(), JSON.stringify(state, null, 2) + "\n", { mode: 0o600 });
 }
 
-/** Record the repo the user picked, keeping a short history for quick re-selection. */
-export async function setActiveRepo(repo: string, defaultBranch?: string): Promise<StoreState> {
+export async function setActiveRepo(repo: string, defaultBranch?: string): Promise<ExtendedStoreState> {
   const previous = await readState();
   const recent = [repo, ...(previous.recent ?? []).filter((r) => r !== repo)].slice(0, 8);
-  const state: StoreState = { repo, defaultBranch, selectedAt: new Date().toISOString(), recent };
+  const state: ExtendedStoreState = {
+    ...previous,
+    repo,
+    defaultBranch,
+    selectedAt: new Date().toISOString(),
+    recent,
+  };
   await writeState(state);
   return state;
 }
 
 export async function clearActiveRepo(): Promise<void> {
   const previous = await readState();
-  await writeState({ recent: previous.recent ?? [] });
+  const { repo, defaultBranch, selectedAt, ...rest } = previous;
+  await writeState(rest);
 }
