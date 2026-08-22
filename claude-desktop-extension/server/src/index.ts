@@ -19,7 +19,7 @@ import {
 import { buildPanel } from "./utils/helpers.js";
 import { registerGitHubTools, PANEL_URI } from "./tools/github.js";
 
-const server = new McpServer({ name: "innostaas-repo-context", version: "0.1.0" });
+const server = new McpServer({ name: "my-team-context", version: "0.1.0" });
 
 registerAppResource(server, "GitHub repo picker", PANEL_URI, {}, async () => ({
   contents: [{ uri: PANEL_URI, mimeType: RESOURCE_MIME_TYPE, text: buildPanel() }],

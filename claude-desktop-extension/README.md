@@ -117,16 +117,25 @@ server/test/api.ts          # Read path against a stub GitHub — no credential
 server/test/smoke.ts        # Server starts, tools register, panel renders
 ```
 
-## Tests
+## Tests & Development
 
 ```bash
+# Run tests
 npm --prefix server test
 npm --prefix server run smoke
+
+# Interactive MCP Inspector with Hot-Reload (auto-restarts on code change)
+npm run dev
+
+# Interactive MCP Inspector (runs compiled server)
+npm run inspect
 ```
 
 Neither test touches a real token or reaches github.com: `api.ts` runs against
 a local stub that rejects anything but its fake credential, and `smoke.ts`
 drives the server over stdio with a throwaway data directory.
+
+When using `npm run dev`, `tsx watch` continuously monitors `src/` and restarts the MCP server automatically whenever you modify your TypeScript code.
 
 ## Environment overrides
 

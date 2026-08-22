@@ -9,15 +9,16 @@
   },
   "scripts": {
     "start": "node dist/index.js",
-    "dev": "tsx src/index.ts",
+    "dev": "npx @modelcontextprotocol/inspector node --watch --import tsx src/index.ts",
     "build:ts": "tsc",
-    "build": "npm run build:ts && npm test && npm run validate && npm run build:deps && npm run build:pack",
+    "build": "npm run build:ts && npm test && npm run validate && npm run build:deps && npm run build:pack && npm install",
     "build:deps": "npm install --omit=dev --no-audit --no-fund",
     "build:pack": "node -e \"require('node:fs').mkdirSync('../../dist',{recursive:true})\" && npx --yes @anthropic-ai/mcpb pack .. ../../dist/repo-context.mcpb",
     "validate": "npx --yes @anthropic-ai/mcpb validate ../manifest.json",
     "info": "npx --yes @anthropic-ai/mcpb info ../../dist/repo-context.mcpb",
-    "test": "tsx test/api.ts",
-    "smoke": "tsx test/smoke.ts"
+    "test": "npx --yes tsx test/api.ts",
+    "smoke": "npx --yes tsx test/smoke.ts",
+    "inspect": "npx --yes @modelcontextprotocol/inspector node dist/index.js"
   },
   "dependencies": {
     "@modelcontextprotocol/ext-apps": "^1.7.5",
