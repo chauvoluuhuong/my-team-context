@@ -8,18 +8,25 @@
     "node": ">=20"
   },
   "scripts": {
-    "start": "node src/index.js",
-    "test": "node test/api.mjs",
-    "smoke": "node test/smoke.mjs",
-    "build": "npm run build:deps && npm run validate && npm test && npm run build:pack",
+    "start": "node dist/index.js",
+    "dev": "tsx src/index.ts",
+    "build:ts": "tsc",
+    "build": "npm run build:ts && npm test && npm run validate && npm run build:deps && npm run build:pack",
     "build:deps": "npm install --omit=dev --no-audit --no-fund",
     "build:pack": "node -e \"require('node:fs').mkdirSync('../../dist',{recursive:true})\" && npx --yes @anthropic-ai/mcpb pack .. ../../dist/repo-context.mcpb",
     "validate": "npx --yes @anthropic-ai/mcpb validate ../manifest.json",
-    "info": "npx --yes @anthropic-ai/mcpb info ../../dist/repo-context.mcpb"
+    "info": "npx --yes @anthropic-ai/mcpb info ../../dist/repo-context.mcpb",
+    "test": "tsx test/api.ts",
+    "smoke": "tsx test/smoke.ts"
   },
   "dependencies": {
     "@modelcontextprotocol/ext-apps": "^1.7.5",
     "@modelcontextprotocol/sdk": "^1.30.0",
     "zod": "^4.4.3"
+  },
+  "devDependencies": {
+    "@types/node": "^25.2.1",
+    "tsx": "^4.19.4",
+    "typescript": "^5.9.3"
   }
 }
