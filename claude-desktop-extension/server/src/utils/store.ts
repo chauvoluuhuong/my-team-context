@@ -60,6 +60,7 @@ async function has(cmd: string): Promise<boolean> {
 }
 
 async function backend(): Promise<BackendKind> {
+  if (process.env.REPO_CONTEXT_BACKEND === "file") return "file";
   if (process.platform === "darwin") return "security";
   if (process.platform === "linux" && (await has("secret-tool"))) return "secret-tool";
   return "file";

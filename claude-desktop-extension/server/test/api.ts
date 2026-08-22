@@ -17,9 +17,14 @@ import path from "node:path";
 
 const dir = await fs.mkdtemp(path.join(os.tmpdir(), "repo-context-test-"));
 process.env.REPO_CONTEXT_DATA = dir;
+process.env.REPO_CONTEXT_BACKEND = "file";
 // Explicit stub credential, so the test can never pick up a real token from
 // the keychain and send it anywhere — not even to the local stub below.
 process.env.REPO_CONTEXT_TOKEN = "stub-token";
+delete process.env.NOTION_API_KEY;
+delete process.env.QDRANT_URL;
+delete process.env.QDRANT_API_KEY;
+delete process.env.DATABASE_URL;
 
 const routes: Record<string, unknown> = {
   "/user": { login: "octo" },
@@ -176,7 +181,7 @@ assert.equal((await notionCheckConnection()).connected, false, "unconfigured Not
 
 // Qdrant validation tests
 const { validateQdrantConnection, qdrantCheckConnection } = await import(
-  "../src/tools/qdrant.js"
+  "../src/services/vector-db.js"
 );
 assert.equal((await validateQdrantConnection("")).valid, false, "empty Qdrant endpoint fails");
 assert.equal((await qdrantCheckConnection()).connected, false, "unconfigured Qdrant reports disconnected");

@@ -23,7 +23,7 @@ import { readEnvConfig, writeEnvConfig } from "../utils/env.js";
 import { text, guarded } from "../utils/helpers.js";
 import { whoami, validateToken } from "./github.js";
 import { notionCheckConnection, validateNotionKey } from "./notion.js";
-import { qdrantCheckConnection, validateQdrantConnection } from "./qdrant.js";
+import { qdrantCheckConnection, validateQdrantConnection } from "../services/vector-db.js";
 import { sqlCheckConnection, validateSqlConnection } from "./sql.js";
 import type {
   TeamContextStatusResult,

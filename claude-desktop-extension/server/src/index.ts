@@ -24,7 +24,6 @@ import {
   registerInitTools,
   registerGitHubTools,
   registerNotionTools,
-  registerQdrantTools,
   registerSqlTools,
   PANEL_URI,
 } from "./tools/index.js";
@@ -38,7 +37,6 @@ registerAppResource(server, "Team Context Settings", PANEL_URI, {}, async () => 
 registerInitTools(server);
 registerGitHubTools(server);
 registerNotionTools(server);
-registerQdrantTools(server);
 registerSqlTools(server);
 
 const transport = new StdioServerTransport();
