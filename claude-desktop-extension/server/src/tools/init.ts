@@ -38,6 +38,26 @@ import type {
 
 export const PANEL_URI = "ui://repo-context/panel.html";
 
+let currentSessionUser: string | null = null;
+
+export function getSessionUser(): string | null {
+  return currentSessionUser;
+}
+
+export function setSessionUser(user: string | null): void {
+  currentSessionUser = user;
+}
+
+export async function getAuthState() {
+  const env = await readEnvConfig();
+  const hasAccount = Boolean(env.AUTH_USERNAME && env.AUTH_PASSWORD);
+  return {
+    hasAccount,
+    isAuthenticated: Boolean(currentSessionUser),
+    username: currentSessionUser,
+  };
+}
+
 /**
  * Check connection status across all integrated services.
  */
@@ -117,9 +137,14 @@ export function registerInitTools(server: McpServer): void {
       _meta: { ui: { resourceUri: PANEL_URI } },
     },
     guarded(async () => {
-      const [status, envConfig] = await Promise.all([getTeamContextStatus(), readEnvConfig()]);
+      const [status, envConfig, auth] = await Promise.all([
+        getTeamContextStatus(),
+        readEnvConfig(),
+        getAuthState(),
+      ]);
       return text({
         status: "ok",
+        auth,
         teamStatus: status,
         config: envConfig,
       });
@@ -139,7 +164,7 @@ export function registerInitTools(server: McpServer): void {
       _meta: { ui: { visibility: ["app"] } },
     },
     guarded(async () => {
-      const [envConfig, ghToken, notionKey, qdrantConfig, sqlConn, geminiKey, state] = await Promise.all([
+      const [envConfig, ghToken, notionKey, qdrantConfig, sqlConn, geminiKey, state, auth] = await Promise.all([
         readEnvConfig(),
         readToken(),
         readNotionKey(),
@@ -147,11 +172,14 @@ export function registerInitTools(server: McpServer): void {
         readSqlConnectionString(),
         readGeminiKey(),
         readState(),
+        getAuthState(),
       ]);
 
       return text({
         status: "ok",
+        auth,
         config: {
+          AUTH_USERNAME: envConfig.AUTH_USERNAME || "",
           GITHUB_TOKEN: envConfig.GITHUB_TOKEN || ghToken || "",
           NOTION_API_KEY: envConfig.NOTION_API_KEY || notionKey || "",
           QDRANT_URL: envConfig.QDRANT_URL || qdrantConfig.endpoint || "",
@@ -160,6 +188,116 @@ export function registerInitTools(server: McpServer): void {
           GEMINI_API_KEY: envConfig.GEMINI_API_KEY || geminiKey || "",
           activeRepo: state.repo || "",
         },
+      });
+    }),
+  );
+
+  registerAppTool(
+    server,
+    "panel_login",
+    {
+      title: "Panel Login",
+      description: "Internal: verify username and password to log in to the settings panel.",
+      annotations: { title: "Panel Login", readOnlyHint: false },
+      inputSchema: {
+        username: z.string().describe("Username"),
+        password: z.string().describe("Password"),
+      },
+      _meta: { ui: { visibility: ["app"] } },
+    },
+    guarded(async (args: { username: string; password: string }) => {
+      const envConfig = await readEnvConfig();
+      const storedUser = envConfig.AUTH_USERNAME?.trim();
+      const storedPass = envConfig.AUTH_PASSWORD?.trim();
+
+      if (!storedUser || !storedPass) {
+        return text({
+          success: false,
+          reason: "No user account exists yet. Please create a new account.",
+          needsAccountCreation: true,
+        });
+      }
+
+      const inputUser = args.username?.trim() || "";
+      const inputPass = args.password?.trim() || "";
+
+      if (inputUser !== storedUser) {
+        return text({
+          success: false,
+          reason: "Username does not exist.",
+          userNotFound: true,
+        });
+      }
+
+      if (inputPass !== storedPass) {
+        return text({
+          success: false,
+          reason: "Incorrect password.",
+        });
+      }
+
+      currentSessionUser = inputUser;
+      return text({
+        success: true,
+        message: `Logged in successfully as ${inputUser}.`,
+        username: inputUser,
+      });
+    }),
+  );
+
+  registerAppTool(
+    server,
+    "panel_create_account",
+    {
+      title: "Create Account",
+      description: "Internal: create new login username and password and store in server/.env.",
+      annotations: { title: "Create Account", readOnlyHint: false },
+      inputSchema: {
+        username: z.string().min(1).describe("Username"),
+        password: z.string().min(1).describe("Password"),
+      },
+      _meta: { ui: { visibility: ["app"] } },
+    },
+    guarded(async (args: { username: string; password: string }) => {
+      const username = args.username?.trim() || "";
+      const password = args.password?.trim() || "";
+
+      if (!username) {
+        return text({ success: false, reason: "Username cannot be empty." });
+      }
+      if (!password) {
+        return text({ success: false, reason: "Password cannot be empty." });
+      }
+
+      await writeEnvConfig({
+        AUTH_USERNAME: username,
+        AUTH_PASSWORD: password,
+      });
+
+      currentSessionUser = username;
+      return text({
+        success: true,
+        message: "Account created and credentials saved to server/.env.",
+        username,
+      });
+    }),
+  );
+
+  registerAppTool(
+    server,
+    "panel_signout",
+    {
+      title: "Sign Out",
+      description: "Internal: sign out from current settings panel session.",
+      annotations: { title: "Sign Out", readOnlyHint: false },
+      inputSchema: {},
+      _meta: { ui: { visibility: ["app"] } },
+    },
+    guarded(async () => {
+      currentSessionUser = null;
+      return text({
+        success: true,
+        message: "Signed out successfully.",
       });
     }),
   );

@@ -56,6 +56,76 @@
   .sub { color: var(--muted); font-size: 12.5px; margin: 0 0 16px; }
   .loading { color: var(--muted); padding: 12px 0; }
 
+  .top-bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--line);
+  }
+
+  .user-badge-wrap {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .user-badge {
+    font-size: 12px;
+    font-weight: 500;
+    padding: 4px 9px;
+    border-radius: 999px;
+    background: var(--code-bg);
+    border: 1px solid var(--line);
+    color: var(--fg);
+    display: flex;
+    align-items: center;
+    gap: 5px;
+  }
+
+  .btn-signout {
+    font-size: 12px;
+    font-weight: 500;
+    padding: 4px 10px;
+    border-radius: 7px;
+    border: 1px solid var(--line);
+    background: transparent;
+    color: var(--err-fg);
+    cursor: pointer;
+    transition: all 0.15s ease;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+  .btn-signout:hover {
+    background: var(--err-bg);
+    border-color: var(--err-fg);
+  }
+
+  .auth-card {
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 18px 16px;
+    background: var(--card-bg);
+    margin-bottom: 14px;
+  }
+
+  .auth-card h3 {
+    margin: 0 0 6px;
+    font-size: 15px;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .auth-card p {
+    color: var(--muted);
+    font-size: 12.5px;
+    margin: 0 0 14px;
+  }
+
   .service-card {
     border: 1px solid var(--border);
     border-radius: 9px;
@@ -128,6 +198,15 @@
     color: #ffffff;
     flex: 1;
   }
+  button.secondary {
+    background: transparent;
+    color: var(--muted);
+    font-size: 12px;
+    padding: 6px 10px;
+    border: none;
+    text-decoration: underline;
+    cursor: pointer;
+  }
   button:hover:not(:disabled) { filter: brightness(1.08); }
   button:disabled { opacity: 0.5; cursor: default; }
 
@@ -161,20 +240,198 @@
   const app = new App({ name: "TeamContextPanel", version: "1.0.0" }, {}, { autoResize: true });
 
   let config = {};
+  let auth = { hasAccount: false, isAuthenticated: false, username: null };
+  let teamStatus = {};
+  let authMode = "auto"; // "auto" | "login" | "register"
 
   app.ontoolresult = async ({ content }) => {
     try {
       const data = JSON.parse(content[0].text);
       config = data.config ?? {};
-      renderForm(data.teamStatus);
+      auth = data.auth ?? { hasAccount: false, isAuthenticated: false, username: null };
+      teamStatus = data.teamStatus ?? {};
+      render();
     } catch {
-      renderForm();
+      await refreshConfig();
     }
   };
 
-  function renderForm(teamStatus) {
+  async function refreshConfig() {
+    try {
+      const res = await app.callServerTool({
+        name: "panel_get_config",
+        arguments: {},
+      });
+      const data = JSON.parse(res.content[0].text);
+      config = data.config ?? {};
+      auth = data.auth ?? { hasAccount: false, isAuthenticated: false, username: null };
+      render();
+    } catch (e) {
+      render();
+    }
+  }
+
+  function render() {
+    if (!auth.isAuthenticated) {
+      renderAuth();
+    } else {
+      renderConnections();
+    }
+  }
+
+  function renderAuth() {
+    const isRegister = authMode === "register" || (!auth.hasAccount && authMode !== "login");
+
     root.innerHTML = `
-      <h2>⚡ Team Context Connections</h2>
+      <div class="auth-card">
+        <h3>${isRegister ? '🔐 Create Admin Account' : '🔐 Sign In to Team Context'}</h3>
+        <p>
+          ${isRegister
+            ? 'First step: create a username and password to store in <code>server/.env</code> and secure your settings panel.'
+            : 'Enter your admin credentials configured in <code>server/.env</code> to access Team Context.'}
+        </p>
+
+        <div class="field-group">
+          <label class="field-label" for="authUsername">Username</label>
+          <input type="text" id="authUsername" placeholder="e.g. admin" autocomplete="username" value="${esc(config.AUTH_USERNAME || '')}" />
+        </div>
+
+        <div class="field-group" style="margin-top: 10px;">
+          <label class="field-label" for="authPassword">Password</label>
+          <input type="password" id="authPassword" placeholder="Enter password" autocomplete="current-password" />
+        </div>
+
+        <div class="btn-row">
+          <button class="primary" id="authSubmitBtn">
+            ${isRegister ? 'Create Account & Sign In' : 'Sign In'}
+          </button>
+        </div>
+
+        <div style="margin-top: 10px; display: flex; justify-content: space-between; align-items: center;">
+          ${auth.hasAccount
+            ? (isRegister
+                ? `<button class="secondary" id="toggleModeBtn">← Back to Sign In</button>`
+                : `<button class="secondary" id="toggleModeBtn">+ Create New / Reset Account</button>`)
+            : `<span></span>`
+          }
+        </div>
+
+        <div id="authStatusBox"></div>
+      </div>
+
+      <div class="hint">
+        Credentials and tokens are stored directly in your local <code>server/.env</code> file and keychain.
+      </div>
+    `;
+
+    const usernameInput = document.getElementById("authUsername");
+    const passwordInput = document.getElementById("authPassword");
+    const submitBtn = document.getElementById("authSubmitBtn");
+    const toggleBtn = document.getElementById("toggleModeBtn");
+
+    if (toggleBtn) {
+      toggleBtn.onclick = () => {
+        authMode = isRegister ? "login" : "register";
+        renderAuth();
+      };
+    }
+
+    const handleSubmit = async () => {
+      const u = usernameInput.value.trim();
+      const p = passwordInput.value.trim();
+      const statusBox = document.getElementById("authStatusBox");
+
+      if (!u) {
+        statusBox.innerHTML = `<div class="status-box err">Please enter a username.</div>`;
+        return;
+      }
+      if (!p) {
+        statusBox.innerHTML = `<div class="status-box err">Please enter a password.</div>`;
+        return;
+      }
+
+      submitBtn.disabled = true;
+      submitBtn.textContent = isRegister ? "Creating account…" : "Signing in…";
+      statusBox.innerHTML = "";
+
+      try {
+        if (isRegister) {
+          const res = await app.callServerTool({
+            name: "panel_create_account",
+            arguments: { username: u, password: p },
+          });
+          const result = JSON.parse(res.content[0].text);
+          if (result.success) {
+            auth = { hasAccount: true, isAuthenticated: true, username: result.username || u };
+            config.AUTH_USERNAME = u;
+            render();
+            return;
+          } else {
+            statusBox.innerHTML = `<div class="status-box err">${esc(result.reason || "Failed to create account.")}</div>`;
+          }
+        } else {
+          const res = await app.callServerTool({
+            name: "panel_login",
+            arguments: { username: u, password: p },
+          });
+          const result = JSON.parse(res.content[0].text);
+          if (result.success) {
+            auth = { hasAccount: true, isAuthenticated: true, username: result.username || u };
+            config.AUTH_USERNAME = u;
+            render();
+            return;
+          } else {
+            if (result.needsAccountCreation || result.userNotFound) {
+              statusBox.innerHTML = `
+                <div class="status-box warn">
+                  ${esc(result.reason || "Username not found.")}<br />
+                  <button class="secondary" style="margin-top: 6px; padding: 0; color: var(--accent);" id="inlineCreateBtn">
+                    Create account with "${esc(u)}" instead?
+                  </button>
+                </div>`;
+              const inlineCreateBtn = document.getElementById("inlineCreateBtn");
+              if (inlineCreateBtn) {
+                inlineCreateBtn.onclick = () => {
+                  authMode = "register";
+                  renderAuth();
+                };
+              }
+            } else {
+              statusBox.innerHTML = `<div class="status-box err">${esc(result.reason || "Login failed.")}</div>`;
+            }
+          }
+        }
+      } catch (err) {
+        statusBox.innerHTML = `<div class="status-box err">Error: ${esc(err.message)}</div>`;
+      } finally {
+        submitBtn.disabled = false;
+        submitBtn.textContent = isRegister ? "Create Account & Sign In" : "Sign In";
+      }
+    };
+
+    submitBtn.onclick = handleSubmit;
+    passwordInput.onkeydown = (e) => {
+      if (e.key === "Enter") handleSubmit();
+    };
+    usernameInput.onkeydown = (e) => {
+      if (e.key === "Enter") passwordInput.focus();
+    };
+  }
+
+  function renderConnections() {
+    root.innerHTML = `
+      <div class="top-bar">
+        <div>
+          <h2>⚡ Team Context</h2>
+        </div>
+        <div class="user-badge-wrap">
+          <span class="user-badge">👤 ${esc(auth.username || 'admin')}</span>
+          <button class="btn-signout" id="signoutBtn" title="Sign out from session">
+            Sign out
+          </button>
+        </div>
+      </div>
+
       <p class="sub">Configure credentials to connect GitHub, Notion, Qdrant, and SQL Database.</p>
 
       <!-- GitHub -->
@@ -210,7 +467,7 @@
         <div class="service-header">
           <span class="service-title">🧠 Qdrant Vector DB</span>
           <span class="badge ${teamStatus?.qdrant?.connected ? 'ok' : 'idle'}" id="badge-qdrant">
-            ${teamStatus?.qdrant?.connected ? '✓ Connected (' + teamStatus.qdrant.collectionsCount + ' col)' : 'Not tested'}
+            ${teamStatus?.qdrant?.connected ? '✓ Connected (' + (teamStatus.qdrant.collectionsCount ?? 0) + ' col)' : 'Not tested'}
           </span>
         </div>
         <div class="field-group">
@@ -264,9 +521,26 @@
 
     const saveBtn = document.getElementById("saveBtn");
     const testBtn = document.getElementById("testBtn");
+    const signoutBtn = document.getElementById("signoutBtn");
 
     testBtn.onclick = () => runTests();
     saveBtn.onclick = () => saveAll();
+    signoutBtn.onclick = () => handleSignout();
+  }
+
+  async function handleSignout() {
+    try {
+      await app.callServerTool({
+        name: "panel_signout",
+        arguments: {},
+      });
+    } catch {
+      // Proceed with local logout
+    }
+    auth.isAuthenticated = false;
+    auth.username = null;
+    authMode = "login";
+    render();
   }
 
   function getFormValues() {

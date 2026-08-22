@@ -229,7 +229,7 @@ assert.equal(sqliteCheck.valid, true, "sqlite valid");
 assert.equal(sqliteCheck.dialect, "sqlite");
 
 // Team Context aggregate status test
-const { getTeamContextStatus } = await import("../src/tools/init.js");
+const { getTeamContextStatus, getAuthState, setSessionUser, getSessionUser } = await import("../src/tools/init.js");
 const aggregateStatus = await getTeamContextStatus();
 assert.equal(aggregateStatus.github.authenticated, true);
 assert.equal(aggregateStatus.github.login, "octo");
@@ -239,7 +239,31 @@ assert.equal(aggregateStatus.qdrant.connected, false);
 assert.equal(aggregateStatus.sql.connected, false);
 assert.equal(aggregateStatus.gemini.connected, false);
 
+// Auth state and session tests
+const { readEnvConfig, writeEnvConfig } = await import("../src/utils/env.js");
+const initialAuth = await getAuthState();
+assert.equal(initialAuth.isAuthenticated, false, "initially not authenticated");
+
+setSessionUser("testadmin");
+assert.equal(getSessionUser(), "testadmin");
+const sessionAuth = await getAuthState();
+assert.equal(sessionAuth.isAuthenticated, true);
+assert.equal(sessionAuth.username, "testadmin");
+
+setSessionUser(null);
+assert.equal(getSessionUser(), null);
+
+// Write env config auth test
+await writeEnvConfig({
+  AUTH_USERNAME: "alice",
+  AUTH_PASSWORD: "secretpassword123",
+});
+const envWithAuth = await readEnvConfig();
+assert.equal(envWithAuth.AUTH_USERNAME, "alice");
+assert.equal(envWithAuth.AUTH_PASSWORD, "secretpassword123");
+
 server.close();
 await fs.rm(dir, { recursive: true, force: true });
 console.log("api tests passed");
+
 
