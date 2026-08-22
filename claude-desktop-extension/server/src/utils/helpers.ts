@@ -2,7 +2,7 @@ import { existsSync, readFileSync } from "node:fs";
 import { createRequire } from "node:module";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import type { ToolTextResponse } from "../types.js";
+import type { ToolTextResponse } from "../tools/types.js";
 
 const require = createRequire(import.meta.url);
 

@@ -33,7 +33,7 @@ import type {
   SearchCodeResult,
   OverviewOptions,
   OverviewResult,
-} from "../types.js";
+} from "./types.js";
 
 export const PANEL_URI = "ui://repo-context/panel.html";
 
@@ -73,7 +73,7 @@ async function request(
   if (res.status === 401) {
     throw new RepoContextError(
       "GitHub rejected the stored token — it may have expired or been revoked. " +
-        "Call connect_github_repo to paste a new one.",
+      "Call connect_github_repo to paste a new one.",
     );
   }
   if (res.status === 403 && res.headers.get("x-ratelimit-remaining") === "0") {
@@ -174,7 +174,7 @@ export async function listRepos({ query, limit = 200 }: ListReposOptions = {}): 
     const batch = await gh<RawGitHubRepo[]>(
       token,
       `${API}/user/repos?per_page=${perPage}&page=${page}&sort=pushed` +
-        `&affiliation=owner,collaborator,organization_member`,
+      `&affiliation=owner,collaborator,organization_member`,
     );
     repos.push(...batch);
     if (batch.length < perPage) break;
