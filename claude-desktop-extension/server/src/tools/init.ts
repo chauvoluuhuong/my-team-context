@@ -14,10 +14,12 @@ import {
   readNotionKey,
   readQdrantConfig,
   readSqlConnectionString,
+  readGeminiKey,
   saveToken,
   saveNotionKey,
   saveQdrantConfig,
   saveSqlConnectionString,
+  saveGeminiKey,
 } from "../utils/store.js";
 import { readEnvConfig, writeEnvConfig } from "../utils/env.js";
 import { text, guarded } from "../utils/helpers.js";
@@ -25,11 +27,13 @@ import { whoami, validateToken } from "./github.js";
 import { notionCheckConnection, validateNotionKey } from "./notion.js";
 import { qdrantCheckConnection, validateQdrantConnection } from "../services/vector-db.js";
 import { sqlCheckConnection, validateSqlConnection } from "./sql.js";
+import { validateGeminiKey, geminiCheckConnection } from "../services/embedding.js";
 import type {
   TeamContextStatusResult,
   NotionStatusResult,
   QdrantStatusResult,
   SqlStatusResult,
+  GeminiStatusResult,
 } from "./types.js";
 
 export const PANEL_URI = "ui://repo-context/panel.html";
@@ -38,18 +42,20 @@ export const PANEL_URI = "ui://repo-context/panel.html";
  * Check connection status across all integrated services.
  */
 export async function getTeamContextStatus(): Promise<TeamContextStatusResult> {
-  const [ghUser, ghState, notionKey, qdrantConfig, sqlConn] = await Promise.all([
+  const [ghUser, ghState, notionKey, qdrantConfig, sqlConn, geminiKey] = await Promise.all([
     whoami().catch(() => ({ authenticated: false, login: undefined as string | undefined })),
     readState().catch(() => ({} as Awaited<ReturnType<typeof readState>>)),
     readNotionKey().catch(() => null as string | null),
     readQdrantConfig().catch(() => ({} as Awaited<ReturnType<typeof readQdrantConfig>>)),
     readSqlConnectionString().catch(() => null as string | null),
+    readGeminiKey().catch(() => null as string | null),
   ]);
 
-  const [notionStatus, qdrantStatus, sqlStatus]: [
+  const [notionStatus, qdrantStatus, sqlStatus, geminiStatus]: [
     NotionStatusResult,
     QdrantStatusResult,
     SqlStatusResult,
+    GeminiStatusResult,
   ] = await Promise.all([
     notionKey
       ? notionCheckConnection(notionKey).catch(() => ({ connected: false }))
@@ -62,6 +68,9 @@ export async function getTeamContextStatus(): Promise<TeamContextStatusResult> {
       : Promise.resolve({ connected: false, collectionsCount: 0 }),
     sqlConn
       ? sqlCheckConnection(sqlConn).catch(() => ({ connected: false }))
+      : Promise.resolve({ connected: false }),
+    geminiKey
+      ? geminiCheckConnection(geminiKey).catch(() => ({ connected: false }))
       : Promise.resolve({ connected: false }),
   ]);
 
@@ -84,6 +93,10 @@ export async function getTeamContextStatus(): Promise<TeamContextStatusResult> {
       connected: sqlStatus.connected,
       dialect: sqlStatus.dialect ?? null,
       database: sqlStatus.database ?? null,
+    },
+    gemini: {
+      connected: geminiStatus.connected,
+      model: geminiStatus.model ?? null,
     },
   };
 }
@@ -126,12 +139,13 @@ export function registerInitTools(server: McpServer): void {
       _meta: { ui: { visibility: ["app"] } },
     },
     guarded(async () => {
-      const [envConfig, ghToken, notionKey, qdrantConfig, sqlConn, state] = await Promise.all([
+      const [envConfig, ghToken, notionKey, qdrantConfig, sqlConn, geminiKey, state] = await Promise.all([
         readEnvConfig(),
         readToken(),
         readNotionKey(),
         readQdrantConfig(),
         readSqlConnectionString(),
+        readGeminiKey(),
         readState(),
       ]);
 
@@ -143,6 +157,7 @@ export function registerInitTools(server: McpServer): void {
           QDRANT_URL: envConfig.QDRANT_URL || qdrantConfig.endpoint || "",
           QDRANT_API_KEY: envConfig.QDRANT_API_KEY || qdrantConfig.apiKey || "",
           DATABASE_URL: envConfig.DATABASE_URL || sqlConn || "",
+          GEMINI_API_KEY: envConfig.GEMINI_API_KEY || geminiKey || "",
           activeRepo: state.repo || "",
         },
       });
@@ -157,22 +172,24 @@ export function registerInitTools(server: McpServer): void {
       description: "Internal: test credentials for a specific service one-by-one from the settings panel.",
       annotations: { title: "Test Single Connection", readOnlyHint: true },
       inputSchema: {
-        service: z.enum(["github", "notion", "qdrant", "sql"]).describe("Target service name"),
+        service: z.enum(["github", "notion", "qdrant", "sql", "gemini"]).describe("Target service name"),
         githubToken: z.string().optional(),
         notionApiKey: z.string().optional(),
         qdrantUrl: z.string().optional(),
         qdrantApiKey: z.string().optional(),
         databaseUrl: z.string().optional(),
+        geminiApiKey: z.string().optional(),
       },
       _meta: { ui: { visibility: ["app"] } },
     },
     guarded(async (args: {
-      service: "github" | "notion" | "qdrant" | "sql";
+      service: "github" | "notion" | "qdrant" | "sql" | "gemini";
       githubToken?: string;
       notionApiKey?: string;
       qdrantUrl?: string;
       qdrantApiKey?: string;
       databaseUrl?: string;
+      geminiApiKey?: string;
     }) => {
       if (args.service === "github") {
         if (!args.githubToken?.trim()) {
@@ -209,6 +226,14 @@ export function registerInitTools(server: McpServer): void {
         return text(check);
       }
 
+      if (args.service === "gemini") {
+        if (!args.geminiApiKey?.trim()) {
+          return text({ valid: false, reason: "Gemini API key is empty." });
+        }
+        const check = await validateGeminiKey(args.geminiApiKey.trim());
+        return text(check);
+      }
+
       return text({ valid: false, reason: "Unknown service." });
     }),
   );
@@ -226,6 +251,7 @@ export function registerInitTools(server: McpServer): void {
         QDRANT_URL: z.string().optional().describe("Qdrant Cluster URL"),
         QDRANT_API_KEY: z.string().optional().describe("Qdrant API Key"),
         DATABASE_URL: z.string().optional().describe("SQL Database Connection URI"),
+        GEMINI_API_KEY: z.string().optional().describe("Google Gemini API Key"),
       },
       _meta: { ui: { visibility: ["app"] } },
     },
@@ -235,6 +261,7 @@ export function registerInitTools(server: McpServer): void {
       QDRANT_URL?: string;
       QDRANT_API_KEY?: string;
       DATABASE_URL?: string;
+      GEMINI_API_KEY?: string;
     }) => {
       // 1. Write to server/.env
       await writeEnvConfig({
@@ -243,6 +270,7 @@ export function registerInitTools(server: McpServer): void {
         QDRANT_URL: args.QDRANT_URL?.trim() || undefined,
         QDRANT_API_KEY: args.QDRANT_API_KEY?.trim() || undefined,
         DATABASE_URL: args.DATABASE_URL?.trim() || undefined,
+        GEMINI_API_KEY: args.GEMINI_API_KEY?.trim() || undefined,
       });
 
       // 2. Sync with keychain storage
@@ -257,6 +285,9 @@ export function registerInitTools(server: McpServer): void {
       }
       if (args.DATABASE_URL?.trim()) {
         await saveSqlConnectionString(args.DATABASE_URL.trim());
+      }
+      if (args.GEMINI_API_KEY?.trim()) {
+        await saveGeminiKey(args.GEMINI_API_KEY.trim());
       }
 
       return text({
@@ -273,7 +304,7 @@ export function registerInitTools(server: McpServer): void {
     {
       title: "Team Context Status",
       description:
-        "Report connection and authentication status for all team services (GitHub, Notion, Qdrant, SQL).",
+        "Report connection and authentication status for all team services (GitHub, Notion, Qdrant, SQL, Gemini).",
       annotations: { title: "Team Context Status", readOnlyHint: true },
       inputSchema: {},
     },

@@ -25,6 +25,7 @@ delete process.env.NOTION_API_KEY;
 delete process.env.QDRANT_URL;
 delete process.env.QDRANT_API_KEY;
 delete process.env.DATABASE_URL;
+delete process.env.GEMINI_API_KEY;
 
 const routes: Record<string, unknown> = {
   "/user": { login: "octo" },
@@ -186,6 +187,39 @@ const { validateQdrantConnection, qdrantCheckConnection } = await import(
 assert.equal((await validateQdrantConnection("")).valid, false, "empty Qdrant endpoint fails");
 assert.equal((await qdrantCheckConnection()).connected, false, "unconfigured Qdrant reports disconnected");
 
+// Serialization tests
+const { serializeSkillDocument, serializeDocument } = await import(
+  "../src/utils/serializer.js"
+);
+const serializedSkill = serializeSkillDocument({
+  name: "db-migration",
+  description: "How to run db migrations",
+  content: "Run npm run migrate",
+});
+assert.equal(
+  serializedSkill,
+  "#name: db-migration\n\n#description: How to run db migrations\n\n#content: Run npm run migrate",
+  "serializeSkillDocument produces #{fieldName}: {fieldValue}\\n\\n format",
+);
+
+const genericSerialized = serializeDocument({
+  name: "auth",
+  description: "Auth setup",
+  content: "Use JWT tokens",
+});
+assert.equal(
+  genericSerialized,
+  "#name: auth\n\n#description: Auth setup\n\n#content: Use JWT tokens",
+  "serializeDocument formats custom fields with #{k}: {v}\\n\\n",
+);
+
+// Gemini validation tests
+const { validateGeminiKey, geminiCheckConnection } = await import(
+  "../src/services/embedding.js"
+);
+assert.equal((await validateGeminiKey("")).valid, false, "empty Gemini key fails");
+assert.equal((await geminiCheckConnection()).connected, false, "unconfigured Gemini reports disconnected");
+
 // SQL validation tests
 const { validateSqlConnection, sqlCheckConnection } = await import(
   "../src/tools/sql.js"
@@ -203,6 +237,7 @@ assert.equal(aggregateStatus.github.activeRepo, "octo/app");
 assert.equal(aggregateStatus.notion.connected, false);
 assert.equal(aggregateStatus.qdrant.connected, false);
 assert.equal(aggregateStatus.sql.connected, false);
+assert.equal(aggregateStatus.gemini.connected, false);
 
 server.close();
 await fs.rm(dir, { recursive: true, force: true });

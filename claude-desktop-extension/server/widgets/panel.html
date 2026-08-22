@@ -223,6 +223,20 @@
         </div>
       </div>
 
+      <!-- Gemini Embeddings -->
+      <div class="service-card">
+        <div class="service-header">
+          <span class="service-title">✨ Google Gemini Embedding</span>
+          <span class="badge ${teamStatus?.gemini?.connected ? 'ok' : 'idle'}" id="badge-gemini">
+            ${teamStatus?.gemini?.connected ? '✓ ' + (teamStatus.gemini.model || 'Connected') : 'Not tested'}
+          </span>
+        </div>
+        <div class="field-group">
+          <label class="field-label" for="geminiKey">Gemini API Key (Google AI Studio)</label>
+          <input type="password" id="geminiKey" placeholder="AIzaSy…" value="${esc(config.GEMINI_API_KEY || '')}" />
+        </div>
+      </div>
+
       <!-- SQL Database -->
       <div class="service-card">
         <div class="service-header">
@@ -262,6 +276,7 @@
       QDRANT_URL: document.getElementById("qdrantUrl")?.value?.trim() || "",
       QDRANT_API_KEY: document.getElementById("qdrantKey")?.value?.trim() || "",
       DATABASE_URL: document.getElementById("databaseUrl")?.value?.trim() || "",
+      GEMINI_API_KEY: document.getElementById("geminiKey")?.value?.trim() || "",
     };
   }
 
@@ -331,6 +346,13 @@
       if (!res.ok) errors.push(`Qdrant: ${res.reason}`);
     } else {
       setBadge("qdrant", "idle", "Empty");
+    }
+
+    if (vals.GEMINI_API_KEY) {
+      const res = await testService("gemini", { geminiApiKey: vals.GEMINI_API_KEY });
+      if (!res.ok) errors.push(`Gemini: ${res.reason}`);
+    } else {
+      setBadge("gemini", "idle", "Empty");
     }
 
     if (vals.DATABASE_URL) {

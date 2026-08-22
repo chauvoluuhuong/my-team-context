@@ -32,6 +32,7 @@ export interface TeamEnvConfig {
   QDRANT_URL?: string;
   QDRANT_API_KEY?: string;
   DATABASE_URL?: string;
+  GEMINI_API_KEY?: string;
   [key: string]: string | undefined;
 }
 
@@ -112,6 +113,7 @@ export async function readEnvConfig(): Promise<TeamEnvConfig> {
     QDRANT_URL: fileConfig.QDRANT_URL || fileConfig.QDRANT_ENDPOINT || process.env.QDRANT_URL || process.env.QDRANT_ENDPOINT || "",
     QDRANT_API_KEY: fileConfig.QDRANT_API_KEY || process.env.QDRANT_API_KEY || "",
     DATABASE_URL: fileConfig.DATABASE_URL || process.env.DATABASE_URL || "",
+    GEMINI_API_KEY: fileConfig.GEMINI_API_KEY || process.env.GEMINI_API_KEY || "",
   };
 }
 

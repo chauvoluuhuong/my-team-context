@@ -99,6 +99,56 @@ export interface SqlStatusResult {
 }
 
 /* ------------------------------------------------------------------ *
+ * Gemini Embedding Types
+ * ------------------------------------------------------------------ */
+
+export interface ValidateGeminiResult {
+  valid: boolean;
+  model?: string;
+  displayName?: string;
+  reason?: string;
+}
+
+export interface GeminiStatusResult {
+  connected: boolean;
+  model?: string;
+  reason?: string;
+}
+
+/* ------------------------------------------------------------------ *
+ * Skills & Knowledge Base Types
+ * ------------------------------------------------------------------ */
+
+export interface SkillDocument {
+  id?: string;
+  name: string;
+  description: string;
+  content: string;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface SkillItem {
+  id: string;
+  name: string;
+  description: string;
+  content: string;
+  serialized?: string;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface SkillSearchResult extends SkillItem {
+  score: number;
+}
+
+export interface ListSkillsResult {
+  skills: SkillItem[];
+  total: number;
+  collection: string;
+}
+
+/* ------------------------------------------------------------------ *
  * Team Context Init & Aggregate Status Types
  * ------------------------------------------------------------------ */
 
@@ -121,6 +171,10 @@ export interface TeamContextStatusResult {
     connected: boolean;
     dialect: string | null;
     database: string | null;
+  };
+  gemini: {
+    connected: boolean;
+    model: string | null;
   };
 }
 

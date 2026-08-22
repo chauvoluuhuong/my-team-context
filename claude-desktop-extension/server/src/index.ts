@@ -17,7 +17,7 @@ import {
   RESOURCE_MIME_TYPE,
 } from "@modelcontextprotocol/ext-apps/server";
 import { loadEnv } from "./utils/env.js";
-import { buildPanel } from "./utils/helpers.js";
+import { buildPanel, buildSkillsPanel } from "./utils/helpers.js";
 
 loadEnv();
 import {
@@ -25,7 +25,9 @@ import {
   registerGitHubTools,
   registerNotionTools,
   registerSqlTools,
+  registerSkillsTools,
   PANEL_URI,
+  SKILLS_URI,
 } from "./tools/index.js";
 
 const server = new McpServer({ name: "my-team-context", version: "0.1.0" });
@@ -34,10 +36,15 @@ registerAppResource(server, "Team Context Settings", PANEL_URI, {}, async () => 
   contents: [{ uri: PANEL_URI, mimeType: RESOURCE_MIME_TYPE, text: buildPanel() }],
 }));
 
+registerAppResource(server, "Team Skills Management", SKILLS_URI, {}, async () => ({
+  contents: [{ uri: SKILLS_URI, mimeType: RESOURCE_MIME_TYPE, text: buildSkillsPanel() }],
+}));
+
 registerInitTools(server);
 registerGitHubTools(server);
 registerNotionTools(server);
 registerSqlTools(server);
+registerSkillsTools(server);
 
 const transport = new StdioServerTransport();
 await server.connect(transport);

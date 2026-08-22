@@ -18,6 +18,7 @@ const ACCOUNTS = {
   NOTION: "notion-api-key",
   QDRANT_KEY: "qdrant-api-key",
   SQL_CONN: "sql-connection-string",
+  GEMINI: "gemini-api-key",
 } as const;
 
 /**
@@ -236,6 +237,23 @@ export async function readSqlConnectionString(): Promise<string | null> {
 
 export async function clearSqlConnectionString(): Promise<void> {
   return clearSecret(ACCOUNTS.SQL_CONN);
+}
+
+/* ------------------------------------------------------------------ *
+ * Gemini API Key
+ * ------------------------------------------------------------------ */
+
+export async function saveGeminiKey(apiKey: string): Promise<SaveTokenResult> {
+  return saveSecret(ACCOUNTS.GEMINI, apiKey);
+}
+
+export async function readGeminiKey(): Promise<string | null> {
+  if (process.env.GEMINI_API_KEY) return process.env.GEMINI_API_KEY.trim();
+  return readSecret(ACCOUNTS.GEMINI);
+}
+
+export async function clearGeminiKey(): Promise<void> {
+  return clearSecret(ACCOUNTS.GEMINI);
 }
 
 /* ------------------------------------------------------------------ *
