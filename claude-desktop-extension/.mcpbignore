@@ -1,0 +1,18 @@
+# Ignore root package output and temp files
+*.mcpb
+*.pmcp
+.DS_Store
+
+# Ignore test files and local secrets
+server/test/
+server/.env
+server/.env.example
+
+# Unignore compiled server code and node_modules dependencies
+!server/dist
+!server/dist/**
+!server/node_modules
+!server/node_modules/**
+!server/widgets
+!server/widgets/**
+!server/DEFAULT_SYSTEM_PROMPT

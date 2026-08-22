@@ -56,6 +56,7 @@ export function registerConfigTools(server: McpServer): void {
       _meta: { ui: { resourceUri: CONFIG_URI } },
     },
     guarded(async () => {
+      console.log('>>>>>>>>>>>>>>')
       const username = await resolveEffectiveUsername();
       let repos: any[] = [];
       let ghUser: { authenticated: boolean; login?: string } = { authenticated: false };
@@ -85,17 +86,17 @@ export function registerConfigTools(server: McpServer): void {
         auth,
         appConfig: appConfig
           ? {
-              ...appConfig,
-              systemPrompt: appConfig.systemPrompt || defaultPrompt,
-            }
+            ...appConfig,
+            systemPrompt: appConfig.systemPrompt || defaultPrompt,
+          }
           : {
-              id: "",
-              username,
-              activeRepos: [],
-              systemPrompt: defaultPrompt,
-              createdAt: "",
-              updatedAt: "",
-            },
+            id: "",
+            username,
+            activeRepos: [],
+            systemPrompt: defaultPrompt,
+            createdAt: "",
+            updatedAt: "",
+          },
         defaultSystemPrompt: defaultPrompt,
         repos,
         reposCount: repos.length,
@@ -151,17 +152,17 @@ export function registerConfigTools(server: McpServer): void {
         auth,
         appConfig: appConfig
           ? {
-              ...appConfig,
-              systemPrompt: appConfig.systemPrompt || defaultPrompt,
-            }
+            ...appConfig,
+            systemPrompt: appConfig.systemPrompt || defaultPrompt,
+          }
           : {
-              id: "",
-              username,
-              activeRepos: [],
-              systemPrompt: defaultPrompt,
-              createdAt: "",
-              updatedAt: "",
-            },
+            id: "",
+            username,
+            activeRepos: [],
+            systemPrompt: defaultPrompt,
+            createdAt: "",
+            updatedAt: "",
+          },
         defaultSystemPrompt: defaultPrompt,
         repos,
       });

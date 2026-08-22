@@ -123,11 +123,32 @@
     border-color: var(--err-fg);
   }
 
+  .btn-config {
+    font-size: 12px;
+    font-weight: 600;
+    padding: 4px 10px;
+    border-radius: 7px;
+    border: 1px solid var(--accent);
+    background: var(--accent-light, #eff6ff);
+    color: var(--accent);
+    cursor: pointer;
+    transition: all 0.15s ease;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+
+  .btn-config:hover {
+    background: var(--accent);
+    color: #ffffff;
+  }
+
   .auth-card {
     border: 1px solid var(--border);
     border-radius: 10px;
     padding: 18px 16px;
     background: var(--card-bg);
+
     margin-bottom: 14px;
   }
 
@@ -500,6 +521,9 @@
           <h2>⚡ Team Context</h2>
         </div>
         <div class="user-badge-wrap">
+          <button class="btn-config" id="openConfigBtn" title="Open Application Configuration">
+            ⚙️ App Config
+          </button>
           <span class="user-badge">👤 ${esc(auth.username || 'admin')}</span>
           <button class="btn-signout" id="signoutBtn" title="Sign out from session">
             Sign out
@@ -508,6 +532,7 @@
       </div>
 
       <p class="sub">Configure credentials to connect GitHub, Notion, Qdrant, and SQL Database.</p>
+
 
       <!-- GitHub -->
       <div class="service-card">
@@ -597,11 +622,21 @@
     const saveBtn = document.getElementById("saveBtn");
     const testBtn = document.getElementById("testBtn");
     const signoutBtn = document.getElementById("signoutBtn");
+    const openConfigBtn = document.getElementById("openConfigBtn");
 
     testBtn.onclick = () => runTests();
     saveBtn.onclick = () => saveAll();
     signoutBtn.onclick = () => handleSignout();
+    if (openConfigBtn) {
+      openConfigBtn.onclick = () => {
+        app.callServerTool({
+          name: "configure_app",
+          arguments: {},
+        });
+      };
+    }
   }
+
 
   async function handleSignout() {
     try {
@@ -736,10 +771,19 @@
       });
       const data = JSON.parse(res.content[0].text);
       if (data.status === "ok") {
-        setStatus("ok", "✓ Configuration saved to server/.env and keychain successfully!");
+        setStatus("ok", "✓ Configuration saved to server/.env and keychain successfully! Launching App Configuration…");
+        try {
+          await app.callServerTool({
+            name: "configure_app",
+            arguments: {},
+          });
+        } catch {
+          // If handled by host
+        }
       } else {
         setStatus("err", data.message || "Failed to save credentials.");
       }
+
     } catch (err) {
       setStatus("err", `Error saving configuration: ${err.message}`);
     }
