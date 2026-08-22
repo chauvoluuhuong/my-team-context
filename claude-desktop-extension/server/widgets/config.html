@@ -570,9 +570,6 @@
         <button class="top-tab ${state.activeTopTab === "config" ? "active" : ""}" id="tabBtnConfig">
           ⚙️ App Configuration
         </button>
-        <button class="top-tab ${state.activeTopTab === "skills" ? "active" : ""}" id="tabBtnSkills">
-          🧠 Skills
-        </button>
       </div>
 
       <!-- Tab Content Area -->
@@ -582,17 +579,15 @@
     document.getElementById("signoutBtn")?.addEventListener("click", handleSignout);
     document.getElementById("tabBtnCredentials")?.addEventListener("click", () => switchTopTab("credentials"));
     document.getElementById("tabBtnConfig")?.addEventListener("click", () => switchTopTab("config"));
-    document.getElementById("tabBtnSkills")?.addEventListener("click", () => switchTopTab("skills"));
 
     const contentArea = document.getElementById("tabContent");
     if (state.activeTopTab === "credentials") {
       renderCredentialsTab(contentArea);
     } else if (state.activeTopTab === "config") {
       renderAppConfigTab(contentArea);
-    } else if (state.activeTopTab === "skills") {
-      renderSkillsTab(contentArea);
     }
   }
+
 
   function switchTopTab(tab) {
     state.activeTopTab = tab;
@@ -1098,120 +1093,8 @@
     btn.textContent = "💾 Save Application Configuration";
   }
 
-  /* ------------------- Tab 3: Skills ------------------- */
-
-  function renderSkillsTab(container) {
-    container.innerHTML = `
-      <div class="section-intro">
-        <h3>🧠 Team Skills & Knowledge Base</h3>
-        <p>Centrally manage, create, and search team skills and procedures in Qdrant vector DB.</p>
-      </div>
-
-      <div class="card">
-        <div class="card-header">
-          <span class="card-title">🔍 Search Skills</span>
-          <button class="primary" id="newSkillBtn" style="font-size:12px;padding:5px 12px;">+ New Skill</button>
-        </div>
-        <div class="field-group">
-          <input type="text" id="skillSearchInput" placeholder="Semantic search skills in vector DB…" />
-        </div>
-        <div id="skillsListContainer" style="margin-top:12px;">
-          <div class="loading">Loading team skills…</div>
-        </div>
-      </div>
-
-      <div id="statusBox" class="${state.statusType ? 'status-box ' + state.statusType : 'status-box'}">${esc(state.statusMessage)}</div>
-    `;
-
-    document.getElementById("newSkillBtn")?.addEventListener("click", showNewSkillModal);
-    document.getElementById("skillSearchInput")?.addEventListener("input", debounce(handleSkillSearch, 300));
-    loadSkillsList();
-  }
-
-  async function loadSkillsList() {
-    const listCont = document.getElementById("skillsListContainer");
-    if (!listCont) return;
-    try {
-      const res = await app.callServerTool({ name: "skills_list", arguments: {} });
-      const data = JSON.parse(res.content[0].text);
-      renderSkillsItems(data.skills || []);
-    } catch (err) {
-      listCont.innerHTML = `<div style="color:var(--err-fg);font-size:12.5px;">Failed to load skills: ${esc(err.message)}</div>`;
-    }
-  }
-
-  function renderSkillsItems(skills) {
-    const listCont = document.getElementById("skillsListContainer");
-    if (!listCont) return;
-    if (skills.length === 0) {
-      listCont.innerHTML = '<div style="color:var(--muted);font-size:12.5px;padding:8px 0;">No skills found. Click "+ New Skill" to add one.</div>';
-      return;
-    }
-    listCont.innerHTML = `
-      <div style="display:flex;flex-direction:column;gap:8px;">
-        ${skills.map(s => `
-          <div class="card" style="margin-bottom:0;padding:10px 12px;">
-            <div style="display:flex;justify-content:space-between;align-items:flex-start;">
-              <div>
-                <strong style="font-size:13.5px;">${esc(s.name || s.title || "Untitled Skill")}</strong>
-                <p style="margin:4px 0 0;font-size:12px;color:var(--muted);">${esc(s.description || s.summary || "")}</p>
-              </div>
-              <div style="display:flex;gap:6px;">
-                <button class="secondary" style="font-size:11.5px;padding:3px 8px;" onclick="window._deleteSkill('${esc(s.id)}')">Delete</button>
-              </div>
-            </div>
-          </div>
-        `).join('')}
-      </div>
-    `;
-  }
-
-  function debounce(fn, delay) {
-    let t;
-    return function(...args) {
-      clearTimeout(t);
-      t = setTimeout(() => fn.apply(this, args), delay);
-    };
-  }
-
-  async function handleSkillSearch() {
-    const query = document.getElementById("skillSearchInput")?.value.trim();
-    if (!query) {
-      loadSkillsList();
-      return;
-    }
-    const listCont = document.getElementById("skillsListContainer");
-    if (!listCont) return;
-    try {
-      const res = await app.callServerTool({ name: "skills_search", arguments: { query } });
-      const data = JSON.parse(res.content[0].text);
-      renderSkillsItems(data.skills || []);
-    } catch (err) {
-      listCont.innerHTML = `<div style="color:var(--err-fg);font-size:12.5px;">Search error: ${esc(err.message)}</div>`;
-    }
-  }
-
-  function showNewSkillModal() {
-    const name = prompt("Enter skill name:");
-    if (!name) return;
-    const description = prompt("Enter skill description:");
-    const content = prompt("Enter skill content/instructions:");
-    if (!content) return;
-    app.callServerTool({
-      name: "skills_save",
-      arguments: { name, description, content },
-    }).then(() => loadSkillsList()).catch(e => alert(e.message));
-  }
-
-  window._deleteSkill = function(id) {
-    if (!confirm("Are you sure you want to delete this skill?")) return;
-    app.callServerTool({
-      name: "skills_delete",
-      arguments: { id },
-    }).then(() => loadSkillsList()).catch(e => alert(e.message));
-  };
-
   /* ------------------- Boot ------------------- */
   await app.connect();
   await loadInitialData();
 </script>
+

@@ -19,11 +19,10 @@ import {
 import { loadEnv } from "./utils/env.js";
 import { buildPanel, buildSkillsPanel, buildConfigPanel } from "./utils/helpers.js";
 
-// Redirect console.log to stderr to prevent corrupting stdio JSON-RPC transport
+// stdout is reserved for JSON-RPC transport. Redirect console.log to stderr.
 console.log = (...args: any[]) => console.error(...args);
 
 loadEnv();
-
 
 import {
   registerInitTools,

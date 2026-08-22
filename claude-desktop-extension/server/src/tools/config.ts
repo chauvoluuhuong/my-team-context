@@ -56,9 +56,10 @@ export function registerConfigTools(server: McpServer): void {
       _meta: { ui: { resourceUri: CONFIG_URI } },
     },
     guarded(async () => {
+      console.error('>>>>>>>>>>>>>>');
       const username = await resolveEffectiveUsername();
-      let repos: any[] = [];
 
+      let repos: any[] = [];
       let ghUser: { authenticated: boolean; login?: string } = { authenticated: false };
       let githubError: string | null = null;
 

@@ -1,5 +1,5 @@
 <div id="root" class="panel-app">
-  <div class="loading">Loading Credentials…</div>
+  <div class="loading">Loading Team Context…</div>
 </div>
 
 <style>
@@ -20,7 +20,11 @@
     --code-bg: #f8fafc;
     --card-bg: #ffffff;
     --card-hover: #f1f5f9;
+    --card-selected: #f0fdf4;
+    --card-selected-border: #86efac;
     --border: #cbd5e1;
+    --purple-bg: #f3e8ff;
+    --purple-fg: #7e22ce;
   }
 
   @media (prefers-color-scheme: dark) {
@@ -41,7 +45,11 @@
       --code-bg: #111827;
       --card-bg: #111827;
       --card-hover: #1e293b;
+      --card-selected: #062e24;
+      --card-selected-border: #059669;
       --border: #334155;
+      --purple-bg: #3b0764;
+      --purple-fg: #d8b4fe;
     }
   }
 
@@ -56,7 +64,7 @@
     border: 1px solid var(--line);
     border-radius: 12px;
     padding: 20px;
-    max-width: 680px;
+    max-width: 720px;
     margin: 0 auto;
   }
 
@@ -64,7 +72,7 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 16px;
+    margin-bottom: 14px;
     padding-bottom: 12px;
     border-bottom: 1px solid var(--line);
   }
@@ -76,12 +84,6 @@
     display: flex;
     align-items: center;
     gap: 8px;
-  }
-
-  .sub {
-    margin: 0 0 16px;
-    font-size: 12.5px;
-    color: var(--muted);
   }
 
   .header-actions {
@@ -120,6 +122,92 @@
     border-color: var(--err-fg);
   }
 
+  /* Two-Tier Navigation */
+  .top-tabs {
+    display: flex;
+    gap: 6px;
+    margin-bottom: 16px;
+    border-bottom: 1px solid var(--line);
+    padding-bottom: 8px;
+  }
+
+  .top-tab {
+    padding: 7px 14px;
+    font-size: 13px;
+    font-weight: 600;
+    border-radius: 8px;
+    border: 1px solid transparent;
+    background: transparent;
+    color: var(--muted);
+    cursor: pointer;
+    transition: all 0.15s ease;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .top-tab:hover {
+    color: var(--fg);
+    background: var(--card-hover);
+  }
+
+  .top-tab.active {
+    background: var(--accent-light);
+    color: var(--accent);
+    border-color: var(--accent);
+  }
+
+  /* Sub-session Pills */
+  .sub-pills {
+    display: flex;
+    gap: 6px;
+    margin-bottom: 16px;
+    flex-wrap: wrap;
+  }
+
+  .sub-pill {
+    padding: 5px 12px;
+    font-size: 12px;
+    font-weight: 600;
+    border-radius: 999px;
+    border: 1px solid var(--border);
+    background: var(--code-bg);
+    color: var(--muted);
+    cursor: pointer;
+    transition: all 0.15s ease;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+  }
+
+  .sub-pill:hover {
+    color: var(--fg);
+    border-color: var(--accent);
+  }
+
+  .sub-pill.active {
+    background: var(--accent);
+    color: #ffffff;
+    border-color: var(--accent);
+  }
+
+  .section-intro {
+    margin-bottom: 14px;
+  }
+
+  .section-intro h3 {
+    margin: 0 0 4px;
+    font-size: 14.5px;
+    font-weight: 600;
+  }
+
+  .section-intro p {
+    margin: 0;
+    font-size: 12.5px;
+    color: var(--muted);
+  }
+
+  /* Form & Cards */
   .card {
     border: 1px solid var(--border);
     border-radius: 9px;
@@ -163,7 +251,8 @@
   }
 
   input[type="text"],
-  input[type="password"] {
+  input[type="password"],
+  textarea {
     width: 100%;
     padding: 8px 10px;
     border: 1px solid var(--border);
@@ -177,8 +266,22 @@
   }
 
   input[type="text"]:focus,
-  input[type="password"]:focus {
+  input[type="password"]:focus,
+  textarea:focus {
     border-color: var(--accent);
+  }
+
+  textarea {
+    min-height: 180px;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    font-size: 12px;
+    line-height: 1.45;
+    resize: vertical;
+  }
+
+  /* Buttons */
+  button {
+    font: inherit;
   }
 
   .btn-row {
@@ -241,10 +344,90 @@
     gap: 4px;
   }
 
-  .badge.ok { background: var(--ok-bg); color: var(--ok-fg); }
-  .badge.warn { background: var(--warn-bg); color: var(--warn-fg); }
-  .badge.err { background: var(--err-bg); color: var(--err-fg); }
-  .badge.idle { background: var(--code-bg); color: var(--muted); border: 1px solid var(--border); }
+  .badge.ok {
+    background: var(--ok-bg);
+    color: var(--ok-fg);
+  }
+
+  .badge.warn {
+    background: var(--warn-bg);
+    color: var(--warn-fg);
+  }
+
+  .badge.err {
+    background: var(--err-bg);
+    color: var(--err-fg);
+  }
+
+  .badge.idle {
+    background: var(--code-bg);
+    color: var(--muted);
+    border: 1px solid var(--border);
+  }
+
+  /* Repo List */
+  .repo-controls {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 12px;
+    align-items: center;
+  }
+
+  .repo-search-input {
+    flex: 1;
+  }
+
+  .repo-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    max-height: 380px;
+    overflow-y: auto;
+    padding-right: 4px;
+  }
+
+  .repo-item {
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 10px 12px;
+    background: var(--card-bg);
+    transition: all 0.15s ease;
+  }
+
+  .repo-item:hover {
+    border-color: var(--accent);
+  }
+
+  .repo-item.selected {
+    border-color: var(--card-selected-border);
+    background: var(--card-selected);
+  }
+
+  .repo-main-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    cursor: pointer;
+  }
+
+  .repo-checkbox {
+    width: 16px;
+    height: 16px;
+    cursor: pointer;
+    accent-color: var(--accent);
+  }
+
+  .repo-name {
+    font-weight: 600;
+    font-size: 13.5px;
+    flex: 1;
+    word-break: break-all;
+  }
+
+  .repo-desc-box {
+    margin-top: 8px;
+    padding-left: 26px;
+  }
 
   .status-box {
     margin-top: 14px;
@@ -254,13 +437,39 @@
     display: none;
   }
 
-  .status-box.ok { display: block; background: var(--ok-bg); color: var(--ok-fg); }
-  .status-box.err { display: block; background: var(--err-bg); color: var(--err-fg); }
+  .status-box.ok {
+    display: block;
+    background: var(--ok-bg);
+    color: var(--ok-fg);
+  }
+
+  .status-box.err {
+    display: block;
+    background: var(--err-bg);
+    color: var(--err-fg);
+  }
 
   .loading {
     color: var(--muted);
     padding: 16px 0;
     text-align: center;
+  }
+
+  .alert-banner {
+    padding: 10px 14px;
+    border-radius: 8px;
+    margin-bottom: 14px;
+    font-size: 12.5px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+  }
+
+  .alert-banner.err {
+    background: var(--err-bg);
+    color: var(--err-fg);
+    border: 1px solid var(--err-fg);
   }
 </style>
 
@@ -270,12 +479,22 @@
 
 <script type="module">
   const { App } = globalThis.ExtApps || {};
-  const app = new App({ name: "TeamContextCredentialsApp", version: "0.1.0" }, {}, { autoResize: true });
+  const app = new App({ name: "TeamContextApp", version: "0.1.0" }, {}, { autoResize: true });
 
   const state = {
+    activeTopTab: "credentials", // "credentials" | "config" | "skills"
+    activeSubSession: "github",  // "github" | "prompt" | "notion" | "database"
     auth: { hasAccount: false, isAuthenticated: false, username: null },
     authMode: "login",
     credentials: {},
+    teamStatus: {},
+    repos: [],
+    reposSearch: "",
+    selectedRepos: new Map(), // name -> description
+    systemPrompt: "",
+    defaultSystemPrompt: "",
+    createdAt: "",
+    updatedAt: "",
     statusType: null,
     statusMessage: "",
   };
@@ -313,9 +532,10 @@
 
   async function loadInitialData() {
     try {
-      const [authRes, configRes] = await Promise.all([
+      const [authRes, configRes, appStateRes] = await Promise.all([
         app.callServerTool({ name: "panel_get_auth_state", arguments: {} }).catch(() => null),
         app.callServerTool({ name: "panel_load_config", arguments: {} }).catch(() => null),
+        app.callServerTool({ name: "config_get_app_state", arguments: {} }).catch(() => null),
       ]);
 
       if (authRes) {
@@ -328,6 +548,21 @@
         if (cfg.auth && cfg.auth.isAuthenticated) {
           state.auth = cfg.auth;
         }
+      }
+
+      if (appStateRes) {
+        const appData = JSON.parse(appStateRes.content[0].text);
+        state.repos = appData.repos || [];
+        state.defaultSystemPrompt = appData.defaultSystemPrompt || "";
+        const appConfig = appData.appConfig || {};
+        state.systemPrompt = appConfig.systemPrompt || appData.defaultSystemPrompt || "";
+        state.createdAt = appConfig.createdAt || "";
+        state.updatedAt = appConfig.updatedAt || "";
+
+        state.selectedRepos.clear();
+        (appConfig.activeRepos || []).forEach(r => {
+          if (r && r.name) state.selectedRepos.set(r.name, r.description || "");
+        });
       }
 
       // Auto-authenticate if credentials are configured in server/.env
@@ -344,7 +579,7 @@
           if (loginData.success) {
             state.auth = { hasAccount: true, isAuthenticated: true, username: loginData.username };
           }
-        } catch {}
+        } catch { }
       }
     } catch (err) {
       console.error("Initial load error:", err);
@@ -360,16 +595,128 @@
       return;
     }
 
-    const cfg = state.credentials;
     root.innerHTML = `
       <div class="header">
-        <h2>⚡ Credentials & Service Connections</h2>
+        <h2>⚡ Team Context</h2>
         <div class="header-actions">
           <span class="user-badge">👤 ${esc(state.auth.username || "admin")}</span>
           <button class="btn-signout" id="signoutBtn">Sign out</button>
         </div>
       </div>
-      <p class="sub">Configure API tokens, database connections, and credentials stored securely in server/.env.</p>
+
+      <!-- Top-Level Tabs -->
+      <div class="top-tabs">
+        <button class="top-tab ${state.activeTopTab === "credentials" ? "active" : ""}" id="tabBtnCredentials">
+          ⚡ Credentials
+        </button>
+        <button class="top-tab ${state.activeTopTab === "config" ? "active" : ""}" id="tabBtnConfig">
+          ⚙️ App Configuration
+        </button>
+      </div>
+
+      <!-- Tab Content Area -->
+      <div id="tabContent"></div>
+    `;
+
+    document.getElementById("signoutBtn")?.addEventListener("click", handleSignout);
+    document.getElementById("tabBtnCredentials")?.addEventListener("click", () => switchTopTab("credentials"));
+    document.getElementById("tabBtnConfig")?.addEventListener("click", () => switchTopTab("config"));
+
+    const contentArea = document.getElementById("tabContent");
+    if (state.activeTopTab === "credentials") {
+      renderCredentialsTab(contentArea);
+    } else if (state.activeTopTab === "config") {
+      renderAppConfigTab(contentArea);
+    }
+  }
+
+  function switchTopTab(tab) {
+    state.activeTopTab = tab;
+    state.statusType = null;
+    state.statusMessage = "";
+    render();
+  }
+
+
+  /* ------------------- Auth View ------------------- */
+
+  function renderAuth() {
+    const isLogin = state.authMode === "login";
+    root.innerHTML = `
+      <div class="header">
+        <h2>⚡ Team Context</h2>
+      </div>
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title">🔐 ${isLogin ? "Sign In" : "Create Account"}</span>
+        </div>
+        <p class="section-intro" style="color:var(--muted);font-size:12.5px;margin-bottom:12px;">
+          ${isLogin ? "Enter credentials to access your team configuration." : "Create account credentials stored in server/.env."}
+        </p>
+        <div class="field-group">
+          <label class="field-label" for="authUsername">Username</label>
+          <input type="text" id="authUsername" placeholder="username" value="${esc(state.credentials.AUTH_USERNAME || '')}" />
+        </div>
+        <div class="field-group" style="margin-top:8px;">
+          <label class="field-label" for="authPassword">Password</label>
+          <input type="password" id="authPassword" placeholder="••••••••" value="${esc(state.credentials.AUTH_PASSWORD || '')}" />
+        </div>
+        <div class="btn-row">
+          <button class="primary" id="authSubmitBtn">${isLogin ? "Sign In" : "Create Account"}</button>
+          <button class="secondary" id="authToggleBtn">Switch to ${isLogin ? "Create Account" : "Sign In"}</button>
+        </div>
+        <div id="statusBox"></div>
+      </div>
+    `;
+
+
+    document.getElementById("authToggleBtn")?.addEventListener("click", () => {
+      state.authMode = state.authMode === "login" ? "register" : "login";
+      render();
+    });
+
+    document.getElementById("authSubmitBtn")?.addEventListener("click", handleAuthSubmit);
+  }
+
+  async function handleAuthSubmit() {
+    const username = document.getElementById("authUsername")?.value.trim();
+    const password = document.getElementById("authPassword")?.value.trim();
+    if (!username || !password) {
+      setStatus("err", "Username and password are required.");
+      return;
+    }
+    const toolName = state.authMode === "login" ? "panel_login" : "panel_create_account";
+    try {
+      const res = await app.callServerTool({ name: toolName, arguments: { username, password } });
+      const data = JSON.parse(res.content[0].text);
+      if (data.success) {
+        state.auth = { hasAccount: true, isAuthenticated: true, username };
+        await loadInitialData();
+      } else {
+        setStatus("err", data.reason || "Authentication failed.");
+      }
+    } catch (err) {
+      setStatus("err", err.message);
+    }
+  }
+
+  async function handleSignout() {
+    try {
+      await app.callServerTool({ name: "panel_signout", arguments: {} });
+    } catch { }
+    state.auth = { hasAccount: true, isAuthenticated: false, username: null };
+    render();
+  }
+
+  /* ------------------- Tab 1: Credentials ------------------- */
+
+  function renderCredentialsTab(container) {
+    const cfg = state.credentials;
+    container.innerHTML = `
+      <div class="section-intro">
+        <h3>⚡ Service Credentials</h3>
+        <p>Configure API tokens and connection keys for GitHub, Notion, Vector DB, and SQL database.</p>
+      </div>
 
       <!-- GitHub -->
       <div class="card">
@@ -443,81 +790,9 @@
       <div id="statusBox" class="${state.statusType ? 'status-box ' + state.statusType : 'status-box'}">${esc(state.statusMessage)}</div>
     `;
 
-    document.getElementById("signoutBtn")?.addEventListener("click", handleSignout);
     document.getElementById("testConnectionsBtn")?.addEventListener("click", runConnectionTests);
     document.getElementById("saveCredentialsBtn")?.addEventListener("click", saveAllCredentials);
   }
-
-  /* ------------------- Auth View ------------------- */
-
-  function renderAuth() {
-    const isLogin = state.authMode === "login";
-    root.innerHTML = `
-      <div class="header">
-        <h2>⚡ Credentials Access</h2>
-      </div>
-      <div class="card">
-        <div class="card-header">
-          <span class="card-title">🔐 ${isLogin ? "Sign In" : "Create Account"}</span>
-        </div>
-        <p style="color:var(--muted);font-size:12.5px;margin:0 0 12px;">
-          ${isLogin ? "Enter credentials to access your team configuration." : "Create account credentials stored in server/.env."}
-        </p>
-        <div class="field-group">
-          <label class="field-label" for="authUsername">Username</label>
-          <input type="text" id="authUsername" placeholder="username" value="${esc(state.credentials.AUTH_USERNAME || '')}" />
-        </div>
-        <div class="field-group" style="margin-top:8px;">
-          <label class="field-label" for="authPassword">Password</label>
-          <input type="password" id="authPassword" placeholder="••••••••" value="${esc(state.credentials.AUTH_PASSWORD || '')}" />
-        </div>
-        <div class="btn-row">
-          <button class="primary" id="authSubmitBtn">${isLogin ? "Sign In" : "Create Account"}</button>
-          <button class="secondary" id="authToggleBtn">Switch to ${isLogin ? "Create Account" : "Sign In"}</button>
-        </div>
-        <div id="statusBox" class="${state.statusType ? 'status-box ' + state.statusType : 'status-box'}">${esc(state.statusMessage)}</div>
-      </div>
-    `;
-
-    document.getElementById("authToggleBtn")?.addEventListener("click", () => {
-      state.authMode = state.authMode === "login" ? "register" : "login";
-      render();
-    });
-
-    document.getElementById("authSubmitBtn")?.addEventListener("click", handleAuthSubmit);
-  }
-
-  async function handleAuthSubmit() {
-    const username = document.getElementById("authUsername")?.value.trim();
-    const password = document.getElementById("authPassword")?.value.trim();
-    if (!username || !password) {
-      setStatus("err", "Username and password are required.");
-      return;
-    }
-    const toolName = state.authMode === "login" ? "panel_login" : "panel_create_account";
-    try {
-      const res = await app.callServerTool({ name: toolName, arguments: { username, password } });
-      const data = JSON.parse(res.content[0].text);
-      if (data.success) {
-        state.auth = { hasAccount: true, isAuthenticated: true, username: data.username || username };
-        await loadInitialData();
-      } else {
-        setStatus("err", data.reason || "Authentication failed.");
-      }
-    } catch (err) {
-      setStatus("err", err.message);
-    }
-  }
-
-  async function handleSignout() {
-    try {
-      await app.callServerTool({ name: "panel_signout", arguments: {} });
-    } catch {}
-    state.auth = { hasAccount: true, isAuthenticated: false, username: null };
-    render();
-  }
-
-  /* ------------------- Connections & Saving ------------------- */
 
   function getCredentialsFormValues() {
     return {
@@ -545,8 +820,8 @@
       try {
         const res = await app.callServerTool({ name: "panel_test_connection", arguments: { service: "github", githubToken: vals.GITHUB_TOKEN } });
         const d = JSON.parse(res.content[0].text);
-        if (d.ok || d.valid) setBadge("github", "ok", "✓ " + (d.login || "Connected"));
-        else { setBadge("github", "err", "Failed"); errors.push("GitHub: " + (d.reason || "Failed")); }
+        if (d.ok) setBadge("github", "ok", "✓ " + (d.login || "Connected"));
+        else { setBadge("github", "err", "Failed"); errors.push("GitHub: " + d.reason); }
       } catch (e) { setBadge("github", "err", "Error"); }
     } else setBadge("github", "idle", "Empty");
 
@@ -554,8 +829,8 @@
       try {
         const res = await app.callServerTool({ name: "panel_test_connection", arguments: { service: "notion", notionApiKey: vals.NOTION_API_KEY } });
         const d = JSON.parse(res.content[0].text);
-        if (d.ok || d.valid) setBadge("notion", "ok", "✓ " + (d.botName || "Connected"));
-        else { setBadge("notion", "err", "Failed"); errors.push("Notion: " + (d.reason || "Failed")); }
+        if (d.ok) setBadge("notion", "ok", "✓ " + (d.botName || "Connected"));
+        else { setBadge("notion", "err", "Failed"); errors.push("Notion: " + d.reason); }
       } catch (e) { setBadge("notion", "err", "Error"); }
     } else setBadge("notion", "idle", "Empty");
 
@@ -563,8 +838,8 @@
       try {
         const res = await app.callServerTool({ name: "panel_test_connection", arguments: { service: "qdrant", qdrantUrl: vals.QDRANT_URL, qdrantApiKey: vals.QDRANT_API_KEY } });
         const d = JSON.parse(res.content[0].text);
-        if (d.ok || d.valid) setBadge("qdrant", "ok", "✓ Connected (" + (d.collectionsCount || 0) + " col)");
-        else { setBadge("qdrant", "err", "Failed"); errors.push("Qdrant: " + (d.reason || "Failed")); }
+        if (d.ok) setBadge("qdrant", "ok", "✓ Connected (" + (d.collectionsCount || 0) + " col)");
+        else { setBadge("qdrant", "err", "Failed"); errors.push("Qdrant: " + d.reason); }
       } catch (e) { setBadge("qdrant", "err", "Error"); }
     } else setBadge("qdrant", "idle", "Empty");
 
@@ -572,8 +847,8 @@
       try {
         const res = await app.callServerTool({ name: "panel_test_connection", arguments: { service: "gemini", geminiApiKey: vals.GEMINI_API_KEY } });
         const d = JSON.parse(res.content[0].text);
-        if (d.ok || d.valid) setBadge("gemini", "ok", "✓ " + (d.model || "Connected"));
-        else { setBadge("gemini", "err", "Failed"); errors.push("Gemini: " + (d.reason || "Failed")); }
+        if (d.ok) setBadge("gemini", "ok", "✓ " + (d.model || "Connected"));
+        else { setBadge("gemini", "err", "Failed"); errors.push("Gemini: " + d.reason); }
       } catch (e) { setBadge("gemini", "err", "Error"); }
     } else setBadge("gemini", "idle", "Empty");
 
@@ -581,8 +856,8 @@
       try {
         const res = await app.callServerTool({ name: "panel_test_connection", arguments: { service: "sql", databaseUrl: vals.DATABASE_URL } });
         const d = JSON.parse(res.content[0].text);
-        if (d.ok || d.valid) setBadge("sql", "ok", "✓ " + (d.dialect || "Connected"));
-        else { setBadge("sql", "err", "Failed"); errors.push("SQL: " + (d.reason || "Failed")); }
+        if (d.ok) setBadge("sql", "ok", "✓ " + (d.dialect || "Connected"));
+        else { setBadge("sql", "err", "Failed"); errors.push("SQL: " + d.reason); }
       } catch (e) { setBadge("sql", "err", "Error"); }
     } else setBadge("sql", "idle", "Empty");
 
@@ -604,7 +879,9 @@
       const data = JSON.parse(res.content[0].text);
       if (data.status === "ok") {
         state.credentials = vals;
-        setStatus("ok", "✓ Credentials saved successfully to server/.env and OS keychain!");
+        // Automatically transition to App Configuration tab!
+        switchTopTab("config");
+        return;
       } else {
         setStatus("err", data.message || "Failed to save credentials.");
       }
@@ -613,6 +890,250 @@
     }
     btn.disabled = false;
     btn.textContent = "Save & Connect";
+  }
+
+  /* ------------------- Tab 2: App Configuration ------------------- */
+
+  function renderAppConfigTab(container) {
+    const sub = state.activeSubSession;
+    const selectedCount = Array.from(state.selectedRepos.values()).length;
+
+    container.innerHTML = `
+      <div class="section-intro">
+        <h3>⚙️ Application Configuration</h3>
+        <p>Manage multi-source context sessions, active repositories, and AI system prompt.</p>
+      </div>
+
+      <!-- Sub-Session Pills -->
+      <div class="sub-pills">
+        <button class="sub-pill ${sub === "github" ? "active" : ""}" id="pillGithub">
+          🐙 GitHub (${selectedCount})
+        </button>
+        <button class="sub-pill ${sub === "prompt" ? "active" : ""}" id="pillPrompt">
+          🧠 System Prompt
+        </button>
+        <button class="sub-pill ${sub === "notion" ? "active" : ""}" id="pillNotion">
+          📝 Notion
+        </button>
+        <button class="sub-pill ${sub === "database" ? "active" : ""}" id="pillDatabase">
+          🗄️ Database
+        </button>
+      </div>
+
+      <div id="subSessionContent"></div>
+
+      <div class="btn-row" style="justify-content:space-between; margin-top:20px;">
+        <button class="primary" id="saveAppConfigBtn">💾 Save Application Configuration</button>
+        <span style="font-size:12px;color:var(--muted);" id="saveTimestamp">
+          ${state.updatedAt ? "Updated: " + new Date(state.updatedAt).toLocaleTimeString() : ""}
+        </span>
+      </div>
+
+      <div id="statusBox" class="${state.statusType ? 'status-box ' + state.statusType : 'status-box'}">${esc(state.statusMessage)}</div>
+    `;
+
+    document.getElementById("pillGithub")?.addEventListener("click", () => switchSubSession("github"));
+    document.getElementById("pillPrompt")?.addEventListener("click", () => switchSubSession("prompt"));
+    document.getElementById("pillNotion")?.addEventListener("click", () => switchSubSession("notion"));
+    document.getElementById("pillDatabase")?.addEventListener("click", () => switchSubSession("database"));
+    document.getElementById("saveAppConfigBtn")?.addEventListener("click", saveAppConfig);
+
+    const subContent = document.getElementById("subSessionContent");
+    if (sub === "github") renderGitHubSession(subContent);
+    else if (sub === "prompt") renderPromptSession(subContent);
+    else if (sub === "notion") renderNotionSession(subContent);
+    else if (sub === "database") renderDatabaseSession(subContent);
+  }
+
+  function switchSubSession(sub) {
+    state.activeSubSession = sub;
+    const subContent = document.getElementById("subSessionContent");
+    if (subContent) {
+      if (sub === "github") renderGitHubSession(subContent);
+      else if (sub === "prompt") renderPromptSession(subContent);
+      else if (sub === "notion") renderNotionSession(subContent);
+      else if (sub === "database") renderDatabaseSession(subContent);
+    }
+    // Update active pill UI
+    ["github", "prompt", "notion", "database"].forEach(s => {
+      const el = document.getElementById("pill" + s.charAt(0).toUpperCase() + s.slice(1));
+      if (el) el.className = "sub-pill " + (s === sub ? "active" : "");
+    });
+  }
+
+  /* Sub-session: GitHub */
+  function renderGitHubSession(container) {
+    const filterText = (state.reposSearch || "").toLowerCase();
+    const filteredRepos = state.repos.filter(r => {
+      const name = (typeof r === "string" ? r : (r.fullName || r.full_name || r.name || "")).toLowerCase();
+      const desc = (typeof r === "object" && r.description ? r.description : "").toLowerCase();
+      return name.includes(filterText) || desc.includes(filterText);
+    });
+
+    container.innerHTML = `
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title">🐙 Select Active GitHub Repositories</span>
+          <span style="font-size:12px;color:var(--muted);">
+            ${state.selectedRepos.size} of ${state.repos.length} selected
+          </span>
+        </div>
+
+        <div class="repo-controls">
+          <input type="text" class="repo-search-input" id="repoSearchInput" placeholder="🔍 Search repositories…" value="${esc(state.reposSearch)}" />
+          <button class="secondary" id="selectAllReposBtn" style="font-size:12px;padding:6px 10px;">Select All</button>
+          <button class="secondary" id="clearAllReposBtn" style="font-size:12px;padding:6px 10px;">Clear</button>
+        </div>
+
+        <div class="repo-list" id="repoListContainer">
+          ${filteredRepos.length === 0 ? '<div class="loading">No repositories found. Ensure GitHub token is configured in Credentials tab.</div>' : ''}
+          ${filteredRepos.map(r => {
+      const name = typeof r === "string" ? r : (r.fullName || r.full_name || r.name || "");
+      if (!name) return "";
+      const isSelected = state.selectedRepos.has(name);
+      const desc = state.selectedRepos.get(name) || "";
+      return `
+              <div class="repo-item ${isSelected ? 'selected' : ''}" data-name="${esc(name)}">
+                <div class="repo-main-row" onclick="window._toggleRepo('${esc(name)}')">
+                  <input type="checkbox" class="repo-checkbox" ${isSelected ? 'checked' : ''} />
+                  <span class="repo-name">${esc(name)}</span>
+                  ${typeof r === "object" && r.private ? '<span class="badge idle" style="font-size:10.5px;padding:1px 6px;">Private</span>' : ''}
+                  ${typeof r === "object" && r.language ? `<span class="badge idle" style="font-size:10.5px;padding:1px 6px;">${esc(r.language)}</span>` : ''}
+                </div>
+                ${isSelected ? `
+                  <div class="repo-desc-box">
+                    <input type="text" placeholder="Custom context description for this repo (e.g. Next.js web client)" value="${esc(desc)}" oninput="window._updateRepoDesc('${esc(name)}', this.value)" />
+                  </div>
+                ` : ''}
+              </div>
+            `;
+    }).join('')}
+        </div>
+      </div>
+    `;
+
+    document.getElementById("repoSearchInput")?.addEventListener("input", (e) => {
+      state.reposSearch = e.target.value;
+      renderGitHubSession(container);
+    });
+
+    document.getElementById("selectAllReposBtn")?.addEventListener("click", () => {
+      state.repos.forEach(r => {
+        const name = typeof r === "string" ? r : (r.fullName || r.full_name || r.name || "");
+        if (name && !state.selectedRepos.has(name)) state.selectedRepos.set(name, "");
+      });
+      renderGitHubSession(container);
+    });
+
+    document.getElementById("clearAllReposBtn")?.addEventListener("click", () => {
+      state.selectedRepos.clear();
+      renderGitHubSession(container);
+    });
+  }
+
+
+  window._toggleRepo = function (name) {
+    if (state.selectedRepos.has(name)) {
+      state.selectedRepos.delete(name);
+    } else {
+      state.selectedRepos.set(name, "");
+    }
+    const subContent = document.getElementById("subSessionContent");
+    if (subContent) renderGitHubSession(subContent);
+  };
+
+  window._updateRepoDesc = function (name, desc) {
+    state.selectedRepos.set(name, desc);
+  };
+
+  /* Sub-session: System Prompt */
+  function renderPromptSession(container) {
+    container.innerHTML = `
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title">🧠 AI System Prompt (Markdown)</span>
+          <button class="secondary" id="resetPromptBtn" style="font-size:12px;padding:4px 8px;">Reset to Default</button>
+        </div>
+        <p style="color:var(--muted);font-size:12.5px;margin:0 0 10px;">
+          Define persistent AI behavioral guidelines, response styling, and domain rules.
+        </p>
+        <textarea id="systemPromptArea" placeholder="Enter Markdown system prompt…">${esc(state.systemPrompt)}</textarea>
+      </div>
+    `;
+
+    document.getElementById("systemPromptArea")?.addEventListener("input", (e) => {
+      state.systemPrompt = e.target.value;
+    });
+
+    document.getElementById("resetPromptBtn")?.addEventListener("click", () => {
+      state.systemPrompt = state.defaultSystemPrompt;
+      const area = document.getElementById("systemPromptArea");
+      if (area) area.value = state.systemPrompt;
+    });
+  }
+
+  /* Sub-session: Notion */
+  function renderNotionSession(container) {
+    container.innerHTML = `
+      <div class="card" style="text-align:center;padding:32px 16px;">
+        <span style="font-size:32px;">📝</span>
+        <h4 style="margin:8px 0 4px;font-size:15px;">Notion Workspace Context</h4>
+        <p style="color:var(--muted);font-size:12.5px;max-width:440px;margin:0 auto 16px;">
+          Configure specific Notion database boards, PRDs, and task databases to synchronize into your team context.
+        </p>
+        <span class="badge ok">Token Configured</span>
+      </div>
+    `;
+  }
+
+  /* Sub-session: Database */
+  function renderDatabaseSession(container) {
+    container.innerHTML = `
+      <div class="card" style="text-align:center;padding:32px 16px;">
+        <span style="font-size:32px;">🗄️</span>
+        <h4 style="margin:8px 0 4px;font-size:15px;">SQL Database Context</h4>
+        <p style="color:var(--muted);font-size:12.5px;max-width:440px;margin:0 auto 16px;">
+          Select active SQL schemas, tables, and views queryable by Claude.
+        </p>
+        <span class="badge ok">Ready for queries</span>
+      </div>
+    `;
+  }
+
+  async function saveAppConfig() {
+    const btn = document.getElementById("saveAppConfigBtn");
+    btn.disabled = true;
+    btn.textContent = "Saving…";
+    setStatus(null, "");
+
+    const activeRepos = Array.from(state.selectedRepos.entries()).map(([name, description]) => ({
+      name,
+      description: description || "",
+    }));
+
+    try {
+      const res = await app.callServerTool({
+        name: "config_save_app_config",
+        arguments: {
+          username: state.auth.username || "admin",
+          activeRepos,
+          systemPrompt: state.systemPrompt,
+        },
+      });
+      const data = JSON.parse(res.content[0].text);
+      if (data.status === "ok") {
+        state.updatedAt = data.updatedAt || new Date().toISOString();
+        setStatus("ok", "✓ Application configuration saved to Qdrant app-config collection!");
+        const ts = document.getElementById("saveTimestamp");
+        if (ts) ts.textContent = "Updated: " + new Date().toLocaleTimeString();
+      } else {
+        setStatus("err", data.message || "Failed to save configuration.");
+      }
+    } catch (err) {
+      setStatus("err", "Error: " + err.message);
+    }
+    btn.disabled = false;
+    btn.textContent = "💾 Save Application Configuration";
   }
 
   /* ------------------- Boot ------------------- */
