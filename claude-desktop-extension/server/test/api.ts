@@ -262,8 +262,29 @@ const envWithAuth = await readEnvConfig();
 assert.equal(envWithAuth.AUTH_USERNAME, "alice");
 assert.equal(envWithAuth.AUTH_PASSWORD, "secretpassword123");
 
+// App Config and System Prompt tests
+const { getDefaultSystemPrompt, buildConfigPanel } = await import("../src/utils/helpers.js");
+const defaultPrompt = getDefaultSystemPrompt();
+assert.ok(defaultPrompt.includes("# Role & Purpose"), "default system prompt loads correctly");
+
+const configPanelHtml = buildConfigPanel();
+assert.ok(configPanelHtml.includes("Application Configuration"), "buildConfigPanel includes title");
+assert.ok(configPanelHtml.includes("ExtApps"), "buildConfigPanel inlines ExtApps bundle");
+assert.ok(configPanelHtml.includes("selectedRepos"), "buildConfigPanel includes repo state");
+
+const { getAppConfigPointId } = await import("../src/services/vector-db.js");
+const pointId1 = getAppConfigPointId("Alice");
+const pointId2 = getAppConfigPointId("alice");
+assert.equal(pointId1, pointId2, "point ID is case-insensitive deterministic UUID");
+assert.match(
+  pointId1,
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/,
+  "point ID matches UUID format",
+);
+
 server.close();
 await fs.rm(dir, { recursive: true, force: true });
 console.log("api tests passed");
+
 
 

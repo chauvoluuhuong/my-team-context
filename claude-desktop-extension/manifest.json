@@ -27,8 +27,11 @@
     { "name": "read_repo_file", "description": "Read one file from the active repo" },
     { "name": "search_repo_code", "description": "Search code in the active repo" },
     { "name": "set_active_repo", "description": "Set the active repo by name, without the panel" },
-    { "name": "github_disconnect", "description": "Delete the stored token and clear the active repo" }
+    { "name": "github_disconnect", "description": "Delete the stored token and clear the active repo" },
+    { "name": "configure_app", "description": "Open the interactive configuration widget for selecting active GitHub repositories and customizing system prompt" },
+    { "name": "get_app_config", "description": "Retrieve saved application configuration (active repos, system prompt) from app-config collection" }
   ],
+
   "compatibility": {
     "platforms": ["darwin", "win32", "linux"],
     "runtimes": { "node": ">=20" }

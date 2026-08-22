@@ -269,6 +269,32 @@ export interface OverviewResult extends RepoMetaResult {
 }
 
 /* ------------------------------------------------------------------ *
+ * Application Configuration Types
+ * ------------------------------------------------------------------ */
+
+export interface ActiveRepoConfigItem {
+  name: string;
+  description: string;
+}
+
+export interface AppConfigPayload {
+  username: string;
+  "active-repos": ActiveRepoConfigItem[];
+  systemPrompt?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface AppConfigItem {
+  id: string;
+  username: string;
+  activeRepos: ActiveRepoConfigItem[];
+  systemPrompt: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+/* ------------------------------------------------------------------ *
  * MCP Tool Response Types
  * ------------------------------------------------------------------ */
 
@@ -277,3 +303,4 @@ export interface ToolTextResponse {
   content: Array<{ type: "text"; text: string }>;
   isError?: boolean;
 }
+

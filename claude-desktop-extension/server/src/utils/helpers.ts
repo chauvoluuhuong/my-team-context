@@ -87,3 +87,27 @@ export function buildSkillsPanel(): string {
   const widgetPath = resolveWidgetPath("skills.html");
   return readFileSync(widgetPath, "utf8").replace("/*__EXT_APPS_BUNDLE__*/", () => bundle);
 }
+
+export function buildConfigPanel(): string {
+  const bundle = loadBundle();
+  const widgetPath = resolveWidgetPath("config.html");
+  return readFileSync(widgetPath, "utf8").replace("/*__EXT_APPS_BUNDLE__*/", () => bundle);
+}
+
+export function getDefaultSystemPrompt(): string {
+  const here = path.dirname(fileURLToPath(import.meta.url));
+  const candidatePaths = [
+    path.resolve(here, "..", "DEFAULT_SYSTEM_PROMPT"),
+    path.resolve(here, "..", "..", "DEFAULT_SYSTEM_PROMPT"),
+    path.resolve(process.cwd(), "DEFAULT_SYSTEM_PROMPT"),
+    path.resolve(process.cwd(), "claude-desktop-extension", "server", "DEFAULT_SYSTEM_PROMPT"),
+  ];
+
+  const found = candidatePaths.find((p) => existsSync(p));
+  if (found) {
+    return readFileSync(found, "utf8");
+  }
+
+  return `# Role & Purpose\n\nYou are an intelligent Team Assistant and Context-Aware Engineering Co-Pilot.`;
+}
+

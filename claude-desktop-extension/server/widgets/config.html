@@ -1,0 +1,1014 @@
+<div id="root" class="config-app">
+  <div class="loading">Loading configuration…</div>
+</div>
+
+<style>
+  :root {
+    --bg: #ffffff;
+    --fg: #0f172a;
+    --muted: #64748b;
+    --line: #e2e8f0;
+    --accent: #2563eb;
+    --accent-hover: #1d4ed8;
+    --accent-light: #eff6ff;
+    --ok-bg: #ecfdf5;
+    --ok-fg: #059669;
+    --warn-bg: #fffbeb;
+    --warn-fg: #d97706;
+    --err-bg: #fef2f2;
+    --err-fg: #dc2626;
+    --code-bg: #f8fafc;
+    --card-bg: #ffffff;
+    --card-hover: #f1f5f9;
+    --card-selected: #f0fdf4;
+    --card-selected-border: #86efac;
+    --border: #cbd5e1;
+    --purple-bg: #f3e8ff;
+    --purple-fg: #7e22ce;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #0b0f19;
+      --fg: #f8fafc;
+      --muted: #94a3b8;
+      --line: #1e293b;
+      --accent: #3b82f6;
+      --accent-hover: #60a5fa;
+      --accent-light: #172554;
+      --ok-bg: #064e3b;
+      --ok-fg: #34d399;
+      --warn-bg: #78350f;
+      --warn-fg: #fbbf24;
+      --err-bg: #7f1d1d;
+      --err-fg: #f87171;
+      --code-bg: #111827;
+      --card-bg: #111827;
+      --card-hover: #1e293b;
+      --card-selected: #062e24;
+      --card-selected-border: #059669;
+      --border: #334155;
+      --purple-bg: #3b0764;
+      --purple-fg: #d8b4fe;
+    }
+  }
+
+  * {
+    box-sizing: border-box;
+  }
+
+  .config-app {
+    background: var(--bg);
+    color: var(--fg);
+    font: 13.5px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 20px;
+    max-width: 720px;
+    margin: 0 auto;
+  }
+
+  .header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 16px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--line);
+  }
+
+  h2 {
+    font-size: 17px;
+    font-weight: 700;
+    margin: 0 0 4px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .sub {
+    color: var(--muted);
+    font-size: 12.5px;
+    margin: 0;
+  }
+
+  .header-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .user-badge {
+    font-size: 12px;
+    font-weight: 600;
+    padding: 4px 10px;
+    border-radius: 999px;
+    background: var(--code-bg);
+    border: 1px solid var(--line);
+    color: var(--accent);
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .btn-settings {
+    font-size: 12px;
+    padding: 4px 10px;
+    border-radius: 6px;
+    border: 1px solid var(--border);
+    background: var(--code-bg);
+    color: var(--fg);
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    transition: background 0.15s;
+  }
+
+  .btn-settings:hover {
+    background: var(--card-hover);
+  }
+
+  /* Countdown Alert Banner */
+  .countdown-alert {
+    background: var(--err-bg);
+    border: 1px solid var(--err-fg);
+    color: var(--err-fg);
+    border-radius: 8px;
+    padding: 14px 16px;
+    margin-bottom: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .countdown-alert-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-weight: 600;
+    font-size: 13.5px;
+  }
+
+  .countdown-badge {
+    background: var(--err-fg);
+    color: #fff;
+    font-size: 11.5px;
+    font-weight: 700;
+    padding: 2px 8px;
+    border-radius: 999px;
+  }
+
+  .countdown-alert-msg {
+    font-size: 12.5px;
+    line-height: 1.4;
+  }
+
+  .countdown-actions {
+    display: flex;
+    gap: 8px;
+    margin-top: 4px;
+  }
+
+  .btn-redirect-now {
+    padding: 5px 12px;
+    font-size: 12px;
+    font-weight: 600;
+    border-radius: 6px;
+    border: none;
+    background: var(--err-fg);
+    color: #ffffff;
+    cursor: pointer;
+  }
+
+  .btn-redirect-cancel {
+    padding: 5px 12px;
+    font-size: 12px;
+    font-weight: 500;
+    border-radius: 6px;
+    border: 1px solid var(--err-fg);
+    background: transparent;
+    color: var(--err-fg);
+    cursor: pointer;
+  }
+
+  /* Navigation Tabs */
+  .nav-tabs {
+    display: flex;
+    gap: 6px;
+    margin-bottom: 16px;
+    border-bottom: 1px solid var(--line);
+    padding-bottom: 8px;
+    overflow-x: auto;
+  }
+
+  .nav-tab {
+    padding: 7px 14px;
+    font-size: 13px;
+    font-weight: 600;
+    border: 1px solid transparent;
+    border-radius: 8px;
+    background: transparent;
+    color: var(--muted);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    transition: all 0.15s ease;
+  }
+
+  .nav-tab:hover {
+    background: var(--code-bg);
+    color: var(--fg);
+  }
+
+  .nav-tab.active {
+    background: var(--accent);
+    color: #ffffff;
+    border-color: var(--accent);
+  }
+
+  .tab-badge {
+    font-size: 10.5px;
+    font-weight: 700;
+    padding: 1px 6px;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.25);
+    color: inherit;
+  }
+
+  .nav-tab:not(.active) .tab-badge {
+    background: var(--line);
+    color: var(--muted);
+  }
+
+  /* Filter toolbar */
+  .toolbar {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 14px;
+    flex-wrap: wrap;
+    align-items: center;
+  }
+
+  .search-box {
+    flex: 1;
+    min-width: 220px;
+    position: relative;
+  }
+
+  input[type="text"], textarea {
+    width: 100%;
+    font: 13px/1.4 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    padding: 8px 12px;
+    border-radius: 7px;
+    border: 1px solid var(--border);
+    background: var(--code-bg);
+    color: var(--fg);
+  }
+
+  input[type="text"]:focus, textarea:focus {
+    outline: 2px solid var(--accent);
+    outline-offset: 1px;
+    border-color: transparent;
+  }
+
+  .btn-sm {
+    padding: 6px 12px;
+    font-size: 12px;
+    font-weight: 500;
+    border-radius: 6px;
+    border: 1px solid var(--border);
+    background: var(--code-bg);
+    color: var(--fg);
+    cursor: pointer;
+  }
+
+  .btn-sm:hover {
+    background: var(--card-hover);
+  }
+
+  .btn-sm.active {
+    background: var(--accent);
+    color: #fff;
+    border-color: var(--accent);
+  }
+
+  /* Repo list */
+  .repo-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    max-height: 420px;
+    overflow-y: auto;
+    padding-right: 4px;
+    margin-bottom: 16px;
+  }
+
+  .repo-card {
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 12px 14px;
+    background: var(--card-bg);
+    transition: border-color 0.15s, background-color 0.15s;
+  }
+
+  .repo-card:hover {
+    background: var(--card-hover);
+  }
+
+  .repo-card.selected {
+    background: var(--card-selected);
+    border-color: var(--card-selected-border);
+  }
+
+  .repo-card-top {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+  }
+
+  .repo-checkbox {
+    margin-top: 3px;
+    width: 17px;
+    height: 17px;
+    cursor: pointer;
+    accent-color: var(--accent);
+  }
+
+  .repo-info {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .repo-title-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+
+  .repo-name {
+    font-weight: 600;
+    font-size: 13.5px;
+    color: var(--fg);
+    text-decoration: none;
+    cursor: pointer;
+  }
+
+  .badge {
+    font-size: 10.5px;
+    padding: 2px 7px;
+    border-radius: 999px;
+    font-weight: 600;
+  }
+
+  .badge.private { background: var(--warn-bg); color: var(--warn-fg); }
+  .badge.public { background: var(--ok-bg); color: var(--ok-fg); }
+  .badge.lang { background: var(--purple-bg); color: var(--purple-fg); }
+  .badge.branch { background: var(--code-bg); color: var(--muted); border: 1px solid var(--line); }
+
+  .repo-desc-field {
+    margin-top: 8px;
+    padding-top: 8px;
+    border-top: 1px dashed var(--line);
+  }
+
+  .repo-desc-field label {
+    font-size: 11.5px;
+    font-weight: 600;
+    color: var(--muted);
+    display: block;
+    margin-bottom: 4px;
+  }
+
+  .repo-desc-input {
+    width: 100%;
+    font-size: 12.5px;
+    padding: 6px 10px;
+    border-radius: 6px;
+    border: 1px solid var(--border);
+    background: var(--bg);
+    color: var(--fg);
+  }
+
+  /* Prompt editor */
+  .prompt-session {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin-bottom: 16px;
+  }
+
+  .prompt-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .prompt-textarea {
+    min-height: 280px;
+    font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+    font-size: 12.5px;
+    line-height: 1.5;
+    resize: vertical;
+    white-space: pre;
+  }
+
+  /* Notion session */
+  .notion-placeholder {
+    padding: 36px 20px;
+    text-align: center;
+    border: 2px dashed var(--line);
+    border-radius: 10px;
+    background: var(--code-bg);
+    margin-bottom: 16px;
+  }
+
+  .notion-placeholder h3 {
+    margin: 0 0 6px;
+    font-size: 15px;
+    color: var(--fg);
+  }
+
+  .notion-placeholder p {
+    margin: 0;
+    font-size: 13px;
+    color: var(--muted);
+  }
+
+  /* Sticky Footer & Action */
+  .footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding-top: 14px;
+    border-top: 1px solid var(--line);
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+
+  .footer-meta {
+    font-size: 11.5px;
+    color: var(--muted);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .btn-submit {
+    padding: 9px 18px;
+    font-size: 13px;
+    font-weight: 600;
+    border-radius: 7px;
+    border: none;
+    background: var(--accent);
+    color: #ffffff;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    transition: background 0.15s;
+  }
+
+  .btn-submit:hover:not(:disabled) {
+    background: var(--accent-hover);
+  }
+
+  .btn-submit:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+
+  .status-box {
+    margin-top: 12px;
+    padding: 9px 12px;
+    border-radius: 7px;
+    font-size: 12.5px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .status-box.ok {
+    background: var(--ok-bg);
+    color: var(--ok-fg);
+    border: 1px solid var(--card-selected-border);
+  }
+
+  .status-box.err {
+    background: var(--err-bg);
+    color: var(--err-fg);
+    border: 1px solid var(--err-fg);
+  }
+
+  .empty-msg {
+    text-align: center;
+    color: var(--muted);
+    padding: 30px 10px;
+    font-size: 13px;
+  }
+</style>
+
+<script type="module">
+  /*__EXT_APPS_BUNDLE__*/
+
+  const { App } = globalThis.ExtApps;
+  const root = document.getElementById("root");
+  const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+
+  const app = new App({ name: "AppConfigPanel", version: "1.0.0" }, {}, { autoResize: true });
+
+  let state = {
+    username: "",
+    githubLogin: "",
+    isGitHubConnected: false,
+    githubError: null,
+    repos: [],
+    // Map of repoName -> { selected: boolean, description: string }
+    selectedRepos: new Map(),
+    systemPrompt: "",
+    defaultSystemPrompt: "",
+    createdAt: "",
+    updatedAt: "",
+    activeTab: "github", // 'github' | 'prompt' | 'notion'
+    searchQuery: "",
+    filterPrivate: "all", // 'all' | 'public' | 'private' | 'selected'
+    statusMessage: null,
+    statusType: "ok",
+    isSaving: false,
+    // Countdown redirect state
+    countdown: null,
+    countdownTimer: null,
+    errorMessage: null,
+  };
+
+  function formatTime(isoStr) {
+    if (!isoStr) return "Never";
+    try {
+      const d = new Date(isoStr);
+      return d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", month: "short", day: "numeric" });
+    } catch {
+      return isoStr;
+    }
+  }
+
+  function startRedirectCountdown(msg) {
+    state.errorMessage = msg;
+    state.countdown = 10;
+    if (state.countdownTimer) clearInterval(state.countdownTimer);
+
+    state.countdownTimer = setInterval(() => {
+      state.countdown -= 1;
+      if (state.countdown <= 0) {
+        clearInterval(state.countdownTimer);
+        state.countdownTimer = null;
+        state.countdown = null;
+        navigateToInitSettings();
+      } else {
+        render();
+      }
+    }, 1000);
+    render();
+  }
+
+  function cancelRedirectCountdown() {
+    if (state.countdownTimer) {
+      clearInterval(state.countdownTimer);
+      state.countdownTimer = null;
+    }
+    state.countdown = null;
+    state.errorMessage = null;
+    render();
+  }
+
+  async function navigateToInitSettings() {
+    try {
+      await app.callServerTool({
+        name: "connect_team_context",
+        arguments: {},
+      });
+    } catch {
+      // Fallback
+    }
+  }
+
+  app.ontoolresult = async ({ content }) => {
+    try {
+      const data = JSON.parse(content[0].text);
+      processStateData(data);
+    } catch (e) {
+      await loadState();
+    }
+  };
+
+  function processStateData(data) {
+    state.username = data.username || "admin";
+    state.githubLogin = data.githubLogin || "";
+    state.isGitHubConnected = Boolean(data.isGitHubConnected);
+    state.githubError = data.githubError || null;
+    state.repos = Array.isArray(data.repos) ? data.repos : [];
+    state.defaultSystemPrompt = data.defaultSystemPrompt || "";
+
+    const appConfig = data.appConfig || {};
+    state.systemPrompt = appConfig.systemPrompt || data.defaultSystemPrompt || "";
+    state.createdAt = appConfig.createdAt || "";
+    state.updatedAt = appConfig.updatedAt || "";
+
+    // Populate selected repos map
+    state.selectedRepos.clear();
+    const activeList = appConfig.activeRepos || [];
+    activeList.forEach((r) => {
+      if (r && r.name) {
+        state.selectedRepos.set(r.name, {
+          selected: true,
+          description: r.description || "",
+        });
+      }
+    });
+
+    if (!state.isGitHubConnected || state.githubError) {
+      const reason = state.githubError || "GitHub is not connected or Personal Access Token is missing.";
+      startRedirectCountdown(reason);
+    } else {
+      render();
+    }
+  }
+
+  async function loadState() {
+    try {
+      const res = await app.callServerTool({
+        name: "config_get_app_state",
+        arguments: {},
+      });
+      const data = JSON.parse(res.content[0].text);
+      processStateData(data);
+    } catch (err) {
+      state.statusType = "err";
+      state.statusMessage = "Failed to load state: " + err.message;
+      startRedirectCountdown(err.message);
+    }
+  }
+
+  function getSelectedCount() {
+    let count = 0;
+    for (const [_, item] of state.selectedRepos.entries()) {
+      if (item.selected) count++;
+    }
+    return count;
+  }
+
+  function getFilteredRepos() {
+    const q = state.searchQuery.toLowerCase().trim();
+    return state.repos.filter((repo) => {
+      const nameMatch = !q || repo.fullName.toLowerCase().includes(q) || (repo.description || "").toLowerCase().includes(q);
+      if (!nameMatch) return false;
+
+      const isSelected = state.selectedRepos.get(repo.fullName)?.selected;
+      if (state.filterPrivate === "public" && repo.private) return false;
+      if (state.filterPrivate === "private" && !repo.private) return false;
+      if (state.filterPrivate === "selected" && !isSelected) return false;
+
+      return true;
+    });
+  }
+
+  function render() {
+    if (!root) return;
+
+    const selectedCount = getSelectedCount();
+    const filteredRepos = getFilteredRepos();
+
+    root.innerHTML = `
+      <!-- Header -->
+      <div class="header">
+        <div>
+          <h2>⚙️ Configure Application</h2>
+          <p class="sub">Configure active repositories, system prompt, and integrations saved to <code>app-config</code>.</p>
+        </div>
+        <div class="header-actions">
+          <button class="btn-settings" id="openSettingsBtn" title="Open Settings Panel">
+            ⚙️ Edit Credentials
+          </button>
+          <div class="user-badge">
+            👤 @${esc(state.username || state.githubLogin || 'admin')}
+          </div>
+        </div>
+      </div>
+
+      <!-- Countdown Error Banner if any -->
+      ${
+        state.errorMessage && state.countdown !== null
+          ? `
+            <div class="countdown-alert">
+              <div class="countdown-alert-top">
+                <span>⚠️ Configuration Issue Encountered</span>
+                <span class="countdown-badge">Redirecting in ${state.countdown}s</span>
+              </div>
+              <div class="countdown-alert-msg">${esc(state.errorMessage)}</div>
+              <div class="countdown-actions">
+                <button class="btn-redirect-now" id="redirectNowBtn">⚙️ Edit Credentials Now</button>
+                <button class="btn-redirect-cancel" id="redirectCancelBtn">Stay Here</button>
+              </div>
+            </div>
+          `
+          : ''
+      }
+
+      <!-- Navigation Tabs -->
+      <div class="nav-tabs">
+        <button class="nav-tab ${state.activeTab === 'github' ? 'active' : ''}" data-tab="github">
+          🐙 GitHub Repositories
+          <span class="tab-badge">${selectedCount}</span>
+        </button>
+        <button class="nav-tab ${state.activeTab === 'prompt' ? 'active' : ''}" data-tab="prompt">
+          🧠 System Prompt
+        </button>
+        <button class="nav-tab ${state.activeTab === 'notion' ? 'active' : ''}" data-tab="notion">
+          📝 Notion Integration
+        </button>
+      </div>
+
+      <!-- Tab 1: GitHub -->
+      <div id="tabContent-github" style="display: ${state.activeTab === 'github' ? 'block' : 'none'}">
+        <div class="toolbar">
+          <div class="search-box">
+            <input type="text" id="repoSearch" placeholder="🔍 Search repositories…" value="${esc(state.searchQuery)}" />
+          </div>
+          <button class="btn-sm ${state.filterPrivate === 'all' ? 'active' : ''}" data-filter="all">All (${state.repos.length})</button>
+          <button class="btn-sm ${state.filterPrivate === 'selected' ? 'active' : ''}" data-filter="selected">Selected (${selectedCount})</button>
+          <button class="btn-sm" id="selectAllBtn">Select All</button>
+          <button class="btn-sm" id="deselectAllBtn">Clear All</button>
+        </div>
+
+        <div class="repo-list">
+          ${
+            filteredRepos.length === 0
+              ? `<div class="empty-msg">
+                  ${
+                    !state.isGitHubConnected
+                      ? `GitHub not connected. Click <strong>Edit Credentials</strong> to provide a GitHub Personal Access Token.`
+                      : `No repositories found matching current filter.`
+                  }
+                </div>`
+              : filteredRepos
+                  .map((repo) => {
+                    const selState = state.selectedRepos.get(repo.fullName);
+                    const isSelected = Boolean(selState?.selected);
+                    const customDesc = selState ? selState.description : (repo.description || "");
+
+                    return `
+                      <div class="repo-card ${isSelected ? 'selected' : ''}" data-repo="${esc(repo.fullName)}">
+                        <div class="repo-card-top">
+                          <input type="checkbox" class="repo-checkbox" data-repo="${esc(repo.fullName)}" ${isSelected ? 'checked' : ''} />
+                          <div class="repo-info">
+                            <div class="repo-title-row">
+                              <span class="repo-name" data-repo="${esc(repo.fullName)}">${esc(repo.fullName)}</span>
+                              <span class="badge ${repo.private ? 'private' : 'public'}">${repo.private ? 'Private' : 'Public'}</span>
+                              ${repo.language ? `<span class="badge lang">${esc(repo.language)}</span>` : ''}
+                              ${repo.defaultBranch ? `<span class="badge branch">${esc(repo.defaultBranch)}</span>` : ''}
+                            </div>
+                            <div class="repo-desc-field">
+                              <label>Description / Context Notes:</label>
+                              <input
+                                type="text"
+                                class="repo-desc-input"
+                                data-repo="${esc(repo.fullName)}"
+                                placeholder="Add custom notes or context for AI regarding this repo…"
+                                value="${esc(customDesc)}"
+                              />
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    `;
+                  })
+                  .join("")
+          }
+        </div>
+      </div>
+
+      <!-- Tab 2: System Prompt -->
+      <div id="tabContent-prompt" style="display: ${state.activeTab === 'prompt' ? 'block' : 'none'}">
+        <div class="prompt-session">
+          <div class="prompt-header">
+            <span style="font-weight:600; font-size:12.5px; color:var(--muted);">Markdown System Instructions for Co-Pilot</span>
+            <button class="btn-sm" id="resetPromptBtn">🔄 Reset to Default</button>
+          </div>
+          <textarea id="systemPromptArea" class="prompt-textarea" placeholder="Enter custom Markdown system prompt…">${esc(state.systemPrompt)}</textarea>
+        </div>
+      </div>
+
+      <!-- Tab 3: Notion -->
+      <div id="tabContent-notion" style="display: ${state.activeTab === 'notion' ? 'block' : 'none'}">
+        <div class="notion-placeholder">
+          <div style="font-size:32px; margin-bottom:8px;">📝</div>
+          <h3>Notion Workspace Configuration</h3>
+          <p>Multi-session configuration for Notion databases and page contexts is coming soon.</p>
+        </div>
+      </div>
+
+      <!-- Sticky Footer -->
+      <div class="footer">
+        <div class="footer-meta">
+          <span>Selected: <strong>${selectedCount}</strong> active repos</span>
+          <span>•</span>
+          <span>Last saved: <strong>${formatTime(state.updatedAt)}</strong></span>
+        </div>
+        <button class="btn-submit" id="saveConfigBtn" ${state.isSaving ? 'disabled' : ''}>
+          ${state.isSaving ? 'Saving…' : '💾 Save Application Configuration'}
+        </button>
+      </div>
+
+      <!-- Status Banner -->
+      ${
+        state.statusMessage
+          ? `<div class="status-box ${state.statusType}">${esc(state.statusMessage)}</div>`
+          : ''
+      }
+    `;
+
+    attachEvents();
+  }
+
+  function attachEvents() {
+    // Open Settings / Credentials
+    document.getElementById("openSettingsBtn")?.addEventListener("click", () => navigateToInitSettings());
+    document.getElementById("redirectNowBtn")?.addEventListener("click", () => navigateToInitSettings());
+    document.getElementById("redirectCancelBtn")?.addEventListener("click", () => cancelRedirectCountdown());
+
+    // Tabs
+    document.querySelectorAll(".nav-tab").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        state.activeTab = btn.dataset.tab;
+        render();
+      });
+    });
+
+    // Search
+    const searchInput = document.getElementById("repoSearch");
+    searchInput?.addEventListener("input", (e) => {
+      state.searchQuery = e.target.value;
+      const listEl = document.querySelector(".repo-list");
+      if (listEl) {
+        render();
+        const reInput = document.getElementById("repoSearch");
+        if (reInput) {
+          reInput.focus();
+          reInput.setSelectionRange(reInput.value.length, reInput.value.length);
+        }
+      }
+    });
+
+    // Filters
+    document.querySelectorAll("[data-filter]").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        state.filterPrivate = btn.dataset.filter;
+        render();
+      });
+    });
+
+    // Select All / Clear All
+    document.getElementById("selectAllBtn")?.addEventListener("click", () => {
+      const filtered = getFilteredRepos();
+      filtered.forEach((r) => {
+        const existing = state.selectedRepos.get(r.fullName);
+        state.selectedRepos.set(r.fullName, {
+          selected: true,
+          description: existing?.description || r.description || "",
+        });
+      });
+      render();
+    });
+
+    document.getElementById("deselectAllBtn")?.addEventListener("click", () => {
+      state.selectedRepos.clear();
+      render();
+    });
+
+    // Checkboxes
+    document.querySelectorAll(".repo-checkbox").forEach((cb) => {
+      cb.addEventListener("change", (e) => {
+        const repoName = e.target.dataset.repo;
+        const checked = e.target.checked;
+        const current = state.selectedRepos.get(repoName);
+        const repoObj = state.repos.find((r) => r.fullName === repoName);
+
+        if (checked) {
+          state.selectedRepos.set(repoName, {
+            selected: true,
+            description: current?.description || repoObj?.description || "",
+          });
+        } else {
+          if (current) {
+            current.selected = false;
+          }
+        }
+        render();
+      });
+    });
+
+    // Repo Name click toggles checkbox
+    document.querySelectorAll(".repo-name").forEach((el) => {
+      el.addEventListener("click", () => {
+        const repoName = el.dataset.repo;
+        const current = state.selectedRepos.get(repoName);
+        const isSelected = !Boolean(current?.selected);
+        const repoObj = state.repos.find((r) => r.fullName === repoName);
+
+        state.selectedRepos.set(repoName, {
+          selected: isSelected,
+          description: current?.description || repoObj?.description || "",
+        });
+        render();
+      });
+    });
+
+    // Custom descriptions input
+    document.querySelectorAll(".repo-desc-input").forEach((inp) => {
+      inp.addEventListener("input", (e) => {
+        const repoName = e.target.dataset.repo;
+        const desc = e.target.value;
+        const current = state.selectedRepos.get(repoName);
+        state.selectedRepos.set(repoName, {
+          selected: current ? current.selected : false,
+          description: desc,
+        });
+      });
+    });
+
+    // System prompt textarea
+    const promptArea = document.getElementById("systemPromptArea");
+    promptArea?.addEventListener("input", (e) => {
+      state.systemPrompt = e.target.value;
+    });
+
+    // Reset prompt button
+    document.getElementById("resetPromptBtn")?.addEventListener("click", () => {
+      state.systemPrompt = state.defaultSystemPrompt;
+      const area = document.getElementById("systemPromptArea");
+      if (area) area.value = state.defaultSystemPrompt;
+    });
+
+    // Submit / Save
+    document.getElementById("saveConfigBtn")?.addEventListener("click", () => handleSave());
+  }
+
+  async function handleSave() {
+    state.isSaving = true;
+    state.statusMessage = null;
+    render();
+
+    // Prepare active-repos array: { name, description }
+    const activeRepos = [];
+    for (const [repoName, item] of state.selectedRepos.entries()) {
+      if (item.selected) {
+        activeRepos.push({
+          name: repoName,
+          description: item.description || "",
+        });
+      }
+    }
+
+    try {
+      const res = await app.callServerTool({
+        name: "config_save_app_config",
+        arguments: {
+          username: state.username,
+          activeRepos,
+          systemPrompt: state.systemPrompt,
+        },
+      });
+
+      const data = JSON.parse(res.content[0].text);
+      if (data.status === "ok") {
+        state.statusType = "ok";
+        state.statusMessage = `✓ Configuration saved to app-config collection! (${activeRepos.length} active repos)`;
+        if (data.config?.updatedAt) {
+          state.updatedAt = data.config.updatedAt;
+        }
+      } else {
+        state.statusType = "err";
+        state.statusMessage = data.message || "Failed to save configuration.";
+        startRedirectCountdown(state.statusMessage);
+      }
+    } catch (err) {
+      state.statusType = "err";
+      state.statusMessage = `Save failed: ${err.message}`;
+      startRedirectCountdown(err.message);
+    } finally {
+      state.isSaving = false;
+      render();
+    }
+  }
+
+  // Connect and start ExtApps
+  try {
+    await app.connect();
+    await loadState();
+  } catch (err) {
+    state.statusType = "err";
+    state.statusMessage = "Initialization error: " + err.message;
+    startRedirectCountdown(err.message);
+  }
+</script>

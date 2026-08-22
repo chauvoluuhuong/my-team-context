@@ -15,9 +15,14 @@ import type {
   SkillItem,
   SkillSearchResult,
   ListSkillsResult,
+  ActiveRepoConfigItem,
+  AppConfigItem,
+  AppConfigPayload,
 } from "../tools/types.js";
 
 export const KNOWLEDGE_BASE_COLLECTION = "knowledge-base";
+export const APP_CONFIG_COLLECTION = "app-config";
+
 
 /**
  * Clean endpoint URL to ensure proper protocol and no trailing slash.
@@ -571,4 +576,233 @@ export async function searchSkills(
   }
 }
 
+/* ------------------------------------------------------------------ *
+ * App Configuration Collection Management (app-config)
+ * ------------------------------------------------------------------ */
+
+/**
+ * Generate deterministic UUID for a user's app-config document in Qdrant.
+ */
+export function getAppConfigPointId(username: string): string {
+  const hash = crypto
+    .createHash("md5")
+    .update(`app-config:${username.trim().toLowerCase()}`)
+    .digest("hex");
+  return `${hash.slice(0, 8)}-${hash.slice(8, 12)}-${hash.slice(12, 16)}-${hash.slice(16, 20)}-${hash.slice(20, 32)}`;
+}
+
+/**
+ * Retrieve app configuration for a user from the app-config Qdrant collection.
+ */
+export async function getAppConfig(
+  username?: string,
+  collectionName: string = APP_CONFIG_COLLECTION,
+): Promise<AppConfigItem | null> {
+  const { endpoint, apiKey } = await getActiveQdrantConfig();
+  await ensureCollection(collectionName);
+
+  const headers = qdrantHeaders(apiKey);
+
+  if (username && username.trim()) {
+    const pointId = getAppConfigPointId(username);
+    try {
+      const res = await fetch(
+        `${endpoint}/collections/${collectionName}/points/${encodeURIComponent(pointId)}`,
+        {
+          method: "GET",
+          headers,
+        },
+      );
+
+      if (res.ok) {
+        const data = (await res.json()) as {
+          result?: {
+            id: string | number;
+            payload?: {
+              username?: string;
+              "active-repos"?: Array<{ name?: string; description?: string }>;
+              activeRepos?: Array<{ name?: string; description?: string }>;
+              systemPrompt?: string;
+              createdAt?: string;
+              updatedAt?: string;
+            };
+          };
+        };
+
+        if (data.result?.payload) {
+          const p = data.result.payload;
+          const rawRepos = p["active-repos"] || p.activeRepos || [];
+          const activeRepos: ActiveRepoConfigItem[] = rawRepos.map((r) => ({
+            name: r.name || "",
+            description: r.description || "",
+          }));
+
+          return {
+            id: String(data.result.id),
+            username: p.username || username,
+            activeRepos,
+            systemPrompt: p.systemPrompt || "",
+            createdAt: p.createdAt || new Date().toISOString(),
+            updatedAt: p.updatedAt || new Date().toISOString(),
+          };
+        }
+      }
+    } catch {
+      // Fallback to scroll below
+    }
+  }
+
+  // Scroll fallback or get latest configured
+  try {
+    const res = await fetch(`${endpoint}/collections/${collectionName}/points/scroll`, {
+      method: "POST",
+      headers,
+      body: JSON.stringify({
+        limit: 10,
+        with_payload: true,
+        with_vector: false,
+      }),
+    });
+
+    if (!res.ok) return null;
+
+    const data = (await res.json()) as {
+      result?: {
+        points?: Array<{
+          id: string | number;
+          payload?: {
+            username?: string;
+            "active-repos"?: Array<{ name?: string; description?: string }>;
+            activeRepos?: Array<{ name?: string; description?: string }>;
+            systemPrompt?: string;
+            createdAt?: string;
+            updatedAt?: string;
+          };
+        }>;
+      };
+    };
+
+    const points = data.result?.points ?? [];
+    if (points.length === 0) return null;
+
+    const matched = username?.trim()
+      ? points.find(
+          (p) => p.payload?.username?.toLowerCase() === username.trim().toLowerCase(),
+        )
+      : points[0];
+
+    if (!matched || !matched.payload) return null;
+
+    const rawRepos = matched.payload["active-repos"] || matched.payload.activeRepos || [];
+    const activeRepos: ActiveRepoConfigItem[] = rawRepos.map((r) => ({
+      name: r.name || "",
+      description: r.description || "",
+    }));
+
+    return {
+      id: String(matched.id),
+      username: matched.payload.username || username || "",
+      activeRepos,
+      systemPrompt: matched.payload.systemPrompt || "",
+      createdAt: matched.payload.createdAt || new Date().toISOString(),
+      updatedAt: matched.payload.updatedAt || new Date().toISOString(),
+    };
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : String(err);
+    throw new RepoContextError(`Failed to retrieve app config: ${message}`);
+  }
+}
+
+/**
+ * Save or update app configuration in the app-config Qdrant collection.
+ */
+export async function saveAppConfig(
+  params: {
+    username: string;
+    activeRepos: ActiveRepoConfigItem[];
+    systemPrompt?: string;
+  },
+  collectionName: string = APP_CONFIG_COLLECTION,
+): Promise<AppConfigItem> {
+  const username = params.username?.trim();
+  if (!username) {
+    throw new RepoContextError("Username is required to save application configuration.");
+  }
+
+  const { endpoint, apiKey } = await getActiveQdrantConfig();
+  await ensureCollection(collectionName);
+
+  const pointId = getAppConfigPointId(username);
+  const existing = await getAppConfig(username, collectionName).catch(() => null);
+
+  const now = new Date().toISOString();
+  const createdAt = existing?.createdAt || now;
+  const updatedAt = now;
+
+  const cleanRepos: ActiveRepoConfigItem[] = (params.activeRepos || []).map((r) => ({
+    name: (r.name || "").trim(),
+    description: (r.description || "").trim(),
+  }));
+
+  const systemPrompt =
+    params.systemPrompt !== undefined
+      ? params.systemPrompt
+      : existing?.systemPrompt || "";
+
+  const payload: AppConfigPayload = {
+    username,
+    "active-repos": cleanRepos,
+    systemPrompt,
+    createdAt,
+    updatedAt,
+  };
+
+  // Generate embedding vector or fallback to zero vector
+  let vector: number[];
+  try {
+    const summary = `App config for @${username}. Active repos: ${cleanRepos.map((r) => `${r.name} (${r.description})`).join(", ")}`;
+    vector = await generateGeminiEmbedding(summary);
+  } catch {
+    vector = new Array(GEMINI_VECTOR_SIZE).fill(0);
+  }
+
+  const headers = qdrantHeaders(apiKey);
+  try {
+    const res = await fetch(`${endpoint}/collections/${collectionName}/points?wait=true`, {
+      method: "PUT",
+      headers,
+      body: JSON.stringify({
+        points: [
+          {
+            id: pointId,
+            vector,
+            payload,
+          },
+        ],
+      }),
+    });
+
+    if (!res.ok) {
+      const errText = await res.text().catch(() => res.statusText);
+      throw new RepoContextError(
+        `Failed to save app config into Qdrant collection "${collectionName}": ${errText}`,
+      );
+    }
+
+    return {
+      id: pointId,
+      username,
+      activeRepos: cleanRepos,
+      systemPrompt,
+      createdAt,
+      updatedAt,
+    };
+  } catch (err: unknown) {
+    if (err instanceof RepoContextError) throw err;
+    const message = err instanceof Error ? err.message : String(err);
+    throw new RepoContextError(`Could not save app config: ${message}`);
+  }
+}
+
 export { readQdrantConfig, saveQdrantConfig, clearQdrantConfig };
+
