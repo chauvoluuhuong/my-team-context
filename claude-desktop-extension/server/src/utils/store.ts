@@ -79,8 +79,7 @@ export async function saveSecret(account: string, value: string): Promise<SaveTo
   if (kind === "security") {
     const { code } = await run(
       "security",
-      ["add-generic-password", "-U", "-a", account, "-s", SERVICE, "-w"],
-      `${value}\n${value}\n`,
+      ["add-generic-password", "-U", "-a", account, "-s", SERVICE, "-w", value],
     );
     if (code === 0) return { stored: "keychain" };
   }
