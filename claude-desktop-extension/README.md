@@ -93,7 +93,8 @@ the same, so the manifest version is the only thing that distinguishes builds.
 
 | Script | Does |
 |---|---|
-| `npm --prefix server run build` | The whole chain: deps → validate → test → pack |
+| `npm --prefix server run build` | The whole chain: TS build → test → validate → deps → pack |
+| `npm --prefix server run build:ts` | TypeScript compilation only (`tsc`) |
 | `npm --prefix server run validate` | Manifest schema check on its own |
 | `npm --prefix server run build:pack` | Re-zip only, skipping deps and tests |
 | `npm --prefix server run info` | Size and signature status of the built bundle |
@@ -106,24 +107,35 @@ ships to every user.
 
 ```
 manifest.json               # MCPB manifest — entry point, tool list, metadata
-server/src/index.js         # MCP server: tool registration, panel resource
-server/src/github.js        # GitHub REST calls (read-only)
-server/src/store.js         # Keychain token storage + active-repo state
+server/src/index.ts         # MCP server entry point: tool registration, panel resource
+server/src/types.ts         # TypeScript interfaces & domain types
+server/src/tools/github.ts  # GitHub REST calls (read-only) & tool handlers
+server/src/utils/store.ts   # Keychain token storage + active-repo state
+server/src/utils/helpers.ts # Response formatting, error handling, widget builder
 server/widgets/panel.html   # The sign-in / repo-picker panel
-server/test/api.mjs         # Read path against a stub GitHub — no credential
-server/test/smoke.mjs       # Server starts, tools register, panel renders
+server/test/api.ts          # Read path against a stub GitHub — no credential
+server/test/smoke.ts        # Server starts, tools register, panel renders
 ```
 
-## Tests
+## Tests & Development
 
 ```bash
+# Run tests
 npm --prefix server test
 npm --prefix server run smoke
+
+# Interactive MCP Inspector with Hot-Reload (auto-restarts on code change)
+npm run dev
+
+# Interactive MCP Inspector (runs compiled server)
+npm run inspect
 ```
 
-Neither test touches a real token or reaches github.com: `api.mjs` runs against
-a local stub that rejects anything but its fake credential, and `smoke.mjs`
+Neither test touches a real token or reaches github.com: `api.ts` runs against
+a local stub that rejects anything but its fake credential, and `smoke.ts`
 drives the server over stdio with a throwaway data directory.
+
+When using `npm run dev`, `tsx watch` continuously monitors `src/` and restarts the MCP server automatically whenever you modify your TypeScript code.
 
 ## Environment overrides
 

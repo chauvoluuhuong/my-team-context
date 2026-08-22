@@ -1,0 +1,403 @@
+<div id="root" class="panel">
+  <div class="loading">Loading configuration…</div>
+</div>
+
+<style>
+  :root {
+    --bg: #ffffff;
+    --fg: #111827;
+    --muted: #6b7280;
+    --line: #e5e7eb;
+    --accent: #2563eb;
+    --accent-hover: #1d4ed8;
+    --ok-bg: #ecfdf5;
+    --ok-fg: #059669;
+    --warn-bg: #fffbeb;
+    --warn-fg: #d97706;
+    --err-bg: #fef2f2;
+    --err-fg: #dc2626;
+    --code-bg: #f9fafb;
+    --card-bg: #ffffff;
+    --border: #e5e7eb;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #111827;
+      --fg: #f9fafb;
+      --muted: #9ca3af;
+      --line: #374151;
+      --accent: #3b82f6;
+      --accent-hover: #60a5fa;
+      --ok-bg: #064e3b;
+      --ok-fg: #34d399;
+      --warn-bg: #78350f;
+      --warn-fg: #fbbf24;
+      --err-bg: #7f1d1d;
+      --err-fg: #f87171;
+      --code-bg: #1f2937;
+      --card-bg: #1e293b;
+      --border: #334155;
+    }
+  }
+
+  * { box-sizing: border-box; }
+
+  .panel {
+    background: var(--bg);
+    color: var(--fg);
+    font: 13.5px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 20px;
+    max-width: 520px;
+  }
+
+  h2 { font-size: 16px; font-weight: 600; margin: 0 0 4px; display: flex; align-items: center; gap: 8px; }
+  .sub { color: var(--muted); font-size: 12.5px; margin: 0 0 16px; }
+  .loading { color: var(--muted); padding: 12px 0; }
+
+  .service-card {
+    border: 1px solid var(--border);
+    border-radius: 9px;
+    padding: 12px 14px;
+    margin-bottom: 12px;
+    background: var(--card-bg);
+  }
+
+  .service-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+  }
+
+  .service-title {
+    font-weight: 600;
+    font-size: 13px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .badge {
+    font-size: 11px;
+    padding: 2px 7px;
+    border-radius: 999px;
+    font-weight: 500;
+  }
+  .badge.idle { background: var(--line); color: var(--muted); }
+  .badge.ok { background: var(--ok-bg); color: var(--ok-fg); }
+  .badge.err { background: var(--err-bg); color: var(--err-fg); }
+  .badge.checking { background: var(--warn-bg); color: var(--warn-fg); }
+
+  .field-group { margin-top: 6px; }
+  .field-label { display: block; font-size: 11.5px; color: var(--muted); margin-bottom: 4px; }
+
+  input[type="password"], input[type="text"] {
+    width: 100%;
+    font: 12.5px/1.4 ui-monospace, SFMono-Regular, "SF Mono", Menlo, monospace;
+    padding: 7px 9px;
+    border-radius: 6px;
+    border: 1px solid var(--line);
+    background: var(--code-bg);
+    color: var(--fg);
+  }
+  input:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
+
+  .btn-row {
+    display: flex;
+    gap: 8px;
+    margin-top: 16px;
+  }
+
+  button {
+    font: inherit;
+    font-size: 13px;
+    font-weight: 500;
+    padding: 9px 14px;
+    border-radius: 7px;
+    border: 1px solid var(--line);
+    background: transparent;
+    color: var(--fg);
+    cursor: pointer;
+    transition: all 0.15s ease;
+  }
+  button.primary {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: #ffffff;
+    flex: 1;
+  }
+  button:hover:not(:disabled) { filter: brightness(1.08); }
+  button:disabled { opacity: 0.5; cursor: default; }
+
+  .status-box {
+    margin-top: 12px;
+    padding: 9px 12px;
+    border-radius: 7px;
+    font-size: 12.5px;
+    line-height: 1.4;
+  }
+  .status-box.ok { background: var(--ok-bg); color: var(--ok-fg); }
+  .status-box.warn { background: var(--warn-bg); color: var(--warn-fg); }
+  .status-box.err { background: var(--err-bg); color: var(--err-fg); }
+
+  .hint {
+    margin-top: 14px;
+    padding-top: 10px;
+    border-top: 1px solid var(--line);
+    color: var(--muted);
+    font-size: 11.5px;
+  }
+  .hint code { background: var(--code-bg); padding: 1px 4px; border-radius: 3px; }
+</style>
+
+<script type="module">
+  /*__EXT_APPS_BUNDLE__*/
+  const { App } = globalThis.ExtApps;
+  const root = document.getElementById("root");
+  const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+
+  const app = new App({ name: "TeamContextPanel", version: "1.0.0" }, {}, { autoResize: true });
+
+  let config = {};
+
+  app.ontoolresult = async ({ content }) => {
+    try {
+      const data = JSON.parse(content[0].text);
+      config = data.config ?? {};
+      renderForm(data.teamStatus);
+    } catch {
+      renderForm();
+    }
+  };
+
+  function renderForm(teamStatus) {
+    root.innerHTML = `
+      <h2>⚡ Team Context Connections</h2>
+      <p class="sub">Configure credentials to connect GitHub, Notion, Qdrant, and SQL Database.</p>
+
+      <!-- GitHub -->
+      <div class="service-card">
+        <div class="service-header">
+          <span class="service-title">🐙 GitHub</span>
+          <span class="badge ${teamStatus?.github?.authenticated ? 'ok' : 'idle'}" id="badge-github">
+            ${teamStatus?.github?.authenticated ? '✓ ' + (teamStatus.github.login || 'Connected') : 'Not tested'}
+          </span>
+        </div>
+        <div class="field-group">
+          <label class="field-label" for="githubToken">Personal Access Token (classic or fine-grained)</label>
+          <input type="password" id="githubToken" placeholder="ghp_… or github_pat_…" value="${esc(config.GITHUB_TOKEN || '')}" />
+        </div>
+      </div>
+
+      <!-- Notion -->
+      <div class="service-card">
+        <div class="service-header">
+          <span class="service-title">📝 Notion</span>
+          <span class="badge ${teamStatus?.notion?.connected ? 'ok' : 'idle'}" id="badge-notion">
+            ${teamStatus?.notion?.connected ? '✓ ' + (teamStatus.notion.botName || 'Connected') : 'Not tested'}
+          </span>
+        </div>
+        <div class="field-group">
+          <label class="field-label" for="notionKey">Internal Integration Token</label>
+          <input type="password" id="notionKey" placeholder="secret_…" value="${esc(config.NOTION_API_KEY || '')}" />
+        </div>
+      </div>
+
+      <!-- Qdrant -->
+      <div class="service-card">
+        <div class="service-header">
+          <span class="service-title">🧠 Qdrant Vector DB</span>
+          <span class="badge ${teamStatus?.qdrant?.connected ? 'ok' : 'idle'}" id="badge-qdrant">
+            ${teamStatus?.qdrant?.connected ? '✓ Connected (' + teamStatus.qdrant.collectionsCount + ' col)' : 'Not tested'}
+          </span>
+        </div>
+        <div class="field-group">
+          <label class="field-label" for="qdrantUrl">Cluster Endpoint URL</label>
+          <input type="text" id="qdrantUrl" placeholder="https://xxx.cloud.qdrant.io" value="${esc(config.QDRANT_URL || '')}" />
+        </div>
+        <div class="field-group" style="margin-top:8px;">
+          <label class="field-label" for="qdrantKey">API Key (optional for local clusters)</label>
+          <input type="password" id="qdrantKey" placeholder="Qdrant API Key" value="${esc(config.QDRANT_API_KEY || '')}" />
+        </div>
+      </div>
+
+      <!-- Gemini Embeddings -->
+      <div class="service-card">
+        <div class="service-header">
+          <span class="service-title">✨ Google Gemini Embedding</span>
+          <span class="badge ${teamStatus?.gemini?.connected ? 'ok' : 'idle'}" id="badge-gemini">
+            ${teamStatus?.gemini?.connected ? '✓ ' + (teamStatus.gemini.model || 'Connected') : 'Not tested'}
+          </span>
+        </div>
+        <div class="field-group">
+          <label class="field-label" for="geminiKey">Gemini API Key (Google AI Studio)</label>
+          <input type="password" id="geminiKey" placeholder="AIzaSy…" value="${esc(config.GEMINI_API_KEY || '')}" />
+        </div>
+      </div>
+
+      <!-- SQL Database -->
+      <div class="service-card">
+        <div class="service-header">
+          <span class="service-title">🗄️ SQL Database</span>
+          <span class="badge ${teamStatus?.sql?.connected ? 'ok' : 'idle'}" id="badge-sql">
+            ${teamStatus?.sql?.connected ? '✓ ' + (teamStatus.sql.dialect || 'Connected') : 'Not tested'}
+          </span>
+        </div>
+        <div class="field-group">
+          <label class="field-label" for="databaseUrl">Connection URI (PostgreSQL, MySQL, SQLite)</label>
+          <input type="text" id="databaseUrl" placeholder="postgresql://user:pass@host:5432/dbname" value="${esc(config.DATABASE_URL || '')}" />
+        </div>
+      </div>
+
+      <div class="btn-row">
+        <button class="primary" id="saveBtn">Save to .env & Connect</button>
+        <button id="testBtn">Test Connections</button>
+      </div>
+
+      <div id="statusBox"></div>
+
+      <div class="hint">
+        Credentials are automatically loaded from and saved to <code>server/.env</code> and securely stored in your OS keychain.
+      </div>`;
+
+    const saveBtn = document.getElementById("saveBtn");
+    const testBtn = document.getElementById("testBtn");
+
+    testBtn.onclick = () => runTests();
+    saveBtn.onclick = () => saveAll();
+  }
+
+  function getFormValues() {
+    return {
+      GITHUB_TOKEN: document.getElementById("githubToken")?.value?.trim() || "",
+      NOTION_API_KEY: document.getElementById("notionKey")?.value?.trim() || "",
+      QDRANT_URL: document.getElementById("qdrantUrl")?.value?.trim() || "",
+      QDRANT_API_KEY: document.getElementById("qdrantKey")?.value?.trim() || "",
+      DATABASE_URL: document.getElementById("databaseUrl")?.value?.trim() || "",
+      GEMINI_API_KEY: document.getElementById("geminiKey")?.value?.trim() || "",
+    };
+  }
+
+  function setBadge(service, status, text) {
+    const el = document.getElementById(`badge-${service}`);
+    if (!el) return;
+    el.className = `badge ${status}`;
+    el.textContent = text;
+  }
+
+  function setStatus(kind, msg) {
+    const box = document.getElementById("statusBox");
+    if (!box) return;
+    box.innerHTML = kind ? `<div class="status-box ${kind}">${esc(msg)}</div>` : "";
+  }
+
+  async function testService(service, data) {
+    setBadge(service, "checking", "Testing…");
+    try {
+      const res = await app.callServerTool({
+        name: "panel_test_connection",
+        arguments: { service, ...data },
+      });
+      const result = JSON.parse(res.content[0].text);
+      if (result.valid) {
+        let label = "✓ Connected";
+        if (result.login) label = `✓ @${result.login}`;
+        if (result.botName) label = `✓ ${result.botName}`;
+        if (result.collectionsCount !== undefined) label = `✓ ${result.collectionsCount} col`;
+        if (result.dialect) label = `✓ ${result.dialect}`;
+        setBadge(service, "ok", label);
+        return { ok: true, detail: result };
+      } else {
+        setBadge(service, "err", "✕ Failed");
+        return { ok: false, reason: result.reason };
+      }
+    } catch (err) {
+      setBadge(service, "err", "✕ Error");
+      return { ok: false, reason: err.message };
+    }
+  }
+
+  async function runTests() {
+    const vals = getFormValues();
+    const testBtn = document.getElementById("testBtn");
+    testBtn.disabled = true;
+    setStatus(null, "");
+
+    const errors = [];
+
+    if (vals.GITHUB_TOKEN) {
+      const res = await testService("github", { githubToken: vals.GITHUB_TOKEN });
+      if (!res.ok) errors.push(`GitHub: ${res.reason}`);
+    } else {
+      setBadge("github", "idle", "Empty");
+    }
+
+    if (vals.NOTION_API_KEY) {
+      const res = await testService("notion", { notionApiKey: vals.NOTION_API_KEY });
+      if (!res.ok) errors.push(`Notion: ${res.reason}`);
+    } else {
+      setBadge("notion", "idle", "Empty");
+    }
+
+    if (vals.QDRANT_URL) {
+      const res = await testService("qdrant", { qdrantUrl: vals.QDRANT_URL, qdrantApiKey: vals.QDRANT_API_KEY });
+      if (!res.ok) errors.push(`Qdrant: ${res.reason}`);
+    } else {
+      setBadge("qdrant", "idle", "Empty");
+    }
+
+    if (vals.GEMINI_API_KEY) {
+      const res = await testService("gemini", { geminiApiKey: vals.GEMINI_API_KEY });
+      if (!res.ok) errors.push(`Gemini: ${res.reason}`);
+    } else {
+      setBadge("gemini", "idle", "Empty");
+    }
+
+    if (vals.DATABASE_URL) {
+      const res = await testService("sql", { databaseUrl: vals.DATABASE_URL });
+      if (!res.ok) errors.push(`SQL: ${res.reason}`);
+    } else {
+      setBadge("sql", "idle", "Empty");
+    }
+
+    testBtn.disabled = false;
+    if (errors.length > 0) {
+      setStatus("err", errors.join(" | "));
+    } else {
+      setStatus("ok", "All active connections tested successfully!");
+    }
+  }
+
+  async function saveAll() {
+    const vals = getFormValues();
+    const saveBtn = document.getElementById("saveBtn");
+    saveBtn.disabled = true;
+    saveBtn.textContent = "Saving…";
+    setStatus(null, "");
+
+    // 1. Run tests first
+    await runTests();
+
+    try {
+      const res = await app.callServerTool({
+        name: "panel_save_all_credentials",
+        arguments: vals,
+      });
+      const data = JSON.parse(res.content[0].text);
+      if (data.status === "ok") {
+        setStatus("ok", "✓ Configuration saved to server/.env and keychain successfully!");
+      } else {
+        setStatus("err", data.message || "Failed to save credentials.");
+      }
+    } catch (err) {
+      setStatus("err", `Error saving configuration: ${err.message}`);
+    }
+
+    saveBtn.disabled = false;
+    saveBtn.textContent = "Save to .env & Connect";
+  }
+
+  await app.connect();
+</script>

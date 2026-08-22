@@ -1,0 +1,13 @@
+{
+  "name": "my-team-context-root",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "npm --prefix claude-desktop-extension/server run dev",
+    "inspect": "npm --prefix claude-desktop-extension/server run inspect",
+    "build": "npm --prefix claude-desktop-extension/server run build",
+    "build:ts": "npm --prefix claude-desktop-extension/server run build:ts",
+    "test": "npm --prefix claude-desktop-extension/server test",
+    "smoke": "npm --prefix claude-desktop-extension/server run smoke"
+  }
+}

@@ -1,0 +1,13 @@
+{
+  "name": "claude-desktop-extension-wrapper",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "npm --prefix server run dev",
+    "inspect": "npm --prefix server run inspect",
+    "build": "npm --prefix server run build",
+    "build:ts": "npm --prefix server run build:ts",
+    "test": "npm --prefix server test",
+    "smoke": "npm --prefix server run smoke"
+  }
+}

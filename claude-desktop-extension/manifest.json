@@ -13,10 +13,10 @@
   "keywords": ["github", "code", "context", "repository", "search"],
   "server": {
     "type": "node",
-    "entry_point": "server/src/index.js",
+    "entry_point": "server/dist/index.js",
     "mcp_config": {
       "command": "node",
-      "args": ["${__dirname}/server/src/index.js"]
+      "args": ["${__dirname}/server/dist/index.js"]
     }
   },
   "tools": [
