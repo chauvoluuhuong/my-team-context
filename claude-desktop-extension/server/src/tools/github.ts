@@ -34,8 +34,7 @@ import type {
   OverviewOptions,
   OverviewResult,
 } from "./types.js";
-
-export const PANEL_URI = "ui://repo-context/panel.html";
+import { PANEL_URI } from "./init.js";
 
 const API = process.env.REPO_CONTEXT_API || "https://api.github.com";
 const UA = "claude-repo-context";
@@ -465,33 +464,7 @@ export async function overview({ repo }: OverviewOptions = {}): Promise<Overview
  * ------------------------------------------------------------------ */
 
 export function registerGitHubTools(server: McpServer): void {
-  /* ---------------------------- the panel ---------------------------- */
-
-  registerAppTool(
-    server,
-    "connect_github_repo",
-    {
-      title: "Connect a GitHub repo",
-      description:
-        "Open a panel where the user pastes a GitHub personal access token, sees every repo that " +
-        "token can read, and picks one as the active repo. The choice is remembered across " +
-        "sessions. Use when the user asks to list their repos, connect or switch a GitHub repo, " +
-        "sign in to GitHub, or asks a question about their code when no repo is active yet — " +
-        "any other tool here that reports 'not signed in' or 'no active repo' means call this.",
-      annotations: { title: "Connect a GitHub repo", readOnlyHint: false, openWorldHint: true },
-      inputSchema: {},
-      _meta: { ui: { resourceUri: PANEL_URI } },
-    },
-    guarded(async () => {
-      const [user, state] = await Promise.all([whoami(), readState()]);
-      return text({
-        authenticated: user.authenticated,
-        login: user.login ?? null,
-        activeRepo: state.repo ?? null,
-        recent: state.recent ?? [],
-      });
-    }),
-  );
+  /* ---------------------------- panel tools ---------------------------- */
 
   registerAppTool(
     server,

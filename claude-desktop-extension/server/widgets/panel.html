@@ -1,40 +1,42 @@
 <div id="root" class="panel">
-  <div class="loading">Loading…</div>
+  <div class="loading">Loading configuration…</div>
 </div>
 
 <style>
   :root {
     --bg: #ffffff;
-    --fg: #1a1a1a;
+    --fg: #111827;
     --muted: #6b7280;
     --line: #e5e7eb;
-    --accent: #1f6feb;
-    --accent-soft: #eaf1fd;
+    --accent: #2563eb;
+    --accent-hover: #1d4ed8;
     --ok-bg: #ecfdf5;
-    --ok-fg: #065f46;
-    --warn-bg: #fef3c7;
-    --warn-fg: #92400e;
+    --ok-fg: #059669;
+    --warn-bg: #fffbeb;
+    --warn-fg: #d97706;
     --err-bg: #fef2f2;
-    --err-fg: #991b1b;
-    --code-bg: #f6f8fa;
-    --row-hover: #f3f4f6;
+    --err-fg: #dc2626;
+    --code-bg: #f9fafb;
+    --card-bg: #ffffff;
+    --border: #e5e7eb;
   }
   @media (prefers-color-scheme: dark) {
     :root {
-      --bg: #16181d;
-      --fg: #e6e7eb;
-      --muted: #9aa1ad;
-      --line: #2c3038;
-      --accent: #58a6ff;
-      --accent-soft: #16283f;
-      --ok-bg: #052e24;
-      --ok-fg: #6ee7b7;
-      --warn-bg: #3a2d08;
-      --warn-fg: #fcd34d;
-      --err-bg: #3b1418;
-      --err-fg: #fca5a5;
-      --code-bg: #1f232b;
-      --row-hover: #1e222a;
+      --bg: #111827;
+      --fg: #f9fafb;
+      --muted: #9ca3af;
+      --line: #374151;
+      --accent: #3b82f6;
+      --accent-hover: #60a5fa;
+      --ok-bg: #064e3b;
+      --ok-fg: #34d399;
+      --warn-bg: #78350f;
+      --warn-fg: #fbbf24;
+      --err-bg: #7f1d1d;
+      --err-fg: #f87171;
+      --code-bg: #1f2937;
+      --card-bg: #1e293b;
+      --border: #334155;
     }
   }
 
@@ -43,337 +45,336 @@
   .panel {
     background: var(--bg);
     color: var(--fg);
-    font: 14px/1.5 ui-sans-serif, -apple-system, "Segoe UI", system-ui, sans-serif;
+    font: 13.5px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
     border: 1px solid var(--line);
     border-radius: 12px;
     padding: 20px;
-    max-width: 460px;
+    max-width: 520px;
   }
 
-  h2 { font-size: 15px; font-weight: 600; margin: 0 0 4px; }
-  .sub { color: var(--muted); font-size: 13px; margin: 0 0 16px; }
-  .loading { color: var(--muted); }
+  h2 { font-size: 16px; font-weight: 600; margin: 0 0 4px; display: flex; align-items: center; gap: 8px; }
+  .sub { color: var(--muted); font-size: 12.5px; margin: 0 0 16px; }
+  .loading { color: var(--muted); padding: 12px 0; }
 
-  label { display: block; font-size: 13px; font-weight: 500; margin-bottom: 6px; }
+  .service-card {
+    border: 1px solid var(--border);
+    border-radius: 9px;
+    padding: 12px 14px;
+    margin-bottom: 12px;
+    background: var(--card-bg);
+  }
 
-  input[type="password"], input[type="text"], input[type="search"] {
+  .service-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+  }
+
+  .service-title {
+    font-weight: 600;
+    font-size: 13px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .badge {
+    font-size: 11px;
+    padding: 2px 7px;
+    border-radius: 999px;
+    font-weight: 500;
+  }
+  .badge.idle { background: var(--line); color: var(--muted); }
+  .badge.ok { background: var(--ok-bg); color: var(--ok-fg); }
+  .badge.err { background: var(--err-bg); color: var(--err-fg); }
+  .badge.checking { background: var(--warn-bg); color: var(--warn-fg); }
+
+  .field-group { margin-top: 6px; }
+  .field-label { display: block; font-size: 11.5px; color: var(--muted); margin-bottom: 4px; }
+
+  input[type="password"], input[type="text"] {
     width: 100%;
-    font: 13px/1.4 ui-monospace, SFMono-Regular, "SF Mono", Menlo, monospace;
-    padding: 9px 10px;
-    border-radius: 8px;
+    font: 12.5px/1.4 ui-monospace, SFMono-Regular, "SF Mono", Menlo, monospace;
+    padding: 7px 9px;
+    border-radius: 6px;
     border: 1px solid var(--line);
     background: var(--code-bg);
     color: var(--fg);
   }
-  input[type="search"] { font-family: inherit; font-size: 13px; }
   input:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
 
-  .row { display: flex; gap: 8px; margin-top: 12px; }
+  .btn-row {
+    display: flex;
+    gap: 8px;
+    margin-top: 16px;
+  }
 
   button {
     font: inherit;
+    font-size: 13px;
     font-weight: 500;
     padding: 9px 14px;
-    border-radius: 8px;
+    border-radius: 7px;
     border: 1px solid var(--line);
     background: transparent;
     color: var(--fg);
     cursor: pointer;
+    transition: all 0.15s ease;
   }
-  button.primary { background: var(--accent); border-color: var(--accent); color: #fff; flex: 1; }
-  button:hover { filter: brightness(1.08); }
-  button:disabled { opacity: 0.55; cursor: default; filter: none; }
+  button.primary {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: #ffffff;
+    flex: 1;
+  }
+  button:hover:not(:disabled) { filter: brightness(1.08); }
+  button:disabled { opacity: 0.5; cursor: default; }
 
-  .status { margin-top: 14px; padding: 10px 12px; border-radius: 8px; font-size: 13px; }
-  .status.ok { background: var(--ok-bg); color: var(--ok-fg); }
-  .status.warn { background: var(--warn-bg); color: var(--warn-fg); }
-  .status.err { background: var(--err-bg); color: var(--err-fg); }
+  .status-box {
+    margin-top: 12px;
+    padding: 9px 12px;
+    border-radius: 7px;
+    font-size: 12.5px;
+    line-height: 1.4;
+  }
+  .status-box.ok { background: var(--ok-bg); color: var(--ok-fg); }
+  .status-box.warn { background: var(--warn-bg); color: var(--warn-fg); }
+  .status-box.err { background: var(--err-bg); color: var(--err-fg); }
 
   .hint {
     margin-top: 14px;
-    padding-top: 12px;
+    padding-top: 10px;
     border-top: 1px solid var(--line);
     color: var(--muted);
-    font-size: 12px;
-    line-height: 1.5;
+    font-size: 11.5px;
   }
-  .hint code { background: var(--code-bg); padding: 1px 5px; border-radius: 4px; font-size: 11.5px; }
-
-  .linkish {
-    background: none;
-    border: none;
-    color: var(--accent);
-    text-decoration: underline;
-    padding: 0;
-    font-size: 13px;
-  }
-
-  .list {
-    margin-top: 10px;
-    border: 1px solid var(--line);
-    border-radius: 8px;
-    max-height: 300px;
-    overflow-y: auto;
-  }
-  .item {
-    display: block;
-    width: 100%;
-    text-align: left;
-    border: none;
-    border-bottom: 1px solid var(--line);
-    border-radius: 0;
-    background: transparent;
-    padding: 9px 12px;
-    cursor: pointer;
-    font-weight: 400;
-  }
-  .item:last-child { border-bottom: none; }
-  .item:hover { background: var(--row-hover); filter: none; }
-  .item[aria-selected="true"] { background: var(--accent-soft); }
-  .item .name { font-weight: 500; font-size: 13px; }
-  .item .meta { color: var(--muted); font-size: 12px; margin-top: 2px; }
-  .badge {
-    font-size: 10.5px;
-    text-transform: uppercase;
-    letter-spacing: 0.04em;
-    border: 1px solid var(--line);
-    border-radius: 999px;
-    padding: 0 6px;
-    margin-left: 6px;
-    color: var(--muted);
-    vertical-align: 1px;
-  }
-  .empty { padding: 14px 12px; color: var(--muted); font-size: 13px; }
+  .hint code { background: var(--code-bg); padding: 1px 4px; border-radius: 3px; }
 </style>
 
 <script type="module">
   /*__EXT_APPS_BUNDLE__*/
   const { App } = globalThis.ExtApps;
-
   const root = document.getElementById("root");
-  const esc = (s) =>
-    String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+  const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
 
-  const CREATE_TOKEN_URL =
-    "https://github.com/settings/tokens/new?scopes=repo&description=Claude%20repo%20context";
+  const app = new App({ name: "TeamContextPanel", version: "1.0.0" }, {}, { autoResize: true });
 
-  const app = new App({ name: "RepoContextPanel", version: "1.0.0" }, {}, { autoResize: true });
+  let config = {};
 
-  let selected = null;
-
-  app.ontoolresult = ({ content }) => {
-    let data;
+  app.ontoolresult = async ({ content }) => {
     try {
-      data = JSON.parse(content[0].text);
+      const data = JSON.parse(content[0].text);
+      config = data.config ?? {};
+      renderForm(data.teamStatus);
     } catch {
-      return renderError("Could not read the connection state from the server.");
+      renderForm();
     }
-    if (data.error) return renderError(data.error);
-    if (!data.authenticated) return renderTokenForm();
-    loadRepos(data.activeRepo);
   };
 
-  /* -------------------------- step 1: token -------------------------- */
-
-  function renderTokenForm(message) {
+  function renderForm(teamStatus) {
     root.innerHTML = `
-      <h2>Connect GitHub</h2>
-      <p class="sub">Paste a personal access token with read access to the repos you want me to read.</p>
-      <label for="pat">Personal access token</label>
-      <input type="password" id="pat" placeholder="ghp_… or github_pat_…" autocomplete="off" spellcheck="false" />
-      <div class="row">
-        <button class="primary" id="save">Continue</button>
-        <button id="create">Create a token</button>
+      <h2>⚡ Team Context Connections</h2>
+      <p class="sub">Configure credentials to connect GitHub, Notion, Qdrant, and SQL Database.</p>
+
+      <!-- GitHub -->
+      <div class="service-card">
+        <div class="service-header">
+          <span class="service-title">🐙 GitHub</span>
+          <span class="badge ${teamStatus?.github?.authenticated ? 'ok' : 'idle'}" id="badge-github">
+            ${teamStatus?.github?.authenticated ? '✓ ' + (teamStatus.github.login || 'Connected') : 'Not tested'}
+          </span>
+        </div>
+        <div class="field-group">
+          <label class="field-label" for="githubToken">Personal Access Token (classic or fine-grained)</label>
+          <input type="password" id="githubToken" placeholder="ghp_… or github_pat_…" value="${esc(config.GITHUB_TOKEN || '')}" />
+        </div>
       </div>
+
+      <!-- Notion -->
+      <div class="service-card">
+        <div class="service-header">
+          <span class="service-title">📝 Notion</span>
+          <span class="badge ${teamStatus?.notion?.connected ? 'ok' : 'idle'}" id="badge-notion">
+            ${teamStatus?.notion?.connected ? '✓ ' + (teamStatus.notion.botName || 'Connected') : 'Not tested'}
+          </span>
+        </div>
+        <div class="field-group">
+          <label class="field-label" for="notionKey">Internal Integration Token</label>
+          <input type="password" id="notionKey" placeholder="secret_…" value="${esc(config.NOTION_API_KEY || '')}" />
+        </div>
+      </div>
+
+      <!-- Qdrant -->
+      <div class="service-card">
+        <div class="service-header">
+          <span class="service-title">🧠 Qdrant Vector DB</span>
+          <span class="badge ${teamStatus?.qdrant?.connected ? 'ok' : 'idle'}" id="badge-qdrant">
+            ${teamStatus?.qdrant?.connected ? '✓ Connected (' + teamStatus.qdrant.collectionsCount + ' col)' : 'Not tested'}
+          </span>
+        </div>
+        <div class="field-group">
+          <label class="field-label" for="qdrantUrl">Cluster Endpoint URL</label>
+          <input type="text" id="qdrantUrl" placeholder="https://xxx.cloud.qdrant.io" value="${esc(config.QDRANT_URL || '')}" />
+        </div>
+        <div class="field-group" style="margin-top:8px;">
+          <label class="field-label" for="qdrantKey">API Key (optional for local clusters)</label>
+          <input type="password" id="qdrantKey" placeholder="Qdrant API Key" value="${esc(config.QDRANT_API_KEY || '')}" />
+        </div>
+      </div>
+
+      <!-- SQL Database -->
+      <div class="service-card">
+        <div class="service-header">
+          <span class="service-title">🗄️ SQL Database</span>
+          <span class="badge ${teamStatus?.sql?.connected ? 'ok' : 'idle'}" id="badge-sql">
+            ${teamStatus?.sql?.connected ? '✓ ' + (teamStatus.sql.dialect || 'Connected') : 'Not tested'}
+          </span>
+        </div>
+        <div class="field-group">
+          <label class="field-label" for="databaseUrl">Connection URI (PostgreSQL, MySQL, SQLite)</label>
+          <input type="text" id="databaseUrl" placeholder="postgresql://user:pass@host:5432/dbname" value="${esc(config.DATABASE_URL || '')}" />
+        </div>
+      </div>
+
+      <div class="btn-row">
+        <button class="primary" id="saveBtn">Save to .env & Connect</button>
+        <button id="testBtn">Test Connections</button>
+      </div>
+
       <div id="statusBox"></div>
-      <p class="hint">
-        Needs <code>repo</code> scope (classic) or <code>Contents: Read-only</code> (fine-grained).
-        The token is checked against GitHub, then stored in this machine's keychain — it never
-        appears in the conversation.
-      </p>`;
 
-    if (message) setStatus("err", message);
+      <div class="hint">
+        Credentials are automatically loaded from and saved to <code>server/.env</code> and securely stored in your OS keychain.
+      </div>`;
 
-    const input = document.getElementById("pat");
-    const saveBtn = document.getElementById("save");
+    const saveBtn = document.getElementById("saveBtn");
+    const testBtn = document.getElementById("testBtn");
 
-    // window.open is blocked by the iframe sandbox — navigation goes through the host.
-    document.getElementById("create").onclick = () => app.openLink({ url: CREATE_TOKEN_URL });
-    input.addEventListener("keydown", (e) => e.key === "Enter" && save());
-    saveBtn.onclick = save;
-    input.focus();
-
-    async function save() {
-      const token = input.value.trim();
-      if (!token) return setStatus("err", "Paste a token first.");
-
-      saveBtn.disabled = true;
-      saveBtn.textContent = "Checking…";
-      setStatus(null, "");
-
-      let state;
-      try {
-        // Goes straight to the server, not through the chat — this is what
-        // keeps the raw token out of the transcript.
-        const result = await app.callServerTool({ name: "panel_save_pat", arguments: { token } });
-        state = JSON.parse(result.content[0].text);
-      } catch (err) {
-        input.value = "";
-        saveBtn.disabled = false;
-        saveBtn.textContent = "Continue";
-        return setStatus("err", `Could not reach the extension: ${err.message}`);
-      }
-
-      input.value = "";
-      saveBtn.disabled = false;
-      saveBtn.textContent = "Continue";
-
-      if (state.status !== "ok") return setStatus("err", state.detail || "That token did not work.");
-      loadRepos(null, state.warning);
-    }
+    testBtn.onclick = () => runTests();
+    saveBtn.onclick = () => saveAll();
   }
 
-  /* -------------------------- step 2: repos -------------------------- */
-
-  async function loadRepos(activeRepo, warning) {
-    root.innerHTML = `<h2>Your repositories</h2><p class="sub">Loading repos…</p>`;
-
-    let data;
-    try {
-      const result = await app.callServerTool({ name: "panel_list_repos", arguments: {} });
-      data = JSON.parse(result.content[0].text);
-    } catch (err) {
-      return renderError(`Could not load your repos: ${err.message}`);
-    }
-
-    if (data.status !== "ok") {
-      // A rejected token is the common case here — send the user back a step.
-      return renderTokenForm(data.detail || "Could not list your repos with that token.");
-    }
-    renderRepoList(data.repos ?? [], activeRepo ?? data.activeRepo ?? null, warning);
+  function getFormValues() {
+    return {
+      GITHUB_TOKEN: document.getElementById("githubToken")?.value?.trim() || "",
+      NOTION_API_KEY: document.getElementById("notionKey")?.value?.trim() || "",
+      QDRANT_URL: document.getElementById("qdrantUrl")?.value?.trim() || "",
+      QDRANT_API_KEY: document.getElementById("qdrantKey")?.value?.trim() || "",
+      DATABASE_URL: document.getElementById("databaseUrl")?.value?.trim() || "",
+    };
   }
 
-  function renderRepoList(repos, activeRepo, warning) {
-    selected = activeRepo && repos.some((r) => r.fullName === activeRepo) ? activeRepo : null;
-
-    root.innerHTML = `
-      <h2>Pick a repository</h2>
-      <p class="sub">${repos.length} repo${repos.length === 1 ? "" : "s"} this token can read. I'll use the one you pick as context for questions about your code.</p>
-      <input type="search" id="filter" placeholder="Filter by name or description…" autocomplete="off" />
-      <div class="list" id="list"></div>
-      <div class="row">
-        <button class="primary" id="use" ${selected ? "" : "disabled"}>Use this repo</button>
-      </div>
-      <div id="statusBox"></div>
-      <button class="linkish" id="switch" style="margin-top:10px">Use a different token</button>`;
-
-    if (warning) setStatus("warn", warning);
-
-    const list = document.getElementById("list");
-    const useBtn = document.getElementById("use");
-    const filter = document.getElementById("filter");
-
-    document.getElementById("switch").onclick = () => renderTokenForm();
-    filter.oninput = () => draw(filter.value.trim().toLowerCase());
-    useBtn.onclick = confirm;
-    draw("");
-
-    function draw(query) {
-      const shown = query
-        ? repos.filter(
-            (r) =>
-              r.fullName.toLowerCase().includes(query) ||
-              (r.description ?? "").toLowerCase().includes(query),
-          )
-        : repos;
-
-      if (!shown.length) {
-        list.innerHTML = `<div class="empty">No repos match "${esc(query)}".</div>`;
-        return;
-      }
-
-      list.innerHTML = shown
-        .map((r) => {
-          const meta = [r.language, r.description].filter(Boolean).join(" · ");
-          return `
-            <button class="item" data-repo="${esc(r.fullName)}" aria-selected="${r.fullName === selected}">
-              <div class="name">${esc(r.fullName)}${r.private ? '<span class="badge">private</span>' : ""}</div>
-              ${meta ? `<div class="meta">${esc(meta.slice(0, 110))}</div>` : ""}
-            </button>`;
-        })
-        .join("");
-
-      for (const el of list.querySelectorAll(".item")) {
-        el.onclick = () => {
-          selected = el.dataset.repo;
-          for (const other of list.querySelectorAll(".item")) {
-            other.setAttribute("aria-selected", String(other === el));
-          }
-          useBtn.disabled = false;
-        };
-      }
-    }
-
-    async function confirm() {
-      if (!selected) return;
-      useBtn.disabled = true;
-      useBtn.textContent = "Connecting…";
-
-      let state;
-      try {
-        const result = await app.callServerTool({
-          name: "panel_select_repo",
-          arguments: { repo: selected },
-        });
-        state = JSON.parse(result.content[0].text);
-      } catch (err) {
-        useBtn.disabled = false;
-        useBtn.textContent = "Use this repo";
-        return setStatus("err", `Could not save that choice: ${err.message}`);
-      }
-
-      if (state.status !== "ok") {
-        useBtn.disabled = false;
-        useBtn.textContent = "Use this repo";
-        return setStatus("err", state.detail || "Could not open that repo.");
-      }
-
-      renderConnected(state.repo, state.defaultBranch);
-      app.sendMessage({
-        role: "user",
-        content: [
-          {
-            type: "text",
-            text:
-              `I picked ${state.repo} (branch ${state.defaultBranch}) as my active GitHub repo. ` +
-              `From now on, use the repo tools — repo_overview, list_repo_files, read_repo_file, ` +
-              `search_repo_code — whenever you need to know what my code does. Start with a short ` +
-              `overview of this repo.`,
-          },
-        ],
-      });
-    }
+  function setBadge(service, status, text) {
+    const el = document.getElementById(`badge-${service}`);
+    if (!el) return;
+    el.className = `badge ${status}`;
+    el.textContent = text;
   }
 
-  function renderConnected(repo, branch) {
-    root.innerHTML = `
-      <h2>Connected</h2>
-      <div class="status ok">
-        <strong>${esc(repo)}</strong> is now the active repo (branch ${esc(branch)}).
-        I can list, read, and search its files from here.
-      </div>
-      <button class="linkish" id="again" style="margin-top:12px">Pick a different repo</button>`;
-    document.getElementById("again").onclick = () => loadRepos(repo);
-  }
-
-  function renderError(message) {
-    root.innerHTML = `<h2>Connect GitHub</h2><div class="status err">${esc(message)}</div>`;
-  }
-
-  function setStatus(kind, message) {
+  function setStatus(kind, msg) {
     const box = document.getElementById("statusBox");
     if (!box) return;
-    box.innerHTML = kind ? `<div class="status ${kind}">${esc(message)}</div>` : "";
+    box.innerHTML = kind ? `<div class="status-box ${kind}">${esc(msg)}</div>` : "";
+  }
+
+  async function testService(service, data) {
+    setBadge(service, "checking", "Testing…");
+    try {
+      const res = await app.callServerTool({
+        name: "panel_test_connection",
+        arguments: { service, ...data },
+      });
+      const result = JSON.parse(res.content[0].text);
+      if (result.valid) {
+        let label = "✓ Connected";
+        if (result.login) label = `✓ @${result.login}`;
+        if (result.botName) label = `✓ ${result.botName}`;
+        if (result.collectionsCount !== undefined) label = `✓ ${result.collectionsCount} col`;
+        if (result.dialect) label = `✓ ${result.dialect}`;
+        setBadge(service, "ok", label);
+        return { ok: true, detail: result };
+      } else {
+        setBadge(service, "err", "✕ Failed");
+        return { ok: false, reason: result.reason };
+      }
+    } catch (err) {
+      setBadge(service, "err", "✕ Error");
+      return { ok: false, reason: err.message };
+    }
+  }
+
+  async function runTests() {
+    const vals = getFormValues();
+    const testBtn = document.getElementById("testBtn");
+    testBtn.disabled = true;
+    setStatus(null, "");
+
+    const errors = [];
+
+    if (vals.GITHUB_TOKEN) {
+      const res = await testService("github", { githubToken: vals.GITHUB_TOKEN });
+      if (!res.ok) errors.push(`GitHub: ${res.reason}`);
+    } else {
+      setBadge("github", "idle", "Empty");
+    }
+
+    if (vals.NOTION_API_KEY) {
+      const res = await testService("notion", { notionApiKey: vals.NOTION_API_KEY });
+      if (!res.ok) errors.push(`Notion: ${res.reason}`);
+    } else {
+      setBadge("notion", "idle", "Empty");
+    }
+
+    if (vals.QDRANT_URL) {
+      const res = await testService("qdrant", { qdrantUrl: vals.QDRANT_URL, qdrantApiKey: vals.QDRANT_API_KEY });
+      if (!res.ok) errors.push(`Qdrant: ${res.reason}`);
+    } else {
+      setBadge("qdrant", "idle", "Empty");
+    }
+
+    if (vals.DATABASE_URL) {
+      const res = await testService("sql", { databaseUrl: vals.DATABASE_URL });
+      if (!res.ok) errors.push(`SQL: ${res.reason}`);
+    } else {
+      setBadge("sql", "idle", "Empty");
+    }
+
+    testBtn.disabled = false;
+    if (errors.length > 0) {
+      setStatus("err", errors.join(" | "));
+    } else {
+      setStatus("ok", "All active connections tested successfully!");
+    }
+  }
+
+  async function saveAll() {
+    const vals = getFormValues();
+    const saveBtn = document.getElementById("saveBtn");
+    saveBtn.disabled = true;
+    saveBtn.textContent = "Saving…";
+    setStatus(null, "");
+
+    // 1. Run tests first
+    await runTests();
+
+    try {
+      const res = await app.callServerTool({
+        name: "panel_save_all_credentials",
+        arguments: vals,
+      });
+      const data = JSON.parse(res.content[0].text);
+      if (data.status === "ok") {
+        setStatus("ok", "✓ Configuration saved to server/.env and keychain successfully!");
+      } else {
+        setStatus("err", data.message || "Failed to save credentials.");
+      }
+    } catch (err) {
+      setStatus("err", `Error saving configuration: ${err.message}`);
+    }
+
+    saveBtn.disabled = false;
+    saveBtn.textContent = "Save to .env & Connect";
   }
 
   await app.connect();

@@ -167,6 +167,39 @@ await assert.rejects(
   "repo form is validated",
 );
 
+// Notion validation tests
+const { validateNotionKey, notionCheckConnection } = await import(
+  "../src/tools/notion.js"
+);
+assert.equal((await validateNotionKey("")).valid, false, "empty Notion key fails");
+assert.equal((await notionCheckConnection()).connected, false, "unconfigured Notion reports disconnected");
+
+// Qdrant validation tests
+const { validateQdrantConnection, qdrantCheckConnection } = await import(
+  "../src/tools/qdrant.js"
+);
+assert.equal((await validateQdrantConnection("")).valid, false, "empty Qdrant endpoint fails");
+assert.equal((await qdrantCheckConnection()).connected, false, "unconfigured Qdrant reports disconnected");
+
+// SQL validation tests
+const { validateSqlConnection, sqlCheckConnection } = await import(
+  "../src/tools/sql.js"
+);
+const sqliteCheck = await validateSqlConnection("sqlite:///tmp/test.db");
+assert.equal(sqliteCheck.valid, true, "sqlite valid");
+assert.equal(sqliteCheck.dialect, "sqlite");
+
+// Team Context aggregate status test
+const { getTeamContextStatus } = await import("../src/tools/init.js");
+const aggregateStatus = await getTeamContextStatus();
+assert.equal(aggregateStatus.github.authenticated, true);
+assert.equal(aggregateStatus.github.login, "octo");
+assert.equal(aggregateStatus.github.activeRepo, "octo/app");
+assert.equal(aggregateStatus.notion.connected, false);
+assert.equal(aggregateStatus.qdrant.connected, false);
+assert.equal(aggregateStatus.sql.connected, false);
+
 server.close();
 await fs.rm(dir, { recursive: true, force: true });
 console.log("api tests passed");
+

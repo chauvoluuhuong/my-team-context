@@ -1,5 +1,5 @@
 /**
- * Type definitions for tools in the GitHub Repo Context extension.
+ * Type definitions for tools in the Team Context extension.
  */
 
 /* ------------------------------------------------------------------ *
@@ -38,7 +38,94 @@ export interface RepoMetaResult {
 }
 
 /* ------------------------------------------------------------------ *
- * Tool Options & Output Types
+ * Notion Types
+ * ------------------------------------------------------------------ */
+
+export interface ValidateNotionResult {
+  valid: boolean;
+  workspaceName?: string;
+  botName?: string;
+  botId?: string;
+  reason?: string;
+}
+
+export interface NotionStatusResult {
+  connected: boolean;
+  botName?: string;
+  botId?: string;
+  reason?: string;
+}
+
+/* ------------------------------------------------------------------ *
+ * Qdrant Types
+ * ------------------------------------------------------------------ */
+
+export interface ValidateQdrantResult {
+  valid: boolean;
+  endpoint?: string;
+  version?: string;
+  collections?: string[];
+  collectionsCount?: number;
+  reason?: string;
+}
+
+export interface QdrantStatusResult {
+  connected: boolean;
+  endpoint?: string;
+  collectionsCount?: number;
+  collections?: string[];
+  reason?: string;
+}
+
+/* ------------------------------------------------------------------ *
+ * SQL Database Types
+ * ------------------------------------------------------------------ */
+
+export interface ValidateSqlResult {
+  valid: boolean;
+  dialect?: string;
+  database?: string;
+  host?: string;
+  port?: number;
+  reason?: string;
+}
+
+export interface SqlStatusResult {
+  connected: boolean;
+  dialect?: string;
+  database?: string;
+  host?: string;
+  reason?: string;
+}
+
+/* ------------------------------------------------------------------ *
+ * Team Context Init & Aggregate Status Types
+ * ------------------------------------------------------------------ */
+
+export interface TeamContextStatusResult {
+  github: {
+    authenticated: boolean;
+    login: string | null;
+    activeRepo: string | null;
+  };
+  notion: {
+    connected: boolean;
+    botName: string | null;
+  };
+  qdrant: {
+    connected: boolean;
+    endpoint: string | null;
+    collectionsCount: number;
+  };
+  sql: {
+    connected: boolean;
+    dialect: string | null;
+    database: string | null;
+  };
+}
+
+/* ------------------------------------------------------------------ *
+ * GitHub Tool Options & Output Types
  * ------------------------------------------------------------------ */
 
 export interface ListReposOptions {
