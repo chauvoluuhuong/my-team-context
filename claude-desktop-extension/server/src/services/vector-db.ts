@@ -310,56 +310,63 @@ export async function listSkills(
 }
 
 /**
- * Get a single skill by ID from the knowledge-base collection.
+ * Get a single skill by ID or Name from the knowledge-base collection.
  */
 export async function getSkill(
-  id: string,
+  idOrName: string,
   collectionName: string = KNOWLEDGE_BASE_COLLECTION,
 ): Promise<SkillItem | null> {
   const { endpoint, apiKey } = await getActiveQdrantConfig();
   const headers = qdrantHeaders(apiKey);
 
+  const clean = idOrName.trim();
+  if (!clean) return null;
+
   try {
-    const res = await fetch(`${endpoint}/collections/${collectionName}/points/${encodeURIComponent(id)}`, {
+    const res = await fetch(`${endpoint}/collections/${collectionName}/points/${encodeURIComponent(clean)}`, {
       method: "GET",
       headers,
     });
 
-    if (res.status === 404) return null;
-    if (!res.ok) {
-      const errText = await res.text().catch(() => res.statusText);
-      throw new RepoContextError(`Failed to retrieve skill with ID "${id}": ${errText}`);
-    }
-
-    const data = (await res.json()) as {
-      result?: {
-        id: string | number;
-        payload?: {
-          name?: string;
-          description?: string;
-          content?: string;
-          serialized?: string;
-          createdAt?: string;
-          updatedAt?: string;
+    if (res.ok) {
+      const data = (await res.json()) as {
+        result?: {
+          id: string | number;
+          payload?: {
+            name?: string;
+            description?: string;
+            content?: string;
+            serialized?: string;
+            createdAt?: string;
+            updatedAt?: string;
+          };
         };
       };
-    };
 
-    if (!data.result) return null;
-    const p = data.result;
-    return {
-      id: String(p.id),
-      name: p.payload?.name || "Untitled Skill",
-      description: p.payload?.description || "",
-      content: p.payload?.content || "",
-      serialized: p.payload?.serialized || "",
-      createdAt: p.payload?.createdAt,
-      updatedAt: p.payload?.updatedAt,
-    };
+      if (data.result) {
+        const p = data.result;
+        return {
+          id: String(p.id),
+          name: p.payload?.name || "Untitled Skill",
+          description: p.payload?.description || "",
+          content: p.payload?.content || "",
+          serialized: p.payload?.serialized || "",
+          createdAt: p.payload?.createdAt,
+          updatedAt: p.payload?.updatedAt,
+        };
+      }
+    }
+
+    // Fallback: find by name matching
+    const list = await listSkills(100, collectionName);
+    const found = list.skills.find(
+      (s) => s.name.toLowerCase() === clean.toLowerCase() || s.id === clean,
+    );
+    return found || null;
   } catch (err: unknown) {
     if (err instanceof RepoContextError) throw err;
     const message = err instanceof Error ? err.message : String(err);
-    throw new RepoContextError(`Failed to get skill "${id}": ${message}`);
+    throw new RepoContextError(`Failed to get skill "${idOrName}": ${message}`);
   }
 }
 

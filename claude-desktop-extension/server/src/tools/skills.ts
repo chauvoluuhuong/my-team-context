@@ -158,15 +158,15 @@ export function registerSkillsTools(server: McpServer): void {
   /* ------------------- Conversational Agent MCP Tools ------------------- */
 
   server.registerTool(
-    "search_team_skills",
+    "search_skills",
     {
-      title: "Search Team Skills",
+      title: "Search Skills",
       description:
-        "Semantically search team skills, coding guidelines, workflows, and procedures stored in the Qdrant knowledge base using Gemini embeddings.",
-      annotations: { title: "Search Team Skills", readOnlyHint: true },
+        "Semantically search skills, coding guidelines, workflows, and procedures stored in the knowledge base using vector embeddings.",
+      annotations: { title: "Search Skills", readOnlyHint: true },
       inputSchema: {
-        query: z.string().min(1).describe("Search query or task topic to find relevant skills for"),
-        limit: z.number().optional().describe("Maximum number of matches (default: 5)"),
+        query: z.string().min(1).describe("Search query, keyword, or task topic to find relevant skills for"),
+        limit: z.number().optional().describe("Maximum number of matches to return (default: 5)"),
       },
     },
     guarded(async ({ query, limit }: { query: string; limit?: number }) => {
@@ -175,6 +175,7 @@ export function registerSkillsTools(server: McpServer): void {
         query,
         count: results.length,
         skills: results.map((r) => ({
+          id: r.id,
           name: r.name,
           description: r.description,
           content: r.content,
@@ -185,13 +186,13 @@ export function registerSkillsTools(server: McpServer): void {
   );
 
   server.registerTool(
-    "list_team_skills",
+    "list_skills",
     {
-      title: "List Team Skills",
-      description: "List all skills and guideline documents available in the team knowledge base.",
-      annotations: { title: "List Team Skills", readOnlyHint: true },
+      title: "List Skills",
+      description: "List all available skills and guideline documents stored in the knowledge base.",
+      annotations: { title: "List Skills", readOnlyHint: true },
       inputSchema: {
-        limit: z.number().optional().describe("Maximum skills to list (default: 50)"),
+        limit: z.number().optional().describe("Maximum number of skills to list (default: 50)"),
       },
     },
     guarded(async ({ limit }: { limit?: number }) => {
@@ -209,23 +210,47 @@ export function registerSkillsTools(server: McpServer): void {
     }),
   );
 
+  const getSkillHandler = guarded(
+    async ({ id, name, skill }: { id?: string; name?: string; skill?: string }) => {
+      const identifier = id?.trim() || name?.trim() || skill?.trim();
+      if (!identifier) {
+        throw new RepoContextError("Please provide a skill name or ID to retrieve.");
+      }
+
+      const found = await getSkill(identifier);
+      if (!found) {
+        throw new RepoContextError(`Skill "${identifier}" was not found in the knowledge base.`);
+      }
+      return text(found);
+    },
+  );
+
   server.registerTool(
-    "get_team_skill",
+    "get_skill",
     {
-      title: "Get Team Skill",
-      description: "Retrieve full content and details for a specific skill from the knowledge base by ID.",
-      annotations: { title: "Get Team Skill", readOnlyHint: true },
+      title: "Get Skill",
+      description: "Retrieve full content, instructions, and details for a specific skill from the knowledge base by ID or skill name.",
+      annotations: { title: "Get Skill", readOnlyHint: true },
       inputSchema: {
-        id: z.string().min(1).describe("Skill UUID"),
+        name: z.string().optional().describe("Skill name to retrieve (e.g. 'database-migration')"),
+        id: z.string().optional().describe("Skill UUID"),
       },
     },
-    guarded(async ({ id }: { id: string }) => {
-      const skill = await getSkill(id);
-      if (!skill) {
-        throw new RepoContextError(`Skill with ID "${id}" was not found in knowledge base.`);
-      }
-      return text(skill);
-    }),
+    getSkillHandler,
+  );
+
+  server.registerTool(
+    "get_skills",
+    {
+      title: "Get Skills",
+      description: "Retrieve content and details for one or more skills from the knowledge base by name or ID.",
+      annotations: { title: "Get Skills", readOnlyHint: true },
+      inputSchema: {
+        name: z.string().optional().describe("Skill name to retrieve"),
+        id: z.string().optional().describe("Skill UUID"),
+      },
+    },
+    getSkillHandler,
   );
 }
 
