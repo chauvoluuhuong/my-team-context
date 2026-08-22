@@ -11,6 +11,7 @@ import type {
   ValidateQdrantResult,
   QdrantStatusResult,
   SkillDocument,
+  SkillDocumentMetadata,
   SkillItem,
   SkillSearchResult,
   ListSkillsResult,
@@ -271,6 +272,7 @@ export async function listSkills(
             name?: string;
             description?: string;
             content?: string;
+            metadata?: SkillDocumentMetadata;
             serialized?: string;
             createdAt?: string;
             updatedAt?: string;
@@ -285,6 +287,7 @@ export async function listSkills(
       name: p.payload?.name || "Untitled Skill",
       description: p.payload?.description || "",
       content: p.payload?.content || "",
+      metadata: p.payload?.metadata,
       serialized: p.payload?.serialized || "",
       createdAt: p.payload?.createdAt,
       updatedAt: p.payload?.updatedAt,
@@ -336,6 +339,7 @@ export async function getSkill(
             name?: string;
             description?: string;
             content?: string;
+            metadata?: SkillDocumentMetadata;
             serialized?: string;
             createdAt?: string;
             updatedAt?: string;
@@ -350,6 +354,7 @@ export async function getSkill(
           name: p.payload?.name || "Untitled Skill",
           description: p.payload?.description || "",
           content: p.payload?.content || "",
+          metadata: p.payload?.metadata,
           serialized: p.payload?.serialized || "",
           createdAt: p.payload?.createdAt,
           updatedAt: p.payload?.updatedAt,
@@ -401,7 +406,15 @@ export async function upsertSkill(
   const vector = await generateGeminiEmbedding(serialized);
 
   const now = new Date().toISOString();
-  const payload = {
+  const payload: {
+    name: string;
+    description: string;
+    content: string;
+    serialized: string;
+    createdAt: string;
+    updatedAt: string;
+    metadata?: SkillDocumentMetadata;
+  } = {
     name: doc.name.trim(),
     description: (doc.description || "").trim(),
     content: doc.content.trim(),
@@ -409,6 +422,10 @@ export async function upsertSkill(
     createdAt: doc.createdAt || now,
     updatedAt: now,
   };
+
+  if (doc.metadata !== undefined) {
+    payload.metadata = doc.metadata;
+  }
 
   const headers = qdrantHeaders(apiKey);
   try {
@@ -436,6 +453,7 @@ export async function upsertSkill(
       name: payload.name,
       description: payload.description,
       content: payload.content,
+      metadata: payload.metadata,
       serialized: payload.serialized,
       createdAt: payload.createdAt,
       updatedAt: payload.updatedAt,
@@ -526,6 +544,7 @@ export async function searchSkills(
           name?: string;
           description?: string;
           content?: string;
+          metadata?: SkillDocumentMetadata;
           serialized?: string;
           createdAt?: string;
           updatedAt?: string;
@@ -540,6 +559,7 @@ export async function searchSkills(
       name: r.payload?.name || "Untitled Skill",
       description: r.payload?.description || "",
       content: r.payload?.content || "",
+      metadata: r.payload?.metadata,
       serialized: r.payload?.serialized || "",
       createdAt: r.payload?.createdAt,
       updatedAt: r.payload?.updatedAt,

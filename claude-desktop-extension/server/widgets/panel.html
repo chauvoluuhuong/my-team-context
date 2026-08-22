@@ -20,6 +20,7 @@
     --card-bg: #ffffff;
     --border: #e5e7eb;
   }
+
   @media (prefers-color-scheme: dark) {
     :root {
       --bg: #111827;
@@ -40,7 +41,9 @@
     }
   }
 
-  * { box-sizing: border-box; }
+  * {
+    box-sizing: border-box;
+  }
 
   .panel {
     background: var(--bg);
@@ -52,9 +55,25 @@
     max-width: 520px;
   }
 
-  h2 { font-size: 16px; font-weight: 600; margin: 0 0 4px; display: flex; align-items: center; gap: 8px; }
-  .sub { color: var(--muted); font-size: 12.5px; margin: 0 0 16px; }
-  .loading { color: var(--muted); padding: 12px 0; }
+  h2 {
+    font-size: 16px;
+    font-weight: 600;
+    margin: 0 0 4px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .sub {
+    color: var(--muted);
+    font-size: 12.5px;
+    margin: 0 0 16px;
+  }
+
+  .loading {
+    color: var(--muted);
+    padding: 12px 0;
+  }
 
   .top-bar {
     display: flex;
@@ -98,6 +117,7 @@
     align-items: center;
     gap: 4px;
   }
+
   .btn-signout:hover {
     background: var(--err-bg);
     border-color: var(--err-fg);
@@ -155,15 +175,40 @@
     border-radius: 999px;
     font-weight: 500;
   }
-  .badge.idle { background: var(--line); color: var(--muted); }
-  .badge.ok { background: var(--ok-bg); color: var(--ok-fg); }
-  .badge.err { background: var(--err-bg); color: var(--err-fg); }
-  .badge.checking { background: var(--warn-bg); color: var(--warn-fg); }
 
-  .field-group { margin-top: 6px; }
-  .field-label { display: block; font-size: 11.5px; color: var(--muted); margin-bottom: 4px; }
+  .badge.idle {
+    background: var(--line);
+    color: var(--muted);
+  }
 
-  input[type="password"], input[type="text"] {
+  .badge.ok {
+    background: var(--ok-bg);
+    color: var(--ok-fg);
+  }
+
+  .badge.err {
+    background: var(--err-bg);
+    color: var(--err-fg);
+  }
+
+  .badge.checking {
+    background: var(--warn-bg);
+    color: var(--warn-fg);
+  }
+
+  .field-group {
+    margin-top: 6px;
+  }
+
+  .field-label {
+    display: block;
+    font-size: 11.5px;
+    color: var(--muted);
+    margin-bottom: 4px;
+  }
+
+  input[type="password"],
+  input[type="text"] {
     width: 100%;
     font: 12.5px/1.4 ui-monospace, SFMono-Regular, "SF Mono", Menlo, monospace;
     padding: 7px 9px;
@@ -172,7 +217,11 @@
     background: var(--code-bg);
     color: var(--fg);
   }
-  input:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
+
+  input:focus {
+    outline: 2px solid var(--accent);
+    outline-offset: 1px;
+  }
 
   .btn-row {
     display: flex;
@@ -192,12 +241,14 @@
     cursor: pointer;
     transition: all 0.15s ease;
   }
+
   button.primary {
     background: var(--accent);
     border-color: var(--accent);
     color: #ffffff;
     flex: 1;
   }
+
   button.secondary {
     background: transparent;
     color: var(--muted);
@@ -207,8 +258,15 @@
     text-decoration: underline;
     cursor: pointer;
   }
-  button:hover:not(:disabled) { filter: brightness(1.08); }
-  button:disabled { opacity: 0.5; cursor: default; }
+
+  button:hover:not(:disabled) {
+    filter: brightness(1.08);
+  }
+
+  button:disabled {
+    opacity: 0.5;
+    cursor: default;
+  }
 
   .status-box {
     margin-top: 12px;
@@ -217,9 +275,21 @@
     font-size: 12.5px;
     line-height: 1.4;
   }
-  .status-box.ok { background: var(--ok-bg); color: var(--ok-fg); }
-  .status-box.warn { background: var(--warn-bg); color: var(--warn-fg); }
-  .status-box.err { background: var(--err-bg); color: var(--err-fg); }
+
+  .status-box.ok {
+    background: var(--ok-bg);
+    color: var(--ok-fg);
+  }
+
+  .status-box.warn {
+    background: var(--warn-bg);
+    color: var(--warn-fg);
+  }
+
+  .status-box.err {
+    background: var(--err-bg);
+    color: var(--err-fg);
+  }
 
   .hint {
     margin-top: 14px;
@@ -228,7 +298,12 @@
     color: var(--muted);
     font-size: 11.5px;
   }
-  .hint code { background: var(--code-bg); padding: 1px 4px; border-radius: 3px; }
+
+  .hint code {
+    background: var(--code-bg);
+    padding: 1px 4px;
+    border-radius: 3px;
+  }
 </style>
 
 <script type="module">
@@ -287,8 +362,8 @@
         <h3>${isRegister ? '🔐 Create Admin Account' : '🔐 Sign In to Team Context'}</h3>
         <p>
           ${isRegister
-            ? 'First step: create a username and password to store in <code>server/.env</code> and secure your settings panel.'
-            : 'Enter your admin credentials configured in <code>server/.env</code> to access Team Context.'}
+        ? 'First step: create a username and password to store in <code>server/.env</code> and secure your settings panel.'
+        : 'Enter your admin credentials configured in <code>server/.env</code> to access Team Context.'}
         </p>
 
         <div class="field-group">
@@ -309,11 +384,11 @@
 
         <div style="margin-top: 10px; display: flex; justify-content: space-between; align-items: center;">
           ${auth.hasAccount
-            ? (isRegister
-                ? `<button class="secondary" id="toggleModeBtn">← Back to Sign In</button>`
-                : `<button class="secondary" id="toggleModeBtn">+ Create New / Reset Account</button>`)
-            : `<span></span>`
-          }
+        ? (isRegister
+          ? `<button class="secondary" id="toggleModeBtn">← Back to Sign In</button>`
+          : `<button class="secondary" id="toggleModeBtn">+ Create New / Reset Account</button>`)
+        : `<span></span>`
+      }
         </div>
 
         <div id="authStatusBox"></div>
@@ -509,7 +584,7 @@
       </div>
 
       <div class="btn-row">
-        <button class="primary" id="saveBtn">Save to .env & Connect</button>
+        <button class="primary" id="saveBtn">Save to  & Connect</button>
         <button id="testBtn">Test Connections</button>
       </div>
 

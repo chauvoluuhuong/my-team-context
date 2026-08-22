@@ -82,9 +82,9 @@ export async function getTeamContextStatus(): Promise<TeamContextStatusResult> {
       : Promise.resolve({ connected: false }),
     qdrantConfig.endpoint
       ? qdrantCheckConnection(qdrantConfig.endpoint, qdrantConfig.apiKey).catch(() => ({
-          connected: false,
-          collectionsCount: 0,
-        }))
+        connected: false,
+        collectionsCount: 0,
+      }))
       : Promise.resolve({ connected: false, collectionsCount: 0 }),
     sqlConn
       ? sqlCheckConnection(sqlConn).catch(() => ({ connected: false }))

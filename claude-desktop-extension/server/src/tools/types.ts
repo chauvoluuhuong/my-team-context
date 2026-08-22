@@ -119,11 +119,17 @@ export interface GeminiStatusResult {
  * Skills & Knowledge Base Types
  * ------------------------------------------------------------------ */
 
+export interface SkillDocumentMetadata {
+  importFromFile?: string;
+  [key: string]: unknown;
+}
+
 export interface SkillDocument {
   id?: string;
   name: string;
   description: string;
   content: string;
+  metadata?: SkillDocumentMetadata;
   createdAt?: string;
   updatedAt?: string;
 }
@@ -133,6 +139,7 @@ export interface SkillItem {
   name: string;
   description: string;
   content: string;
+  metadata?: SkillDocumentMetadata;
   serialized?: string;
   createdAt?: string;
   updatedAt?: string;
