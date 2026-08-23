@@ -573,7 +573,7 @@ export function registerConfigTools(server: McpServer): void {
       _meta: { ui: { visibility: ["app"] } },
     },
     guarded(async ({ query, limit }: { query?: string; limit?: number }) => {
-      const pages = await searchNotionPages({ query, limit: limit || 100 });
+      const pages = await searchNotionPages({ query, limit: limit || 500 });
       const pagesWithStatus = await Promise.all(
         pages.map(async (p) => {
           const pointId = getNotionSkillPointId(p.id);

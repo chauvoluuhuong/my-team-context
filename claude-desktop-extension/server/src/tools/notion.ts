@@ -41,34 +41,61 @@ export async function getActiveNotionKey(): Promise<string> {
 }
 
 /**
- * Extract plain-text title from Notion page properties.
+ * Extract plain-text title from Notion page or database properties.
  */
 export function extractPageTitle(page: any): string {
-  if (!page || !page.properties) return "Untitled Page";
-  for (const key of Object.keys(page.properties)) {
-    const prop = page.properties[key];
-    if (
-      prop &&
-      prop.type === "title" &&
-      Array.isArray(prop.title) &&
-      prop.title.length > 0
-    ) {
-      const titleStr = prop.title.map((t: any) => t.plain_text || "").join("").trim();
-      if (titleStr) return titleStr;
+  if (!page) return "Untitled Page";
+
+  // 1. If database object, title is directly in page.title array
+  if (Array.isArray(page.title) && page.title.length > 0) {
+    const titleStr = page.title.map((t: any) => t.plain_text || "").join("").trim();
+    if (titleStr) return titleStr;
+  }
+
+  // 2. If page object with properties
+  if (page.properties && typeof page.properties === "object") {
+    // Priority 1: Property with type === "title" (standard for page and database row titles)
+    for (const key of Object.keys(page.properties)) {
+      const prop = page.properties[key];
+      if (
+        prop &&
+        prop.type === "title" &&
+        Array.isArray(prop.title) &&
+        prop.title.length > 0
+      ) {
+        const titleStr = prop.title.map((t: any) => t.plain_text || "").join("").trim();
+        if (titleStr) return titleStr;
+      }
+    }
+
+    // Priority 2: Fallback to common property names with rich_text (e.g. Name, Title, Topic)
+    for (const key of Object.keys(page.properties)) {
+      const prop = page.properties[key];
+      if (
+        prop &&
+        prop.type === "rich_text" &&
+        Array.isArray(prop.rich_text) &&
+        prop.rich_text.length > 0 &&
+        /^(title|name|topic|header|subject|prd|doc)$/i.test(key)
+      ) {
+        const titleStr = prop.rich_text.map((t: any) => t.plain_text || "").join("").trim();
+        if (titleStr) return titleStr;
+      }
     }
   }
-  return "Untitled Page";
+
+  return page.object === "database" ? "Untitled Database" : "Untitled Page";
 }
 
 /**
- * Extract icon representation from Notion page.
+ * Extract icon representation from Notion page or database.
  */
 export function extractPageIcon(page: any): string {
-  if (!page?.icon) return "📄";
+  if (!page?.icon) return page?.object === "database" ? "🗄️" : "📄";
   if (page.icon.type === "emoji") return page.icon.emoji || "📄";
-  if (page.icon.type === "external") return "🔗";
+  if (page.icon.type === "external") return page.icon.external?.url ? "🔗" : "📄";
   if (page.icon.type === "file") return "📎";
-  return "📄";
+  return page?.object === "database" ? "🗄️" : "📄";
 }
 
 /**
@@ -140,93 +167,88 @@ export async function fetchNotionBlocksToMarkdown(
   const indent = "  ".repeat(depth);
 
   for (const block of allBlocks) {
+    if (block.archived || block.in_trash) continue;
     const type = block.type;
-    const blockData = block[type] || {};
-    const text = richTextToMarkdown(blockData.rich_text);
+    const value = block[type] || {};
+    const richText = value.rich_text || [];
+    const textContent = richTextToMarkdown(richText);
 
     switch (type) {
       case "paragraph":
-        lines.push(`${indent}${text}`);
-        lines.push("");
+        if (textContent.trim()) lines.push(`${indent}${textContent}\n`);
         break;
       case "heading_1":
-        lines.push("");
-        lines.push(`${indent}# ${text}`);
-        lines.push("");
+        lines.push(`\n# ${textContent}\n`);
         break;
       case "heading_2":
-        lines.push("");
-        lines.push(`${indent}## ${text}`);
-        lines.push("");
+        lines.push(`\n## ${textContent}\n`);
         break;
       case "heading_3":
-        lines.push("");
-        lines.push(`${indent}### ${text}`);
-        lines.push("");
+        lines.push(`\n### ${textContent}\n`);
         break;
       case "bulleted_list_item":
-        lines.push(`${indent}- ${text}`);
+        lines.push(`${indent}- ${textContent}`);
         break;
       case "numbered_list_item":
-        lines.push(`${indent}1. ${text}`);
+        lines.push(`${indent}1. ${textContent}`);
         break;
       case "to_do":
-        lines.push(`${indent}- [${blockData.checked ? "x" : " "}] ${text}`);
+        lines.push(`${indent}- [${value.checked ? "x" : " "}] ${textContent}`);
         break;
       case "toggle":
-        lines.push(`${indent}> ${text}`);
-        break;
-      case "quote":
-        lines.push(`${indent}> ${text}`);
+        lines.push(`${indent}<details><summary>${textContent}</summary>`);
         break;
       case "callout":
-        lines.push(`${indent}> 💡 ${text}`);
+        const iconEmoji = value.icon?.emoji || "💡";
+        lines.push(`\n> ${iconEmoji} **Note:** ${textContent}\n`);
+        break;
+      case "quote":
+        lines.push(`\n> ${textContent}\n`);
         break;
       case "code":
-        lines.push(`${indent}\`\`\`${blockData.language || ""}`);
-        lines.push(`${indent}${text}`);
-        lines.push(`${indent}\`\`\``);
-        lines.push("");
+        const lang = value.language || "text";
+        lines.push(`\n\`\`\`${lang}\n${textContent}\n\`\`\`\n`);
         break;
       case "divider":
-        lines.push(`${indent}---`);
-        lines.push("");
+        lines.push("\n---\n");
         break;
       case "bookmark":
-        lines.push(`${indent}[${blockData.url || "Bookmark"}](${blockData.url || ""})`);
+        const bmUrl = value.url || "";
+        lines.push(`${indent}[${bmUrl}](${bmUrl})`);
         break;
-      case "image": {
-        const imgUrl = blockData.file?.url || blockData.external?.url || "";
-        lines.push(`${indent}![image](${imgUrl})`);
+      case "image":
+        const imgUrl = value.file?.url || value.external?.url || "";
+        if (imgUrl) lines.push(`\n![image](${imgUrl})\n`);
         break;
-      }
       case "child_page":
-        lines.push(`${indent}📄 **${blockData.title || "Child Page"}**`);
+        const childTitle = value.title || "Sub-page";
+        lines.push(`${indent}📄 **${childTitle}**`);
         break;
       case "child_database":
-        lines.push(`${indent}🗄️ **${blockData.title || "Child Database"}**`);
+        const dbTitle = value.title || "Sub-database";
+        lines.push(`${indent}🗄️ **${dbTitle}**`);
         break;
       default:
-        if (text) {
-          lines.push(`${indent}${text}`);
-        }
+        if (textContent.trim()) lines.push(`${indent}${textContent}`);
         break;
     }
 
-    // Recursively process nested child blocks
     if (block.has_children && depth < maxDepth) {
       try {
-        const childMd = await fetchNotionBlocksToMarkdown(
+        const childMarkdown = await fetchNotionBlocksToMarkdown(
           apiKey,
           block.id,
           depth + 1,
           maxDepth,
         );
-        if (childMd) {
-          lines.push(childMd);
+        if (childMarkdown.trim()) {
+          lines.push(childMarkdown);
         }
       } catch {
         // Skip child error
+      }
+      if (type === "toggle") {
+        lines.push(`${indent}</details>`);
       }
     }
   }
@@ -311,7 +333,8 @@ export async function notionCheckConnection(apiKeyOverride?: string): Promise<No
 }
 
 /**
- * Search and list pages in the Notion workspace.
+ * Search and list all pages and databases in the Notion workspace with full pagination.
+ * Reference: https://developers.notion.com/reference/post-search
  */
 export async function searchNotionPages(params?: {
   query?: string;
@@ -321,49 +344,76 @@ export async function searchNotionPages(params?: {
   const apiKey = params?.apiKeyOverride?.trim() || (await getActiveNotionKey());
   const headers = notionHeaders(apiKey);
 
-  const body: Record<string, any> = {
-    filter: { value: "page", property: "object" },
-    page_size: params?.limit || 100,
-    sort: {
-      direction: "descending",
-      timestamp: "last_edited_time",
-    },
-  };
-
-  if (params?.query && params.query.trim()) {
-    body.query = params.query.trim();
-  }
+  const maxPages = params?.limit || 500;
+  const items: NotionPageItem[] = [];
+  const seenIds = new Set<string>();
+  let startCursor: string | undefined = undefined;
+  let hasMore = true;
 
   try {
-    const res = await fetch(`${NOTION_API}/search`, {
-      method: "POST",
-      headers,
-      body: JSON.stringify(body),
-    });
+    while (hasMore && items.length < maxPages) {
+      const body: Record<string, any> = {
+        page_size: Math.min(100, maxPages - items.length),
+        sort: {
+          direction: "descending",
+          timestamp: "last_edited_time",
+        },
+      };
 
-    if (!res.ok) {
-      const errText = await res.text().catch(() => res.statusText);
-      throw new RepoContextError(`Notion search failed (${res.status}): ${errText}`);
+      if (startCursor) {
+        body.start_cursor = startCursor;
+      }
+
+      if (params?.query && params.query.trim()) {
+        body.query = params.query.trim();
+      }
+
+      const res = await fetch(`${NOTION_API}/search`, {
+        method: "POST",
+        headers,
+        body: JSON.stringify(body),
+      });
+
+      if (!res.ok) {
+        const errText = await res.text().catch(() => res.statusText);
+        throw new RepoContextError(`Notion search failed (${res.status}): ${errText}`);
+      }
+
+      const data = (await res.json()) as {
+        results?: any[];
+        has_more?: boolean;
+        next_cursor?: string | null;
+      };
+
+      const rawResults = data.results || [];
+      for (const item of rawResults) {
+        if (!item || !item.id || seenIds.has(item.id)) continue;
+        if (item.archived || item.in_trash) continue;
+
+        seenIds.add(item.id);
+        const id = item.id;
+        const title = extractPageTitle(item);
+        const icon = extractPageIcon(item);
+        const url = item.url || `https://www.notion.so/${id.replace(/-/g, "")}`;
+
+        items.push({
+          id,
+          title,
+          url,
+          icon,
+          createdTime: item.created_time,
+          lastEditedTime: item.last_edited_time,
+        });
+      }
+
+      hasMore = Boolean(data.has_more && data.next_cursor);
+      startCursor = data.next_cursor || undefined;
+
+      // If no next cursor, break loop
+      if (!startCursor) break;
     }
 
-    const data = (await res.json()) as { results?: any[] };
-    const rawPages = data.results || [];
-
-    return rawPages.map((page) => {
-      const id = page.id;
-      const title = extractPageTitle(page);
-      const icon = extractPageIcon(page);
-      const url =
-        page.url || `https://www.notion.so/${id.replace(/-/g, "")}`;
-      return {
-        id,
-        title,
-        url,
-        icon,
-        createdTime: page.created_time,
-        lastEditedTime: page.last_edited_time,
-      };
-    });
+    return items;
   } catch (err: unknown) {
     if (err instanceof RepoContextError) throw err;
     const message = err instanceof Error ? err.message : String(err);
@@ -372,7 +422,7 @@ export async function searchNotionPages(params?: {
 }
 
 /**
- * Fetch full page details and converted Markdown content for a Notion page.
+ * Fetch full page or database details and converted Markdown content.
  */
 export async function fetchNotionPageContent(
   pageId: string,
@@ -390,24 +440,62 @@ export async function fetchNotionPageContent(
   const headers = notionHeaders(apiKey);
   const cleanId = pageId.trim();
 
-  // 1. Fetch page metadata
-  const pageRes = await fetch(`${NOTION_API}/pages/${cleanId}`, {
+  // Try fetching as standard page first
+  let pageRes = await fetch(`${NOTION_API}/pages/${cleanId}`, {
     method: "GET",
     headers,
   });
 
+  let isDatabase = false;
+  let pageData: any = null;
+
   if (!pageRes.ok) {
-    const errText = await pageRes.text().catch(() => pageRes.statusText);
-    throw new RepoContextError(`Failed to fetch Notion page ${cleanId}: ${errText}`);
+    // If not a page, check if it is a database object
+    const dbRes = await fetch(`${NOTION_API}/databases/${cleanId}`, {
+      method: "GET",
+      headers,
+    });
+    if (dbRes.ok) {
+      pageData = await dbRes.json();
+      isDatabase = true;
+    } else {
+      const errText = await pageRes.text().catch(() => pageRes.statusText);
+      throw new RepoContextError(`Failed to fetch Notion resource ${cleanId}: ${errText}`);
+    }
+  } else {
+    pageData = await pageRes.json();
   }
 
-  const page = (await pageRes.json()) as any;
-  const title = extractPageTitle(page);
-  const icon = extractPageIcon(page);
-  const url = page.url || `https://www.notion.so/${cleanId.replace(/-/g, "")}`;
+  const title = extractPageTitle(pageData);
+  const icon = extractPageIcon(pageData);
+  const url = pageData.url || `https://www.notion.so/${cleanId.replace(/-/g, "")}`;
 
-  // 2. Fetch page blocks and convert to Markdown
-  const bodyMarkdown = await fetchNotionBlocksToMarkdown(apiKey, cleanId);
+  let bodyMarkdown = "";
+  if (isDatabase) {
+    // If database, fetch items in database
+    try {
+      const queryRes = await fetch(`${NOTION_API}/databases/${cleanId}/query`, {
+        method: "POST",
+        headers,
+        body: JSON.stringify({ page_size: 50 }),
+      });
+      if (queryRes.ok) {
+        const queryJson = (await queryRes.json()) as { results?: any[] };
+        const rows = queryJson.results || [];
+        const lines = [`### Database Records (${rows.length} items)\n`];
+        for (const row of rows) {
+          const rowTitle = extractPageTitle(row);
+          const rowIcon = extractPageIcon(row);
+          lines.push(`- ${rowIcon} **${rowTitle}** (${row.url || ""})`);
+        }
+        bodyMarkdown = lines.join("\n");
+      }
+    } catch {
+      bodyMarkdown = "(Database content)";
+    }
+  } else {
+    bodyMarkdown = await fetchNotionBlocksToMarkdown(apiKey, cleanId);
+  }
 
   // Combine title header with body markdown
   const header = `# ${icon ? `${icon} ` : ""}${title}\n\n`;
@@ -419,8 +507,8 @@ export async function fetchNotionPageContent(
     url,
     icon,
     content: fullContent,
-    createdTime: page.created_time || new Date().toISOString(),
-    lastEditedTime: page.last_edited_time || new Date().toISOString(),
+    createdTime: pageData.created_time || new Date().toISOString(),
+    lastEditedTime: pageData.last_edited_time || new Date().toISOString(),
   };
 }
 
