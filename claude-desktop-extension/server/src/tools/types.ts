@@ -56,6 +56,30 @@ export interface NotionStatusResult {
   reason?: string;
 }
 
+export interface NotionPageItem {
+  id: string;
+  title: string;
+  url: string;
+  icon?: string;
+  createdTime?: string;
+  lastEditedTime?: string;
+  isSynced?: boolean;
+  pointId?: string;
+}
+
+export interface NotionPagePreviewResult {
+  id: string;
+  title: string;
+  url: string;
+  icon?: string;
+  prefix: string;
+  suggestedName: string;
+  suggestedDescription: string;
+  content: string;
+  exists: boolean;
+  existingSkill?: SkillItem | null;
+}
+
 /* ------------------------------------------------------------------ *
  * Qdrant Types
  * ------------------------------------------------------------------ */
@@ -277,9 +301,19 @@ export interface ActiveRepoConfigItem {
   description: string;
 }
 
+export interface ActiveNotionPageConfigItem {
+  id: string;
+  title: string;
+  url?: string;
+  description?: string;
+  lastEditedTime?: string;
+  icon?: string;
+}
+
 export interface AppConfigPayload {
   username: string;
   "active-repos": ActiveRepoConfigItem[];
+  "active-notion-pages"?: ActiveNotionPageConfigItem[];
   systemPrompt?: string;
   createdAt: string;
   updatedAt: string;
@@ -289,6 +323,7 @@ export interface AppConfigItem {
   id: string;
   username: string;
   activeRepos: ActiveRepoConfigItem[];
+  activeNotionPages: ActiveNotionPageConfigItem[];
   systemPrompt: string;
   createdAt: string;
   updatedAt: string;

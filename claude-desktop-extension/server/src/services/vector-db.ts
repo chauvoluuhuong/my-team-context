@@ -18,6 +18,7 @@ import type {
   SkillSearchResult,
   ListSkillsResult,
   ActiveRepoConfigItem,
+  ActiveNotionPageConfigItem,
   AppConfigItem,
   AppConfigPayload,
 } from "../tools/types.js";
@@ -605,7 +606,18 @@ export function getSkillPointId(repo: string, filePath: string): string {
 }
 
 /**
- * Centralized skill name suggestion and formatting function.
+ * Generate deterministic UUID for a skill imported from a Notion page.
+ */
+export function getNotionSkillPointId(pageId: string): string {
+  const hash = crypto
+    .createHash("md5")
+    .update(`notion-skill:${pageId.trim().toLowerCase()}`)
+    .digest("hex");
+  return `${hash.slice(0, 8)}-${hash.slice(8, 12)}-${hash.slice(12, 16)}-${hash.slice(16, 20)}-${hash.slice(20, 32)}`;
+}
+
+/**
+ * Centralized skill name suggestion and formatting function for GitHub files.
  * Prefix contains Git repo and file path, followed by the skill title.
  * e.g., "[github-repo: owner/repo, path: docs/guide.md] Architecture Overview"
  */
@@ -618,8 +630,14 @@ export function formatSkillName(repo: string, filePath: string, title?: string):
   return `[github-repo: ${cleanRepo}, path: ${cleanPath}] ${baseName}`;
 }
 
-
-
+/**
+ * Centralized skill name suggestion and formatting function for Notion pages.
+ * e.g., "[notion: Architecture & Design Decisions]"
+ */
+export function formatNotionSkillName(title: string): string {
+  const cleanTitle = (title || "").trim() || "Untitled Page";
+  return `[notion: ${cleanTitle}]`;
+}
 
 /**
  * Retrieve app configuration for a user from the app-config Qdrant collection.
@@ -652,6 +670,22 @@ export async function getAppConfig(
               username?: string;
               "active-repos"?: Array<{ name?: string; description?: string }>;
               activeRepos?: Array<{ name?: string; description?: string }>;
+              "active-notion-pages"?: Array<{
+                id?: string;
+                title?: string;
+                url?: string;
+                description?: string;
+                lastEditedTime?: string;
+                icon?: string;
+              }>;
+              activeNotionPages?: Array<{
+                id?: string;
+                title?: string;
+                url?: string;
+                description?: string;
+                lastEditedTime?: string;
+                icon?: string;
+              }>;
               systemPrompt?: string;
               createdAt?: string;
               updatedAt?: string;
@@ -667,10 +701,21 @@ export async function getAppConfig(
             description: r.description || "",
           }));
 
+          const rawNotion = p["active-notion-pages"] || p.activeNotionPages || [];
+          const activeNotionPages: ActiveNotionPageConfigItem[] = rawNotion.map((n) => ({
+            id: n.id || "",
+            title: n.title || "",
+            url: n.url || "",
+            description: n.description || "",
+            lastEditedTime: n.lastEditedTime || "",
+            icon: n.icon || "📄",
+          }));
+
           return {
             id: String(data.result.id),
             username: p.username || username,
             activeRepos,
+            activeNotionPages,
             systemPrompt: p.systemPrompt || "",
             createdAt: p.createdAt || new Date().toISOString(),
             updatedAt: p.updatedAt || new Date().toISOString(),
@@ -704,6 +749,22 @@ export async function getAppConfig(
             username?: string;
             "active-repos"?: Array<{ name?: string; description?: string }>;
             activeRepos?: Array<{ name?: string; description?: string }>;
+            "active-notion-pages"?: Array<{
+              id?: string;
+              title?: string;
+              url?: string;
+              description?: string;
+              lastEditedTime?: string;
+              icon?: string;
+            }>;
+            activeNotionPages?: Array<{
+              id?: string;
+              title?: string;
+              url?: string;
+              description?: string;
+              lastEditedTime?: string;
+              icon?: string;
+            }>;
             systemPrompt?: string;
             createdAt?: string;
             updatedAt?: string;
@@ -729,10 +790,21 @@ export async function getAppConfig(
       description: r.description || "",
     }));
 
+    const rawNotion = matched.payload["active-notion-pages"] || matched.payload.activeNotionPages || [];
+    const activeNotionPages: ActiveNotionPageConfigItem[] = rawNotion.map((n) => ({
+      id: n.id || "",
+      title: n.title || "",
+      url: n.url || "",
+      description: n.description || "",
+      lastEditedTime: n.lastEditedTime || "",
+      icon: n.icon || "📄",
+    }));
+
     return {
       id: String(matched.id),
       username: matched.payload.username || username || "",
       activeRepos,
+      activeNotionPages,
       systemPrompt: matched.payload.systemPrompt || "",
       createdAt: matched.payload.createdAt || new Date().toISOString(),
       updatedAt: matched.payload.updatedAt || new Date().toISOString(),
@@ -750,6 +822,7 @@ export async function saveAppConfig(
   params: {
     username: string;
     activeRepos: ActiveRepoConfigItem[];
+    activeNotionPages?: ActiveNotionPageConfigItem[];
     systemPrompt?: string;
   },
   collectionName: string = APP_CONFIG_COLLECTION,
@@ -774,6 +847,19 @@ export async function saveAppConfig(
     description: (r.description || "").trim(),
   }));
 
+  const cleanNotionPages: ActiveNotionPageConfigItem[] = (
+    params.activeNotionPages !== undefined
+      ? params.activeNotionPages
+      : existing?.activeNotionPages || []
+  ).map((n) => ({
+    id: (n.id || "").trim(),
+    title: (n.title || "").trim(),
+    url: (n.url || "").trim(),
+    description: (n.description || "").trim(),
+    lastEditedTime: (n.lastEditedTime || "").trim(),
+    icon: (n.icon || "📄").trim(),
+  }));
+
   const systemPrompt =
     params.systemPrompt !== undefined
       ? params.systemPrompt
@@ -782,6 +868,7 @@ export async function saveAppConfig(
   const payload: AppConfigPayload = {
     username,
     "active-repos": cleanRepos,
+    "active-notion-pages": cleanNotionPages,
     systemPrompt,
     createdAt,
     updatedAt,
@@ -790,7 +877,9 @@ export async function saveAppConfig(
   // Generate embedding vector or fallback to zero vector
   let vector: number[];
   try {
-    const summary = `App config for @${username}. Active repos: ${cleanRepos.map((r) => `${r.name} (${r.description})`).join(", ")}`;
+    const reposSummary = cleanRepos.map((r) => `${r.name} (${r.description})`).join(", ");
+    const notionSummary = cleanNotionPages.map((n) => `${n.title} (${n.description})`).join(", ");
+    const summary = `App config for @${username}. Active repos: ${reposSummary || "none"}. Active Notion pages: ${notionSummary || "none"}.`;
     vector = await generateGeminiEmbedding(summary);
   } catch {
     vector = new Array(GEMINI_VECTOR_SIZE).fill(0);
@@ -823,6 +912,7 @@ export async function saveAppConfig(
       id: pointId,
       username,
       activeRepos: cleanRepos,
+      activeNotionPages: cleanNotionPages,
       systemPrompt,
       createdAt,
       updatedAt,

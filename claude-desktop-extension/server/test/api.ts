@@ -176,11 +176,52 @@ await assert.rejects(
 );
 
 // Notion validation tests
-const { validateNotionKey, notionCheckConnection } = await import(
-  "../src/tools/notion.js"
-);
+const {
+  validateNotionKey,
+  notionCheckConnection,
+  richTextToMarkdown,
+  extractPageTitle,
+  extractPageIcon,
+} = await import("../src/tools/notion.js");
 assert.equal((await validateNotionKey("")).valid, false, "empty Notion key fails");
 assert.equal((await notionCheckConnection()).connected, false, "unconfigured Notion reports disconnected");
+
+// Notion rich text to markdown formatting tests
+const richTextSample = [
+  { plain_text: "Hello ", annotations: {} },
+  { plain_text: "World", annotations: { bold: true } },
+  { plain_text: "!", annotations: { italic: true } },
+  { plain_text: " Click here", href: "https://notion.so", annotations: {} },
+];
+assert.equal(
+  richTextToMarkdown(richTextSample),
+  "Hello **World***!*[ Click here](https://notion.so)",
+  "richTextToMarkdown converts formatted Notion rich text",
+);
+
+assert.equal(
+  extractPageTitle({ properties: { title: { type: "title", title: [{ plain_text: "My Notion Page" }] } } }),
+  "My Notion Page",
+  "extractPageTitle extracts title properly",
+);
+assert.equal(
+  extractPageIcon({ icon: { type: "emoji", emoji: "🎯" } }),
+  "🎯",
+  "extractPageIcon extracts emoji icon",
+);
+
+const { getNotionSkillPointId, formatNotionSkillName } = await import(
+  "../src/services/vector-db.js"
+);
+const notionPointId1 = getNotionSkillPointId("c1f7b889-1234-5678-9abc-def012345678");
+const notionPointId2 = getNotionSkillPointId("C1F7B889-1234-5678-9ABC-DEF012345678");
+assert.equal(notionPointId1, notionPointId2, "notion point ID is case-insensitive deterministic UUID");
+assert.match(
+  notionPointId1,
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/,
+  "notion point ID matches UUID format",
+);
+assert.equal(formatNotionSkillName("Architecture Overview"), "[notion: Architecture Overview]");
 
 // Qdrant validation tests
 const { validateQdrantConnection, qdrantCheckConnection } = await import(

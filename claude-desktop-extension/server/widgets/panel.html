@@ -595,6 +595,11 @@
     repos: [],
     reposSearch: "",
     selectedRepos: new Map(), // name -> description
+    notionPages: [],
+    notionPagesSearch: "",
+    selectedNotionPages: new Map(), // id -> { id, title, description, url, icon, lastEditedTime }
+    isNotionConnected: false,
+    notionBotName: null,
     systemPrompt: "",
     defaultSystemPrompt: "",
     createdAt: "",
@@ -658,6 +663,10 @@
         const appData = JSON.parse(appStateRes.content[0].text);
         state.repos = appData.repos || [];
         state.defaultSystemPrompt = appData.defaultSystemPrompt || "";
+        state.isNotionConnected = Boolean(appData.isNotionConnected);
+        state.notionBotName = appData.notionBotName || null;
+        state.notionPages = appData.notionPages || [];
+
         const appConfig = appData.appConfig || {};
         state.systemPrompt = appConfig.systemPrompt || appData.defaultSystemPrompt || "";
         state.createdAt = appConfig.createdAt || "";
@@ -666,6 +675,20 @@
         state.selectedRepos.clear();
         (appConfig.activeRepos || []).forEach(r => {
           if (r && r.name) state.selectedRepos.set(r.name, r.description || "");
+        });
+
+        state.selectedNotionPages.clear();
+        (appConfig.activeNotionPages || []).forEach(n => {
+          if (n && n.id) {
+            state.selectedNotionPages.set(n.id, {
+              id: n.id,
+              title: n.title || "",
+              url: n.url || "",
+              description: n.description || "",
+              lastEditedTime: n.lastEditedTime || "",
+              icon: n.icon || "📄",
+            });
+          }
         });
       }
 
@@ -1004,24 +1027,25 @@
 
   function renderAppConfigTab(container) {
     const sub = state.activeSubSession;
-    const selectedCount = Array.from(state.selectedRepos.values()).length;
+    const selectedRepoCount = Array.from(state.selectedRepos.values()).length;
+    const selectedNotionCount = Array.from(state.selectedNotionPages.values()).length;
 
     container.innerHTML = `
       <div class="section-intro">
         <h3>⚙️ Application Configuration</h3>
-        <p>Manage multi-source context sessions, active repositories, and AI system prompt.</p>
+        <p>Manage multi-source context sessions, active repositories, Notion pages, and AI system prompt.</p>
       </div>
 
       <!-- Sub-Session Pills -->
       <div class="sub-pills">
         <button class="sub-pill ${sub === "github" ? "active" : ""}" id="pillGithub">
-          🐙 GitHub (${selectedCount})
+          🐙 GitHub (${selectedRepoCount})
+        </button>
+        <button class="sub-pill ${sub === "notion" ? "active" : ""}" id="pillNotion">
+          📝 Notion (${selectedNotionCount})
         </button>
         <button class="sub-pill ${sub === "prompt" ? "active" : ""}" id="pillPrompt">
           🧠 System Prompt
-        </button>
-        <button class="sub-pill ${sub === "notion" ? "active" : ""}" id="pillNotion">
-          📝 Notion
         </button>
         <button class="sub-pill ${sub === "database" ? "active" : ""}" id="pillDatabase">
           🗄️ Database
@@ -1041,15 +1065,15 @@
     `;
 
     document.getElementById("pillGithub")?.addEventListener("click", () => switchSubSession("github"));
-    document.getElementById("pillPrompt")?.addEventListener("click", () => switchSubSession("prompt"));
     document.getElementById("pillNotion")?.addEventListener("click", () => switchSubSession("notion"));
+    document.getElementById("pillPrompt")?.addEventListener("click", () => switchSubSession("prompt"));
     document.getElementById("pillDatabase")?.addEventListener("click", () => switchSubSession("database"));
     document.getElementById("saveAppConfigBtn")?.addEventListener("click", saveAppConfig);
 
     const subContent = document.getElementById("subSessionContent");
     if (sub === "github") renderGitHubSession(subContent);
-    else if (sub === "prompt") renderPromptSession(subContent);
     else if (sub === "notion") renderNotionSession(subContent);
+    else if (sub === "prompt") renderPromptSession(subContent);
     else if (sub === "database") renderDatabaseSession(subContent);
   }
 
@@ -1058,12 +1082,12 @@
     const subContent = document.getElementById("subSessionContent");
     if (subContent) {
       if (sub === "github") renderGitHubSession(subContent);
-      else if (sub === "prompt") renderPromptSession(subContent);
       else if (sub === "notion") renderNotionSession(subContent);
+      else if (sub === "prompt") renderPromptSession(subContent);
       else if (sub === "database") renderDatabaseSession(subContent);
     }
     // Update active pill UI
-    ["github", "prompt", "notion", "database"].forEach(s => {
+    ["github", "notion", "prompt", "database"].forEach(s => {
       const el = document.getElementById("pill" + s.charAt(0).toUpperCase() + s.slice(1));
       if (el) el.className = "sub-pill " + (s === sub ? "active" : "");
     });
@@ -1532,17 +1556,152 @@
 
   /* Sub-session: Notion */
   function renderNotionSession(container) {
+    if (!state.isNotionConnected && state.notionPages.length === 0) {
+      container.innerHTML = `
+        <div class="card" style="text-align:center;padding:32px 16px;">
+          <span style="font-size:32px;">📝</span>
+          <h4 style="margin:8px 0 4px;font-size:15px;">Notion Workspace Not Connected</h4>
+          <p style="color:var(--muted);font-size:12.5px;max-width:440px;margin:0 auto 16px;">
+            Configure your Notion Internal Integration Token in the Credentials tab to load and select active Notion pages.
+          </p>
+          <button class="primary" onclick="window._goToCredentialsTab()">⚡ Go to Credentials Tab</button>
+        </div>
+      `;
+      return;
+    }
+
+    const filterText = (state.notionPagesSearch || "").toLowerCase();
+    const filteredPages = state.notionPages.filter(p => {
+      const title = (p.title || "").toLowerCase();
+      const sel = state.selectedNotionPages.get(p.id);
+      const desc = sel ? (sel.description || "").toLowerCase() : "";
+      return title.includes(filterText) || desc.includes(filterText);
+    });
+
     container.innerHTML = `
-      <div class="card" style="text-align:center;padding:32px 16px;">
-        <span style="font-size:32px;">📝</span>
-        <h4 style="margin:8px 0 4px;font-size:15px;">Notion Workspace Context</h4>
-        <p style="color:var(--muted);font-size:12.5px;max-width:440px;margin:0 auto 16px;">
-          Configure specific Notion database boards, PRDs, and task databases to synchronize into your team context.
-        </p>
-        <span class="badge ok">Token Configured</span>
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title">📝 Select Active Notion Pages</span>
+          <span style="font-size:12px;color:var(--muted);">
+            ${state.selectedNotionPages.size} of ${state.notionPages.length} selected
+          </span>
+        </div>
+
+        <div class="repo-controls">
+          <input type="text" class="repo-search-input" id="notionSearchInput" placeholder="🔍 Search Notion pages…" value="${esc(state.notionPagesSearch)}" />
+          <button class="secondary" id="selectAllNotionBtn" style="font-size:12px;padding:6px 10px;">Select All</button>
+          <button class="secondary" id="clearAllNotionBtn" style="font-size:12px;padding:6px 10px;">Clear</button>
+          <button class="secondary" id="refreshNotionBtn" style="font-size:12px;padding:6px 10px;">🔄 Refresh</button>
+        </div>
+
+        <div class="repo-list" id="notionListContainer">
+          ${filteredPages.length === 0 ? '<div class="loading">No Notion pages found. Ensure Notion integration token is configured in Credentials tab.</div>' : ''}
+          ${filteredPages.map(p => {
+            const isSelected = state.selectedNotionPages.has(p.id);
+            const selItem = state.selectedNotionPages.get(p.id);
+            const desc = selItem ? (selItem.description || "") : "";
+            const lastEdited = p.lastEditedTime ? new Date(p.lastEditedTime).toLocaleDateString() : "";
+            return `
+              <div class="repo-item ${isSelected ? 'selected' : ''}" data-id="${esc(p.id)}">
+                <div class="repo-main-row" onclick="window._toggleNotionPage('${esc(p.id)}')">
+                  <input type="checkbox" class="repo-checkbox" ${isSelected ? 'checked' : ''} />
+                  <span style="font-size:15px;line-height:1;">${esc(p.icon || '📄')}</span>
+                  <span class="repo-name">${esc(p.title || 'Untitled Page')}</span>
+                  ${lastEdited ? `<span class="badge idle" style="font-size:10.5px;padding:1px 6px;">${esc(lastEdited)}</span>` : ''}
+                  ${p.url ? `<a href="${esc(p.url)}" target="_blank" onclick="event.stopPropagation()" style="font-size:12px;color:var(--accent);text-decoration:none;margin-left:4px;" title="Open in Notion">↗</a>` : ''}
+                </div>
+                ${isSelected ? `
+                  <div class="repo-desc-box">
+                    <input type="text" placeholder="Custom context description for this page (e.g. Product Requirements Document)" value="${esc(desc)}" oninput="window._updateNotionDesc('${esc(p.id)}', this.value)" />
+                  </div>
+                ` : ''}
+              </div>
+            `;
+          }).join('')}
+        </div>
       </div>
     `;
+
+    document.getElementById("notionSearchInput")?.addEventListener("input", (e) => {
+      state.notionPagesSearch = e.target.value;
+      renderNotionSession(container);
+    });
+
+    document.getElementById("selectAllNotionBtn")?.addEventListener("click", () => {
+      state.notionPages.forEach(p => {
+        if (p && p.id && !state.selectedNotionPages.has(p.id)) {
+          state.selectedNotionPages.set(p.id, {
+            id: p.id,
+            title: p.title || "",
+            url: p.url || "",
+            description: "",
+            lastEditedTime: p.lastEditedTime || "",
+            icon: p.icon || "📄",
+          });
+        }
+      });
+      renderNotionSession(container);
+    });
+
+    document.getElementById("clearAllNotionBtn")?.addEventListener("click", () => {
+      state.selectedNotionPages.clear();
+      renderNotionSession(container);
+    });
+
+    document.getElementById("refreshNotionBtn")?.addEventListener("click", () => {
+      window._refreshNotionPages();
+    });
   }
+
+  window._goToCredentialsTab = function() {
+    switchTopTab("credentials");
+  };
+
+  window._toggleNotionPage = function(pageId) {
+    if (state.selectedNotionPages.has(pageId)) {
+      state.selectedNotionPages.delete(pageId);
+    } else {
+      const pageObj = state.notionPages.find(p => p.id === pageId);
+      if (pageObj) {
+        state.selectedNotionPages.set(pageId, {
+          id: pageObj.id,
+          title: pageObj.title || "",
+          url: pageObj.url || "",
+          description: "",
+          lastEditedTime: pageObj.lastEditedTime || "",
+          icon: pageObj.icon || "📄",
+        });
+      }
+    }
+    const subContent = document.getElementById("subSessionContent");
+    if (subContent) renderNotionSession(subContent);
+  };
+
+  window._updateNotionDesc = function(pageId, desc) {
+    const item = state.selectedNotionPages.get(pageId);
+    if (item) {
+      item.description = desc;
+      state.selectedNotionPages.set(pageId, item);
+    }
+  };
+
+  window._refreshNotionPages = async function() {
+    const refreshBtn = document.getElementById("refreshNotionBtn");
+    if (refreshBtn) {
+      refreshBtn.disabled = true;
+      refreshBtn.textContent = "Refreshing…";
+    }
+    try {
+      const res = await app.callServerTool({ name: "config_list_notion_pages", arguments: {} });
+      const data = JSON.parse(res.content[0].text);
+      state.notionPages = data.pages || [];
+      state.isNotionConnected = true;
+    } catch (err) {
+      console.error("Failed to refresh Notion pages:", err);
+    }
+    const subContent = document.getElementById("subSessionContent");
+    if (subContent) renderNotionSession(subContent);
+  };
 
   /* Sub-session: Database */
   function renderDatabaseSession(container) {
@@ -1569,12 +1728,22 @@
       description: description || "",
     }));
 
+    const activeNotionPages = Array.from(state.selectedNotionPages.values()).map(n => ({
+      id: n.id,
+      title: n.title || "",
+      url: n.url || "",
+      description: n.description || "",
+      lastEditedTime: n.lastEditedTime || "",
+      icon: n.icon || "📄",
+    }));
+
     try {
       const res = await app.callServerTool({
         name: "config_save_app_config",
         arguments: {
           username: state.auth.username || "admin",
           activeRepos,
+          activeNotionPages,
           systemPrompt: state.systemPrompt,
         },
       });
