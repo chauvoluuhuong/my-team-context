@@ -109,10 +109,13 @@ const address = server.address() as AddressInfo;
 process.env.REPO_CONTEXT_API = `http://127.0.0.1:${address.port}`;
 
 // Imported after the env vars are set — the modules read them at load time.
-const { listRepos, listFiles, readFile, searchCode, overview, repoMeta } = await import(
+const { listRepos, listFiles, readFile, searchCode, overview, repoMeta, resolveActiveRepos } = await import(
   "../src/tools/github.js"
 );
 const { setActiveRepo, readState } = await import("../src/utils/store.js");
+
+const resolvedOverride = await resolveActiveRepos("octo/site");
+assert.deepEqual(resolvedOverride, ["octo/site"], "explicit repo override resolved");
 
 const repos = await listRepos({});
 assert.equal(repos.length, 2);
@@ -124,50 +127,69 @@ assert.equal(meta.defaultBranch, "main");
 await setActiveRepo(meta.fullName, meta.defaultBranch);
 assert.equal((await readState()).repo, "octo/app", "selection persists");
 
-const dirListing = await listFiles({});
+const dirListings = await listFiles({});
+assert.ok(Array.isArray(dirListings));
+assert.equal(dirListings[0].repo, "octo/app");
 assert.deepEqual(
-  dirListing.entries.map((e) => e.path),
+  dirListings[0].entries.map((e) => e.path),
   ["src", "README.md"],
   "dirs sort first",
 );
-assert.equal(dirListing.ref, "main", "falls back to the stored default branch");
+assert.equal(dirListings[0].ref, "main", "falls back to the stored default branch");
 
-const tree = await listFiles({ recursive: true, path: "src" });
+const trees = await listFiles({ recursive: true, path: "src" });
+assert.ok(Array.isArray(trees));
 assert.deepEqual(
-  tree.entries.map((e) => e.path),
+  trees[0].entries.map((e) => e.path),
   ["src/index.ts", "src/lib/util.ts"],
   "prefix filter",
 );
-assert.equal(tree.fileCount, 2);
+assert.equal(trees[0].fileCount, 2);
 
 const capped = await listFiles({ recursive: true, limit: 1 });
-assert.equal(capped.entries.length, 1);
-assert.ok(capped.truncated && capped.note?.includes("Narrow"), "truncation is reported");
+assert.ok(Array.isArray(capped));
+assert.equal(capped[0].entries.length, 1);
+assert.ok(capped[0].truncated && capped[0].note?.includes("Narrow"), "truncation is reported");
 
 const whole = await readFile({ path: "src/index.ts" });
-assert.equal(whole.lines, 5);
-assert.equal(whole.content, "one\ntwo\nthree\nfour\n");
+assert.ok(Array.isArray(whole));
+assert.equal(whole[0].lines, 5);
+assert.equal(whole[0].content, "one\ntwo\nthree\nfour\n");
 
 const slice = await readFile({ path: "src/index.ts", startLine: 2, endLine: 3 });
-assert.equal(slice.content, "two\nthree");
-assert.equal(slice.shown, "2-3");
+assert.ok(Array.isArray(slice));
+assert.equal(slice[0].content, "two\nthree");
+assert.equal(slice[0].shown, "2-3");
 
 const clipped = await readFile({ path: "src/index.ts", maxChars: 5 });
-assert.ok(clipped.truncated && clipped.content.length === 5, "maxChars clips");
+assert.ok(Array.isArray(clipped));
+assert.ok(clipped[0].truncated && clipped[0].content?.length === 5, "maxChars clips");
 
 const hits = await searchCode({ query: "answer" });
-assert.equal(hits.totalCount, 1);
-assert.deepEqual(hits.results[0].matches, ["export const answer = 42"]);
+assert.ok(Array.isArray(hits), "searchCode returns an array of repo search results");
+assert.equal(hits.length, 1);
+assert.equal(hits[0].repo, "octo/app");
+assert.equal(hits[0].totalCount, 1);
+assert.deepEqual(hits[0].results[0].matches, ["export const answer = 42"]);
 
-const primer = await overview({});
-assert.deepEqual(primer.languages, ["TypeScript", "CSS"]);
-assert.deepEqual(primer.topLevel, ["src/", "README.md"]);
-assert.ok(primer.readme?.startsWith("# The app"));
+// Explicit repo override test
+const explicitHits = await searchCode({ repo: "octo/app", query: "answer" });
+assert.ok(Array.isArray(explicitHits));
+assert.equal(explicitHits.length, 1);
+assert.equal(explicitHits[0].repo, "octo/app");
+assert.equal(explicitHits[0].totalCount, 1);
 
-await assert.rejects(
-  () => readFile({ path: "nope.ts" }),
-  /GitHub error: 404/,
-  "404s surface readably",
+const primers = await overview({});
+assert.ok(Array.isArray(primers));
+assert.equal(primers[0].repo, "octo/app");
+assert.deepEqual(primers[0].languages, ["TypeScript", "CSS"]);
+assert.deepEqual(primers[0].topLevel, ["src/", "README.md"]);
+assert.ok(primers[0].readme?.startsWith("# The app"));
+
+const missingRead = await readFile({ path: "nope.ts" });
+assert.ok(
+  missingRead[0].error?.includes("404") || missingRead[0].note?.includes("404"),
+  "404s surface in result object",
 );
 await assert.rejects(
   () => listFiles({ repo: "not-a-repo" }),

@@ -327,8 +327,9 @@ export function registerConfigTools(server: McpServer): void {
       _meta: { ui: { visibility: ["app"] } },
     },
     guarded(async ({ repo }: { repo: string }) => {
-      const res = await listFiles({ repo, recursive: true, limit: 1000 });
-      const mdEntries = (res.entries || []).filter((e) => {
+      const listRes = await listFiles({ repo, recursive: true, limit: 1000 });
+      const res = Array.isArray(listRes) ? listRes[0] : listRes;
+      const mdEntries = ((res && res.entries) || []).filter((e) => {
         const lower = e.path.toLowerCase();
         return lower.endsWith(".md") || lower.endsWith(".mdx");
       });
@@ -376,8 +377,9 @@ export function registerConfigTools(server: McpServer): void {
       _meta: { ui: { visibility: ["app"] } },
     },
     guarded(async ({ repo, filePath }: { repo: string; filePath: string }) => {
-      const fileData = await readFile({ repo, path: filePath });
-      const content = fileData.content || "";
+      const readRes = await readFile({ repo, path: filePath });
+      const fileData = Array.isArray(readRes) ? readRes[0] : readRes;
+      const content = fileData?.content || "";
 
       // Extract title from first markdown heading or filename
       const titleMatch = content.match(/^#+\s+(.+)$/m);
@@ -486,8 +488,9 @@ export function registerConfigTools(server: McpServer): void {
           try {
             let content = item.content;
             if (!content || !content.trim()) {
-              const fileData = await readFile({ repo, path: filePath });
-              content = fileData.content || "";
+              const readRes = await readFile({ repo, path: filePath });
+              const fileData = Array.isArray(readRes) ? readRes[0] : readRes;
+              content = fileData?.content || "";
             }
 
             if (!content.trim()) {
