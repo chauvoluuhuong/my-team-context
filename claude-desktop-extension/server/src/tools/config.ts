@@ -6,14 +6,24 @@
  * persisted in Qdrant's `app-config` collection.
  */
 
+import path from "node:path";
 import { z } from "zod";
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { registerAppTool } from "@modelcontextprotocol/ext-apps/server";
 import { text, guarded, getDefaultSystemPrompt, RepoContextError } from "../utils/helpers.js";
-import { whoami, listRepos } from "./github.js";
+import { whoami, listRepos, listFiles, readFile } from "./github.js";
 import { getAuthState, getSessionUser } from "./init.js";
-import { getAppConfig, saveAppConfig } from "../services/vector-db.js";
+import {
+  getAppConfig,
+  saveAppConfig,
+  upsertSkill,
+  getSkill,
+  getSkillPointId,
+  formatSkillName,
+} from "../services/vector-db.js";
 import type { ActiveRepoConfigItem } from "./types.js";
+
+
 
 export const CONFIG_URI = "ui://repo-context/config.html";
 
@@ -241,6 +251,252 @@ export function registerConfigTools(server: McpServer): void {
       },
     ),
   );
+
+  registerAppTool(
+    server,
+    "config_list_repo_md_files",
+    {
+      title: "List Repository Markdown Files",
+      description: "Internal: recursively find all .md and .mdx files inside a GitHub repository.",
+      annotations: { title: "List Markdown Files", readOnlyHint: true },
+      inputSchema: {
+        repo: z.string().min(1).describe("Repository name (owner/repo)"),
+      },
+      _meta: { ui: { visibility: ["app"] } },
+    },
+    guarded(async ({ repo }: { repo: string }) => {
+      const res = await listFiles({ repo, recursive: true, limit: 1000 });
+      const mdEntries = (res.entries || []).filter((e) => {
+        const lower = e.path.toLowerCase();
+        return lower.endsWith(".md") || lower.endsWith(".mdx");
+      });
+
+      const mdFiles = await Promise.all(
+        mdEntries.map(async (e) => {
+          const pointId = getSkillPointId(repo, e.path);
+          let isSynced = false;
+          try {
+            const existing = await getSkill(pointId);
+            if (existing) isSynced = true;
+          } catch {
+            // Not in Qdrant yet
+          }
+          return {
+            path: e.path,
+            size: e.size,
+            isSynced,
+            pointId,
+          };
+        }),
+      );
+
+      return text({
+        status: "ok",
+        repo,
+        count: mdFiles.length,
+        mdFiles,
+      });
+    }),
+  );
+
+  registerAppTool(
+    server,
+    "config_preview_repo_md_file",
+    {
+      title: "Preview Repository Markdown File for Skill Sync",
+      description:
+        "Internal: fetch file content, suggest formatted skill name and description, and check existing Qdrant skill status.",
+      annotations: { title: "Preview Markdown Skill", readOnlyHint: true },
+      inputSchema: {
+        repo: z.string().min(1).describe("Repository name (owner/repo)"),
+        filePath: z.string().min(1).describe("File path within the repository"),
+      },
+      _meta: { ui: { visibility: ["app"] } },
+    },
+    guarded(async ({ repo, filePath }: { repo: string; filePath: string }) => {
+      const fileData = await readFile({ repo, path: filePath });
+      const content = fileData.content || "";
+
+      // Extract title from first markdown heading or filename
+      const titleMatch = content.match(/^#+\s+(.+)$/m);
+      const defaultTitle = titleMatch
+        ? titleMatch[1].trim()
+        : path.basename(filePath, path.extname(filePath));
+
+      // Centralized naming suggestion
+      const suggestedName = formatSkillName(repo, filePath, defaultTitle);
+      const prefix = `[github-repo: ${repo.trim()}, path: ${filePath.trim()}]`;
+
+
+      // Extract description from first non-header text line
+      const lines = content
+        .split("\n")
+        .map((l) => l.trim())
+        .filter((l) => l.length > 0 && !l.startsWith("#"));
+      const suggestedDescription = lines[0]
+        ? lines[0].slice(0, 200) + (lines[0].length > 200 ? "..." : "")
+        : `Imported from ${repo}/${filePath}`;
+
+      const pointId = getSkillPointId(repo, filePath);
+      let existingSkill = null;
+      try {
+        existingSkill = await getSkill(pointId);
+      } catch {
+        // Does not exist yet
+      }
+
+      return text({
+        status: "ok",
+        repo,
+        filePath,
+        prefix,
+        defaultTitle,
+        suggestedName,
+        suggestedDescription,
+        content,
+        exists: Boolean(existingSkill),
+        existingSkill,
+      });
+    }),
+  );
+
+  registerAppTool(
+    server,
+    "config_sync_repo_md_files",
+    {
+      title: "Sync Markdown Files to Qdrant Skills",
+      description:
+        "Internal: fetch selected .md files from a GitHub repository and upsert them into Qdrant vector DB skills collection with deterministic UUIDs and location metadata.",
+      annotations: { title: "Sync Markdown to Skills", readOnlyHint: false },
+      inputSchema: {
+        repo: z.string().min(1).describe("Repository name (owner/repo)"),
+        items: z
+          .array(
+            z.object({
+              filePath: z.string().min(1).describe("File path in repository"),
+              name: z.string().optional().describe("Custom skill name (suggested prefix + title)"),
+              description: z.string().optional().describe("Custom skill description"),
+              content: z.string().optional().describe("Skill content markdown"),
+            }),
+          )
+          .optional()
+          .describe("Items to sync with custom names/descriptions"),
+        filePaths: z
+          .array(z.string().min(1))
+          .optional()
+          .describe("List of file paths to sync (fallback)"),
+      },
+      _meta: { ui: { visibility: ["app"] } },
+    },
+    guarded(
+      async ({
+        repo,
+        items,
+        filePaths,
+      }: {
+        repo: string;
+        items?: Array<{ filePath: string; name?: string; description?: string; content?: string }>;
+        filePaths?: string[];
+      }) => {
+        const syncList: Array<{
+          filePath: string;
+          name?: string;
+          description?: string;
+          content?: string;
+        }> =
+          items && items.length > 0
+            ? items
+            : (filePaths || []).map((fp) => ({ filePath: fp }));
+
+        if (syncList.length === 0) {
+          throw new RepoContextError("No markdown files specified to sync.");
+        }
+
+        const results: Array<{
+          path: string;
+          status: "upserted" | "failed";
+          name?: string;
+          skillId?: string;
+          error?: string;
+        }> = [];
+
+        for (const item of syncList) {
+          const { filePath } = item;
+          try {
+            let content = item.content;
+            if (!content || !content.trim()) {
+              const fileData = await readFile({ repo, path: filePath });
+              content = fileData.content || "";
+            }
+
+            if (!content.trim()) {
+              results.push({ path: filePath, status: "failed", error: "File content is empty." });
+              continue;
+            }
+
+            // Extract title from first markdown header or filename
+            const titleMatch = content.match(/^#+\s+(.+)$/m);
+            const defaultTitle = titleMatch
+              ? titleMatch[1].trim()
+              : path.basename(filePath, path.extname(filePath));
+
+            const skillName =
+              item.name && item.name.trim()
+                ? item.name.trim()
+                : formatSkillName(repo, filePath, defaultTitle);
+
+            // Extract description from first non-header line or summary
+            const lines = content
+              .split("\n")
+              .map((l) => l.trim())
+              .filter((l) => l.length > 0 && !l.startsWith("#"));
+            const skillDescription =
+              item.description && item.description.trim()
+                ? item.description.trim()
+                : lines[0]
+                  ? lines[0].slice(0, 200) + (lines[0].length > 200 ? "..." : "")
+                  : `Imported from ${repo}/${filePath}`;
+
+            const skillId = getSkillPointId(repo, filePath);
+
+            await upsertSkill({
+              id: skillId,
+              name: skillName,
+              description: skillDescription,
+              content,
+              metadata: {
+                source: "github",
+                location: {
+                  repo: repo.trim(),
+                  filePath: filePath.trim(),
+                  fullPath: `github:${repo.trim()}:${filePath.trim()}`,
+                },
+                repo: repo.trim(),
+                filePath: filePath.trim(),
+                syncedAt: new Date().toISOString(),
+              },
+            });
+
+            results.push({ path: filePath, status: "upserted", name: skillName, skillId });
+          } catch (err: unknown) {
+            const msg = err instanceof Error ? err.message : String(err);
+            results.push({ path: filePath, status: "failed", error: msg });
+          }
+        }
+
+        const successCount = results.filter((r) => r.status === "upserted").length;
+
+        return text({
+          status: "ok",
+          synced: successCount,
+          total: syncList.length,
+          results,
+        });
+      },
+    ),
+  );
+
+
 
   /* ------------------- Conversational Agent Tools ------------------- */
 

@@ -3,7 +3,9 @@
  */
 
 import crypto from "node:crypto";
+import path from "node:path";
 import { readQdrantConfig, saveQdrantConfig, clearQdrantConfig } from "../utils/store.js";
+
 import { RepoContextError } from "../utils/helpers.js";
 import { serializeSkillDocument } from "../utils/serializer.js";
 import { generateGeminiEmbedding, GEMINI_VECTOR_SIZE } from "./embedding.js";
@@ -590,6 +592,34 @@ export function getAppConfigPointId(username: string): string {
     .digest("hex");
   return `${hash.slice(0, 8)}-${hash.slice(8, 12)}-${hash.slice(12, 16)}-${hash.slice(16, 20)}-${hash.slice(20, 32)}`;
 }
+
+/**
+ * Generate deterministic UUID for a skill imported from a repository file.
+ */
+export function getSkillPointId(repo: string, filePath: string): string {
+  const hash = crypto
+    .createHash("md5")
+    .update(`github-skill:${repo.trim().toLowerCase()}:${filePath.trim().toLowerCase()}`)
+    .digest("hex");
+  return `${hash.slice(0, 8)}-${hash.slice(8, 12)}-${hash.slice(12, 16)}-${hash.slice(16, 20)}-${hash.slice(20, 32)}`;
+}
+
+/**
+ * Centralized skill name suggestion and formatting function.
+ * Prefix contains Git repo and file path, followed by the skill title.
+ * e.g., "[github-repo: owner/repo, path: docs/guide.md] Architecture Overview"
+ */
+export function formatSkillName(repo: string, filePath: string, title?: string): string {
+  const cleanRepo = repo.trim();
+  const cleanPath = filePath.trim().replace(/^\/+/, "");
+  const baseName = title && title.trim()
+    ? title.trim()
+    : path.basename(cleanPath, path.extname(cleanPath));
+  return `[github-repo: ${cleanRepo}, path: ${cleanPath}] ${baseName}`;
+}
+
+
+
 
 /**
  * Retrieve app configuration for a user from the app-config Qdrant collection.

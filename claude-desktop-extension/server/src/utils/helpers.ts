@@ -76,10 +76,14 @@ function resolveWidgetPath(widgetFileName: string): string {
   return found;
 }
 
-export function buildPanel(): string {
+export function buildPanel(defaultTab: "credentials" | "config" = "credentials"): string {
   const bundle = loadBundle();
   const widgetPath = resolveWidgetPath("panel.html");
-  return readFileSync(widgetPath, "utf8").replace("/*__EXT_APPS_BUNDLE__*/", () => bundle);
+  let html = readFileSync(widgetPath, "utf8").replace("/*__EXT_APPS_BUNDLE__*/", () => bundle);
+  if (defaultTab === "config") {
+    html = html.replace('activeTopTab: "credentials"', 'activeTopTab: "config"');
+  }
+  return html;
 }
 
 export function buildSkillsPanel(): string {
@@ -89,10 +93,9 @@ export function buildSkillsPanel(): string {
 }
 
 export function buildConfigPanel(): string {
-  const bundle = loadBundle();
-  const widgetPath = resolveWidgetPath("config.html");
-  return readFileSync(widgetPath, "utf8").replace("/*__EXT_APPS_BUNDLE__*/", () => bundle);
+  return buildPanel("config");
 }
+
 
 export function getDefaultSystemPrompt(): string {
   const here = path.dirname(fileURLToPath(import.meta.url));

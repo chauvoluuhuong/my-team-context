@@ -65,8 +65,14 @@
     border-radius: 12px;
     padding: 20px;
     max-width: 720px;
+    height: 680px;
+    max-height: 680px;
     margin: 0 auto;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
   }
+
 
   .header {
     display: flex;
@@ -157,13 +163,31 @@
     border-color: var(--accent);
   }
 
+  /* Content area scrollable container */
+  #tabContent {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow-y: auto;
+    padding-right: 4px;
+    min-height: 0;
+  }
+
+  #subSessionContent {
+    flex: 1;
+    overflow-y: auto;
+    padding-right: 2px;
+    min-height: 0;
+  }
+
   /* Sub-session Pills */
   .sub-pills {
     display: flex;
     gap: 6px;
-    margin-bottom: 16px;
+    margin-bottom: 14px;
     flex-wrap: wrap;
   }
+
 
   .sub-pill {
     padding: 5px 12px;
@@ -471,7 +495,87 @@
     color: var(--err-fg);
     border: 1px solid var(--err-fg);
   }
+
+  /* Modal Popup Styles */
+  .modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.65);
+    backdrop-filter: blur(4px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+    padding: 16px;
+  }
+
+  .modal-dialog {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    width: 100%;
+    max-width: 560px;
+    max-height: 88vh;
+    overflow-y: auto;
+    box-shadow: 0 16px 40px rgba(0, 0, 0, 0.4);
+    display: flex;
+    flex-direction: column;
+    padding: 20px 22px;
+  }
+
+  .modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 12px;
+    margin-bottom: 16px;
+  }
+
+  .modal-title {
+    font-size: 15px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 0;
+  }
+
+  .btn-close {
+    background: transparent;
+    border: none;
+    color: var(--muted);
+    font-size: 20px;
+    cursor: pointer;
+    padding: 2px 6px;
+    border-radius: 4px;
+    line-height: 1;
+  }
+
+  .btn-close:hover {
+    color: var(--fg);
+    background: var(--code-bg);
+  }
+
+  .preview-box {
+    background: var(--code-bg);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 8px 12px;
+    font-family: ui-monospace, monospace;
+    font-size: 11.5px;
+    max-height: 120px;
+    overflow-y: auto;
+    white-space: pre-wrap;
+    word-break: break-all;
+    color: var(--fg);
+    margin-top: 6px;
+  }
 </style>
+
 
 <script>
   /*__EXT_APPS_BUNDLE__*/
@@ -616,9 +720,13 @@
 
       <!-- Tab Content Area -->
       <div id="tabContent"></div>
+
+      <!-- Modal Container -->
+      <div id="modalContainer"></div>
     `;
 
     document.getElementById("signoutBtn")?.addEventListener("click", handleSignout);
+
     document.getElementById("tabBtnCredentials")?.addEventListener("click", () => switchTopTab("credentials"));
     document.getElementById("tabBtnConfig")?.addEventListener("click", () => switchTopTab("config"));
 
@@ -992,6 +1100,7 @@
       if (!name) return "";
       const isSelected = state.selectedRepos.has(name);
       const desc = state.selectedRepos.get(name) || "";
+      const safeId = name.replace(/[^a-zA-Z0-9_-]/g, '_');
       return `
               <div class="repo-item ${isSelected ? 'selected' : ''}" data-name="${esc(name)}">
                 <div class="repo-main-row" onclick="window._toggleRepo('${esc(name)}')">
@@ -1003,6 +1112,16 @@
                 ${isSelected ? `
                   <div class="repo-desc-box">
                     <input type="text" placeholder="Custom context description for this repo (e.g. Next.js web client)" value="${esc(desc)}" oninput="window._updateRepoDesc('${esc(name)}', this.value)" />
+                    
+                    <div class="md-sync-section" style="margin-top:10px;padding:10px 12px;background:var(--code-bg);border:1px solid var(--border);border-radius:8px;">
+                      <div style="display:flex;justify-content:space-between;align-items:center;">
+                        <span style="font-size:12px;font-weight:600;display:flex;align-items:center;gap:5px;">📄 Markdown Skills Sync</span>
+                        <button class="secondary" style="font-size:11.5px;padding:3px 9px;" onclick="window._scanMdFiles('${esc(name)}')">
+                          🔍 Find .md Files
+                        </button>
+                      </div>
+                      <div id="md-list-${safeId}" style="margin-top:4px;"></div>
+                    </div>
                   </div>
                 ` : ''}
               </div>
@@ -1031,6 +1150,344 @@
     });
   }
 
+  /* ------------------- Centralized Skill Name & Modal Flow ------------------- */
+
+  function formatSkillName(repo, filePath, title) {
+    const cleanRepo = (repo || "").trim();
+    const cleanPath = (filePath || "").trim().replace(/^\/+/, "");
+    const baseName = title && title.trim()
+      ? title.trim()
+      : (cleanPath.split("/").pop().replace(/\.[^/.]+$/, ""));
+    return `[github-repo: ${cleanRepo}, path: ${cleanPath}] ${baseName}`;
+  }
+
+  window._mdFilesCache = window._mdFilesCache || {};
+  window._mdSelectedCache = window._mdSelectedCache || {};
+
+
+  window._scanMdFiles = async function(repo) {
+    const safeId = repo.replace(/[^a-zA-Z0-9_-]/g, '_');
+    const cont = document.getElementById("md-list-" + safeId);
+    if (!cont) return;
+    cont.innerHTML = '<div style="font-size:12px;color:var(--muted);padding:6px 0;">🔍 Recursively scanning repository for .md and .mdx files…</div>';
+
+    try {
+      const res = await app.callServerTool({ name: "config_list_repo_md_files", arguments: { repo } });
+      const data = JSON.parse(res.content[0].text);
+      const files = data.mdFiles || [];
+      window._mdFilesCache[repo] = files;
+      window._mdSelectedCache[repo] = new Set(files.map(f => f.path));
+
+      renderMdFileList(repo, safeId);
+    } catch (err) {
+      cont.innerHTML = `<div style="font-size:12px;color:var(--err-fg);padding:4px 0;">Failed to scan: ${esc(err.message)}</div>`;
+    }
+  };
+
+  function renderMdFileList(repo, safeId) {
+    const cont = document.getElementById("md-list-" + safeId);
+    if (!cont) return;
+    const files = window._mdFilesCache[repo] || [];
+    const selected = window._mdSelectedCache[repo] || new Set();
+
+    if (files.length === 0) {
+      cont.innerHTML = '<div style="font-size:12px;color:var(--muted);padding:4px 0;">No .md files found in this repository.</div>';
+      return;
+    }
+
+    cont.innerHTML = `
+      <div style="margin-top:6px;border-top:1px dashed var(--line);padding-top:8px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+          <span style="font-size:11.5px;color:var(--muted);font-weight:600;">Found ${files.length} .md files (${selected.size} selected)</span>
+          <div style="display:flex;gap:4px;">
+            <button class="secondary" style="font-size:10.5px;padding:2px 6px;" onclick="window._toggleAllMd('${esc(repo)}', true)">All</button>
+            <button class="secondary" style="font-size:10.5px;padding:2px 6px;" onclick="window._toggleAllMd('${esc(repo)}', false)">None</button>
+          </div>
+        </div>
+        <div style="max-height:180px;overflow-y:auto;display:flex;flex-direction:column;gap:5px;margin-bottom:8px;padding-right:4px;">
+          ${files.map(f => {
+            const isChecked = selected.has(f.path);
+            return `
+              <div style="display:flex;align-items:center;justify-content:space-between;gap:6px;padding:5px 8px;border-radius:6px;background:var(--card-bg);border:1px solid var(--border);">
+                <label style="display:flex;align-items:center;gap:6px;font-size:12px;cursor:pointer;flex:1;min-width:0;">
+                  <input type="checkbox" ${isChecked ? 'checked' : ''} onchange="window._toggleMdItem('${esc(repo)}', '${esc(f.path)}', this.checked)" />
+                  <span style="font-family:ui-monospace,monospace;font-size:11.5px;word-break:break-all;">${esc(f.path)}</span>
+                  ${f.size ? `<span style="font-size:10px;color:var(--muted);">(${Math.round(f.size / 1024)} KB)</span>` : ''}
+                </label>
+                <div style="display:flex;align-items:center;gap:6px;">
+                  ${f.isSynced ? '<span class="badge ok" style="font-size:10px;padding:1px 6px;">✓ Synced</span>' : '<span class="badge idle" style="font-size:10px;padding:1px 6px;">New</span>'}
+                  <button class="secondary" style="font-size:11px;padding:2px 7px;" onclick="window._openMdModal('${esc(repo)}', '${esc(f.path)}')">
+                    ⚡ Sync / Name
+                  </button>
+                </div>
+              </div>
+            `;
+          }).join('')}
+        </div>
+        <div style="display:flex;gap:8px;align-items:center;">
+          <button class="primary" style="font-size:11.5px;padding:4px 10px;" onclick="window._syncMdFiles('${esc(repo)}')">
+            ⚡ Sync (${selected.size}) Selected Skills
+          </button>
+          <span id="md-sync-status-${safeId}" style="font-size:11.5px;"></span>
+        </div>
+      </div>
+    `;
+  }
+
+  window._toggleAllMd = function(repo, selectAll) {
+    const files = window._mdFilesCache[repo] || [];
+    if (selectAll) {
+      window._mdSelectedCache[repo] = new Set(files.map(f => f.path));
+    } else {
+      window._mdSelectedCache[repo] = new Set();
+    }
+    const safeId = repo.replace(/[^a-zA-Z0-9_-]/g, '_');
+    renderMdFileList(repo, safeId);
+  };
+
+  window._toggleMdItem = function(repo, filePath, isChecked) {
+    const selected = window._mdSelectedCache[repo] || new Set();
+    if (isChecked) selected.add(filePath);
+    else selected.delete(filePath);
+    window._mdSelectedCache[repo] = selected;
+    const safeId = repo.replace(/[^a-zA-Z0-9_-]/g, '_');
+    renderMdFileList(repo, safeId);
+  };
+
+  /* ------------------- Interactive Sync Modal ------------------- */
+
+  window._currentModalFileContent = "";
+
+  window._openMdModal = async function(repo, filePath) {
+    const modalContainer = document.getElementById("modalContainer");
+    if (!modalContainer) return;
+
+    modalContainer.innerHTML = `
+      <div class="modal-overlay" id="mdModalOverlay" onclick="if(event.target === this) window._closeMdModal()">
+        <div class="modal-dialog">
+          <div class="modal-header">
+            <h3 class="modal-title">📄 Configure & Sync Skill</h3>
+            <button class="btn-close" onclick="window._closeMdModal()">✕</button>
+          </div>
+          <div class="loading">Loading file preview and name suggestion…</div>
+        </div>
+      </div>
+    `;
+
+    try {
+      const res = await app.callServerTool({
+        name: "config_preview_repo_md_file",
+        arguments: { repo, filePath },
+      });
+      const data = JSON.parse(res.content[0].text);
+
+      const modalDialog = document.querySelector(".modal-dialog");
+      if (!modalDialog) return;
+
+      window._currentModalFileContent = data.content || "";
+      const prefix = data.prefix || `[${repo}:${filePath}]`;
+      const suggestedName = data.suggestedName || formatSkillName(repo, filePath, data.defaultTitle);
+      const suggestedDesc = data.suggestedDescription || `Imported from ${repo}/${filePath}`;
+      const isExisting = Boolean(data.exists);
+      const linesCount = (data.content || "").split("\n").length;
+      const charCount = (data.content || "").length;
+
+      modalDialog.innerHTML = `
+        <div class="modal-header">
+          <div>
+            <h3 class="modal-title">📄 Import Skill from Markdown</h3>
+            <div style="font-size:11.5px;color:var(--muted);margin-top:2px;">
+              📍 Location: <strong style="color:var(--fg);">${esc(repo)}</strong> → <span style="font-family:ui-monospace,monospace;">${esc(filePath)}</span>
+            </div>
+          </div>
+          <button class="btn-close" onclick="window._closeMdModal()">✕</button>
+        </div>
+
+        ${isExisting ? `
+          <div style="padding:8px 12px;background:var(--card-selected);border:1px solid var(--accent);border-radius:6px;font-size:12px;margin-bottom:12px;color:var(--fg);">
+            ℹ️ <strong>Already imported in Qdrant</strong>. Syncing will update this skill in-place with your new name, description, and fresh vector embedding.
+          </div>
+        ` : ''}
+
+
+        <div class="field-group" style="margin-bottom:12px;">
+          <label style="font-size:12px;font-weight:600;display:flex;justify-content:space-between;">
+            <span>Skill Name:</span>
+            <span style="font-size:11px;color:var(--muted);font-weight:normal;">Suggested with origin prefix</span>
+          </label>
+          <input type="text" id="modalSkillName" value="${esc(suggestedName)}" placeholder="e.g. ${esc(prefix)} Overview" />
+          <div style="font-size:11px;color:var(--muted);margin-top:3px;">
+            Prefix <code style="background:var(--code-bg);padding:1px 4px;border-radius:3px;">${esc(prefix)}</code> identifies origin repo & file path. You can customize the title as you wish.
+          </div>
+        </div>
+
+        <div class="field-group" style="margin-bottom:12px;">
+          <label style="font-size:12px;font-weight:600;">Skill Description / Summary:</label>
+          <input type="text" id="modalSkillDesc" value="${esc(suggestedDesc)}" placeholder="Brief summary of this skill…" />
+        </div>
+
+        <div class="field-group" style="margin-bottom:14px;">
+          <label style="font-size:12px;font-weight:600;display:flex;justify-content:space-between;">
+            <span>Markdown Content Preview:</span>
+            <span style="font-size:11px;color:var(--muted);">${linesCount} lines · ${charCount} chars</span>
+          </label>
+          <div class="preview-box" style="max-height:160px;">${esc(data.content || "(Empty file)")}</div>
+        </div>
+
+        <div id="modalStatusBox" style="font-size:12px;margin-bottom:12px;display:none;"></div>
+
+        <div class="btn-row" style="justify-content:flex-end;gap:8px;">
+          <button class="secondary" onclick="window._closeMdModal()">Cancel</button>
+          <button class="primary" id="modalSyncBtn" onclick="window._saveSingleMdSkill('${esc(repo)}', '${esc(filePath)}')">
+            ⚡ Sync Skill
+          </button>
+        </div>
+      `;
+    } catch (err) {
+      const modalDialog = document.querySelector(".modal-dialog");
+      if (modalDialog) {
+        modalDialog.innerHTML = `
+          <div class="modal-header">
+            <h3 class="modal-title">Error</h3>
+            <button class="btn-close" onclick="window._closeMdModal()">✕</button>
+          </div>
+          <div style="color:var(--err-fg);padding:10px 0;font-size:12.5px;">Failed to load preview: ${esc(err.message)}</div>
+        `;
+      }
+    }
+  };
+
+  window._closeMdModal = function() {
+    const modalContainer = document.getElementById("modalContainer");
+    if (modalContainer) modalContainer.innerHTML = "";
+    window._currentModalFileContent = "";
+  };
+
+  window._saveSingleMdSkill = async function(repo, filePath) {
+    const nameInput = document.getElementById("modalSkillName");
+    const descInput = document.getElementById("modalSkillDesc");
+    const syncBtn = document.getElementById("modalSyncBtn");
+    const statusBox = document.getElementById("modalStatusBox");
+
+    const customName = nameInput ? nameInput.value.trim() : "";
+    const customDesc = descInput ? descInput.value.trim() : "";
+
+    if (!customName) {
+      if (statusBox) {
+        statusBox.style.display = "block";
+        statusBox.style.color = "var(--err-fg)";
+        statusBox.textContent = "Skill name cannot be empty.";
+      }
+      return;
+    }
+
+    if (syncBtn) {
+      syncBtn.disabled = true;
+      syncBtn.textContent = "Syncing & Embedding…";
+    }
+
+    try {
+      const res = await app.callServerTool({
+        name: "config_sync_repo_md_files",
+        arguments: {
+          repo,
+          items: [
+            {
+              filePath,
+              name: customName,
+              description: customDesc,
+              content: window._currentModalFileContent || undefined,
+            },
+          ],
+        },
+      });
+
+      const data = JSON.parse(res.content[0].text);
+      if (data.status === "ok" && data.synced > 0) {
+        // Update local file cache
+        const files = window._mdFilesCache[repo] || [];
+        const fileObj = files.find(f => f.path === filePath);
+        if (fileObj) fileObj.isSynced = true;
+
+        const safeId = repo.replace(/[^a-zA-Z0-9_-]/g, '_');
+        renderMdFileList(repo, safeId);
+
+        if (statusBox) {
+          statusBox.style.display = "block";
+          statusBox.style.color = "var(--ok-fg)";
+          statusBox.textContent = "✓ Skill successfully synced to Qdrant!";
+        }
+
+        setTimeout(() => {
+          window._closeMdModal();
+        }, 800);
+      } else {
+        throw new Error(data.message || "Failed to sync skill.");
+      }
+    } catch (err) {
+      if (statusBox) {
+        statusBox.style.display = "block";
+        statusBox.style.color = "var(--err-fg)";
+        statusBox.textContent = "Error: " + err.message;
+      }
+      if (syncBtn) {
+        syncBtn.disabled = false;
+        syncBtn.textContent = "⚡ Sync Skill";
+      }
+    }
+  };
+
+  window._syncMdFiles = async function(repo) {
+    const safeId = repo.replace(/[^a-zA-Z0-9_-]/g, '_');
+    const statusEl = document.getElementById("md-sync-status-" + safeId);
+    const selected = Array.from(window._mdSelectedCache[repo] || []);
+
+    if (selected.length === 0) {
+      if (statusEl) {
+        statusEl.style.color = "var(--err-fg)";
+        statusEl.textContent = "Please select at least 1 .md file.";
+      }
+      return;
+    }
+
+    if (statusEl) {
+      statusEl.style.color = "var(--muted)";
+      statusEl.textContent = `Syncing ${selected.length} skills to Qdrant…`;
+    }
+
+    try {
+      const res = await app.callServerTool({
+        name: "config_sync_repo_md_files",
+        arguments: { repo, filePaths: selected },
+      });
+      const data = JSON.parse(res.content[0].text);
+      if (data.status === "ok") {
+        const files = window._mdFilesCache[repo] || [];
+        files.forEach(f => {
+          if (selected.includes(f.path)) f.isSynced = true;
+        });
+        renderMdFileList(repo, safeId);
+
+        const statusElAfter = document.getElementById("md-sync-status-" + safeId);
+        if (statusElAfter) {
+          statusElAfter.style.color = "var(--ok-fg)";
+          statusElAfter.textContent = `✓ ${data.synced} of ${data.total} skills synced to Qdrant!`;
+        }
+      } else {
+        if (statusEl) {
+          statusEl.style.color = "var(--err-fg)";
+          statusEl.textContent = data.message || "Sync failed.";
+        }
+      }
+    } catch (err) {
+      if (statusEl) {
+        statusEl.style.color = "var(--err-fg)";
+        statusEl.textContent = "Error: " + err.message;
+      }
+    }
+  };
+
+
 
   window._toggleRepo = function (name) {
     if (state.selectedRepos.has(name)) {
@@ -1045,6 +1502,7 @@
   window._updateRepoDesc = function (name, desc) {
     state.selectedRepos.set(name, desc);
   };
+
 
   /* Sub-session: System Prompt */
   function renderPromptSession(container) {
