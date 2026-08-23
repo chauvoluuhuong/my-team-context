@@ -56,6 +56,30 @@ export interface NotionStatusResult {
   reason?: string;
 }
 
+export interface NotionPageItem {
+  id: string;
+  title: string;
+  url: string;
+  icon?: string;
+  createdTime?: string;
+  lastEditedTime?: string;
+  isSynced?: boolean;
+  pointId?: string;
+}
+
+export interface NotionPagePreviewResult {
+  id: string;
+  title: string;
+  url: string;
+  icon?: string;
+  prefix: string;
+  suggestedName: string;
+  suggestedDescription: string;
+  content: string;
+  exists: boolean;
+  existingSkill?: SkillItem | null;
+}
+
 /* ------------------------------------------------------------------ *
  * Qdrant Types
  * ------------------------------------------------------------------ */
@@ -119,11 +143,17 @@ export interface GeminiStatusResult {
  * Skills & Knowledge Base Types
  * ------------------------------------------------------------------ */
 
+export interface SkillDocumentMetadata {
+  importFromFile?: string;
+  [key: string]: unknown;
+}
+
 export interface SkillDocument {
   id?: string;
   name: string;
   description: string;
   content: string;
+  metadata?: SkillDocumentMetadata;
   createdAt?: string;
   updatedAt?: string;
 }
@@ -133,6 +163,7 @@ export interface SkillItem {
   name: string;
   description: string;
   content: string;
+  metadata?: SkillDocumentMetadata;
   serialized?: string;
   createdAt?: string;
   updatedAt?: string;
@@ -262,6 +293,43 @@ export interface OverviewResult extends RepoMetaResult {
 }
 
 /* ------------------------------------------------------------------ *
+ * Application Configuration Types
+ * ------------------------------------------------------------------ */
+
+export interface ActiveRepoConfigItem {
+  name: string;
+  description: string;
+}
+
+export interface ActiveNotionPageConfigItem {
+  id: string;
+  title: string;
+  url?: string;
+  description?: string;
+  lastEditedTime?: string;
+  icon?: string;
+}
+
+export interface AppConfigPayload {
+  username: string;
+  "active-repos": ActiveRepoConfigItem[];
+  "active-notion-pages"?: ActiveNotionPageConfigItem[];
+  systemPrompt?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface AppConfigItem {
+  id: string;
+  username: string;
+  activeRepos: ActiveRepoConfigItem[];
+  activeNotionPages: ActiveNotionPageConfigItem[];
+  systemPrompt: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+/* ------------------------------------------------------------------ *
  * MCP Tool Response Types
  * ------------------------------------------------------------------ */
 
@@ -270,3 +338,4 @@ export interface ToolTextResponse {
   content: Array<{ type: "text"; text: string }>;
   isError?: boolean;
 }
+

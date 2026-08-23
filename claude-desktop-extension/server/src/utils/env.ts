@@ -27,6 +27,8 @@ export function getEnvPath(): string {
 }
 
 export interface TeamEnvConfig {
+  AUTH_USERNAME?: string;
+  AUTH_PASSWORD?: string;
   GITHUB_TOKEN?: string;
   NOTION_API_KEY?: string;
   QDRANT_URL?: string;
@@ -108,6 +110,8 @@ export async function readEnvConfig(): Promise<TeamEnvConfig> {
   }
 
   return {
+    AUTH_USERNAME: fileConfig.AUTH_USERNAME || process.env.AUTH_USERNAME || "",
+    AUTH_PASSWORD: fileConfig.AUTH_PASSWORD || process.env.AUTH_PASSWORD || "",
     GITHUB_TOKEN: fileConfig.GITHUB_TOKEN || process.env.GITHUB_TOKEN || process.env.REPO_CONTEXT_TOKEN || "",
     NOTION_API_KEY: fileConfig.NOTION_API_KEY || process.env.NOTION_API_KEY || "",
     QDRANT_URL: fileConfig.QDRANT_URL || fileConfig.QDRANT_ENDPOINT || process.env.QDRANT_URL || process.env.QDRANT_ENDPOINT || "",

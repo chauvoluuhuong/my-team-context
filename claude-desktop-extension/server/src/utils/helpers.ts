@@ -76,10 +76,14 @@ function resolveWidgetPath(widgetFileName: string): string {
   return found;
 }
 
-export function buildPanel(): string {
+export function buildPanel(defaultTab: "credentials" | "config" = "credentials"): string {
   const bundle = loadBundle();
   const widgetPath = resolveWidgetPath("panel.html");
-  return readFileSync(widgetPath, "utf8").replace("/*__EXT_APPS_BUNDLE__*/", () => bundle);
+  let html = readFileSync(widgetPath, "utf8").replace("/*__EXT_APPS_BUNDLE__*/", () => bundle);
+  if (defaultTab === "config") {
+    html = html.replace('activeTopTab: "credentials"', 'activeTopTab: "config"');
+  }
+  return html;
 }
 
 export function buildSkillsPanel(): string {
@@ -87,3 +91,26 @@ export function buildSkillsPanel(): string {
   const widgetPath = resolveWidgetPath("skills.html");
   return readFileSync(widgetPath, "utf8").replace("/*__EXT_APPS_BUNDLE__*/", () => bundle);
 }
+
+export function buildConfigPanel(): string {
+  return buildPanel("config");
+}
+
+
+export function getDefaultSystemPrompt(): string {
+  const here = path.dirname(fileURLToPath(import.meta.url));
+  const candidatePaths = [
+    path.resolve(here, "..", "DEFAULT_SYSTEM_PROMPT"),
+    path.resolve(here, "..", "..", "DEFAULT_SYSTEM_PROMPT"),
+    path.resolve(process.cwd(), "DEFAULT_SYSTEM_PROMPT"),
+    path.resolve(process.cwd(), "claude-desktop-extension", "server", "DEFAULT_SYSTEM_PROMPT"),
+  ];
+
+  const found = candidatePaths.find((p) => existsSync(p));
+  if (found) {
+    return readFileSync(found, "utf8");
+  }
+
+  return `# Role & Purpose\n\nYou are an intelligent Team Assistant and Context-Aware Engineering Co-Pilot.`;
+}
+

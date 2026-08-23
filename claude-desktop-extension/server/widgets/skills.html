@@ -375,6 +375,14 @@
     const nameVal = currentEditSkill?.name || "";
     const descVal = currentEditSkill?.description || "";
     const contentVal = currentEditSkill?.content || "";
+    const importFromFileVal = currentEditSkill?.metadata?.importFromFile || "";
+    let customMetaVal = "";
+    if (currentEditSkill?.metadata) {
+      const { importFromFile: _, ...rest } = currentEditSkill.metadata;
+      if (Object.keys(rest).length > 0) {
+        customMetaVal = JSON.stringify(rest, null, 2);
+      }
+    }
 
     return `
       <div class="editor-card">
@@ -393,6 +401,18 @@
         <div class="form-group">
           <label class="form-label" for="skillDesc">Short Description</label>
           <input type="text" id="skillDesc" placeholder="Brief summary of what this skill does or solves" value="${esc(descVal)}" />
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="skillImportFromFile">Source File (Optional)</label>
+          <input type="text" id="skillImportFromFile" placeholder="e.g. docs/skills/database-guide.md or .agents/skills/deploy/SKILL.md" value="${esc(importFromFileVal)}" />
+          <div class="form-hint">File path or reference if this skill was imported from a file.</div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="skillMetadata">Custom Metadata (JSON Object, Optional)</label>
+          <textarea id="skillMetadata" style="min-height: 70px; font-size: 12px;" placeholder='{\n  "version": "1.0",\n  "author": "team-lead",\n  "tags": ["database", "postgres"]\n}'>${esc(customMetaVal)}</textarea>
+          <div class="form-hint">Arbitrary key-value metadata object for custom properties.</div>
         </div>
 
         <div class="form-group">
@@ -446,6 +466,21 @@
       ? `<span class="badge score">★ ${(Math.min(100, Math.max(0, skill.score * 100))).toFixed(1)}% match</span>`
       : '';
 
+    const hasImport = skill.metadata?.importFromFile;
+    let extraMetaBadges = '';
+    if (skill.metadata) {
+      const { importFromFile: _, ...rest } = skill.metadata;
+      const keys = Object.keys(rest);
+      if (keys.length > 0) {
+        extraMetaBadges = keys
+          .map((k) => {
+            const v = typeof rest[k] === 'object' ? JSON.stringify(rest[k]) : String(rest[k]);
+            return `<span class="badge idle" style="font-size:10.5px;" title="${esc(k)}: ${esc(v)}">🏷️ ${esc(k)}: ${esc(v)}</span>`;
+          })
+          .join(' ');
+      }
+    }
+
     return `
       <div class="skill-card" data-id="${esc(skill.id)}">
         <div class="skill-header">
@@ -460,6 +495,18 @@
         </div>
 
         ${skill.description ? `<div class="skill-desc">${esc(skill.description)}</div>` : ''}
+
+        ${hasImport ? `
+          <div style="margin-bottom: 8px; font-size: 11.5px; color: var(--accent);">
+            📁 <strong>Source:</strong> <code>${esc(skill.metadata.importFromFile)}</code>
+          </div>
+        ` : ''}
+
+        ${extraMetaBadges ? `
+          <div style="display:flex; flex-wrap:wrap; gap:4px; margin-bottom:8px;">
+            ${extraMetaBadges}
+          </div>
+        ` : ''}
 
         <div class="skill-content-preview" title="Click to expand/collapse" id="preview-${esc(skill.id)}">${esc(skill.content)}</div>
 
@@ -568,9 +615,12 @@
   }
 
   async function handleSaveSkill() {
+    const isNew = !currentEditSkill?.id;
     const name = document.getElementById("skillName")?.value?.trim();
     const description = document.getElementById("skillDesc")?.value?.trim() || "";
     const content = document.getElementById("skillContent")?.value?.trim();
+    const importFromFile = document.getElementById("skillImportFromFile")?.value?.trim();
+    const metaText = document.getElementById("skillMetadata")?.value?.trim();
     const saveBtn = document.getElementById("saveSkillBtn");
 
     if (!name) {
@@ -581,6 +631,27 @@
       showStatus("err", "Skill content is required.");
       return;
     }
+
+    let metaObj = {};
+    if (metaText) {
+      try {
+        const parsed = JSON.parse(metaText);
+        if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed)) {
+          showStatus("err", 'Metadata must be a valid JSON object (e.g. {"key": "value"}).');
+          return;
+        }
+        metaObj = { ...parsed };
+      } catch (err) {
+        showStatus("err", `Invalid JSON in metadata: ${err.message}`);
+        return;
+      }
+    }
+
+    if (importFromFile) {
+      metaObj.importFromFile = importFromFile;
+    }
+
+    const metadata = Object.keys(metaObj).length > 0 ? metaObj : undefined;
 
     saveBtn.disabled = true;
     saveBtn.textContent = "Embedding with Gemini & saving…";
@@ -595,6 +666,7 @@
             name,
             description,
             content,
+            metadata,
           },
         });
         const data = JSON.parse(res.content[0].text);
@@ -607,6 +679,7 @@
             name,
             description,
             content,
+            metadata,
           },
         });
         const data = JSON.parse(res.content[0].text);
@@ -618,7 +691,7 @@
     } catch (err) {
       showStatus("err", `Failed to save skill: ${err.message}`);
       saveBtn.disabled = false;
-      saveBtn.textContent = "Save Skill";
+      saveBtn.textContent = isNew ? "🚀 Embed & Store Skill" : "💾 Update & Re-embed Skill";
     }
   }
 

@@ -18,6 +18,7 @@ import path from "node:path";
 const dir = await fs.mkdtemp(path.join(os.tmpdir(), "repo-context-test-"));
 process.env.REPO_CONTEXT_DATA = dir;
 process.env.REPO_CONTEXT_BACKEND = "file";
+process.env.ENV_FILE_PATH = path.join(dir, ".env");
 // Explicit stub credential, so the test can never pick up a real token from
 // the keychain and send it anywhere — not even to the local stub below.
 process.env.REPO_CONTEXT_TOKEN = "stub-token";
@@ -26,6 +27,7 @@ delete process.env.QDRANT_URL;
 delete process.env.QDRANT_API_KEY;
 delete process.env.DATABASE_URL;
 delete process.env.GEMINI_API_KEY;
+
 
 const routes: Record<string, unknown> = {
   "/user": { login: "octo" },
@@ -174,11 +176,52 @@ await assert.rejects(
 );
 
 // Notion validation tests
-const { validateNotionKey, notionCheckConnection } = await import(
-  "../src/tools/notion.js"
-);
+const {
+  validateNotionKey,
+  notionCheckConnection,
+  richTextToMarkdown,
+  extractPageTitle,
+  extractPageIcon,
+} = await import("../src/tools/notion.js");
 assert.equal((await validateNotionKey("")).valid, false, "empty Notion key fails");
 assert.equal((await notionCheckConnection()).connected, false, "unconfigured Notion reports disconnected");
+
+// Notion rich text to markdown formatting tests
+const richTextSample = [
+  { plain_text: "Hello ", annotations: {} },
+  { plain_text: "World", annotations: { bold: true } },
+  { plain_text: "!", annotations: { italic: true } },
+  { plain_text: " Click here", href: "https://notion.so", annotations: {} },
+];
+assert.equal(
+  richTextToMarkdown(richTextSample),
+  "Hello **World***!*[ Click here](https://notion.so)",
+  "richTextToMarkdown converts formatted Notion rich text",
+);
+
+assert.equal(
+  extractPageTitle({ properties: { title: { type: "title", title: [{ plain_text: "My Notion Page" }] } } }),
+  "My Notion Page",
+  "extractPageTitle extracts title properly",
+);
+assert.equal(
+  extractPageIcon({ icon: { type: "emoji", emoji: "🎯" } }),
+  "🎯",
+  "extractPageIcon extracts emoji icon",
+);
+
+const { getNotionSkillPointId, formatNotionSkillName } = await import(
+  "../src/services/vector-db.js"
+);
+const notionPointId1 = getNotionSkillPointId("c1f7b889-1234-5678-9abc-def012345678");
+const notionPointId2 = getNotionSkillPointId("C1F7B889-1234-5678-9ABC-DEF012345678");
+assert.equal(notionPointId1, notionPointId2, "notion point ID is case-insensitive deterministic UUID");
+assert.match(
+  notionPointId1,
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/,
+  "notion point ID matches UUID format",
+);
+assert.equal(formatNotionSkillName("Architecture Overview"), "[notion: Architecture Overview]");
 
 // Qdrant validation tests
 const { validateQdrantConnection, qdrantCheckConnection } = await import(
@@ -229,7 +272,7 @@ assert.equal(sqliteCheck.valid, true, "sqlite valid");
 assert.equal(sqliteCheck.dialect, "sqlite");
 
 // Team Context aggregate status test
-const { getTeamContextStatus } = await import("../src/tools/init.js");
+const { getTeamContextStatus, getAuthState, setSessionUser, getSessionUser } = await import("../src/tools/init.js");
 const aggregateStatus = await getTeamContextStatus();
 assert.equal(aggregateStatus.github.authenticated, true);
 assert.equal(aggregateStatus.github.login, "octo");
@@ -239,7 +282,52 @@ assert.equal(aggregateStatus.qdrant.connected, false);
 assert.equal(aggregateStatus.sql.connected, false);
 assert.equal(aggregateStatus.gemini.connected, false);
 
+// Auth state and session tests
+const { readEnvConfig, writeEnvConfig } = await import("../src/utils/env.js");
+const initialAuth = await getAuthState();
+assert.equal(initialAuth.isAuthenticated, false, "initially not authenticated");
+
+setSessionUser("testadmin");
+assert.equal(getSessionUser(), "testadmin");
+const sessionAuth = await getAuthState();
+assert.equal(sessionAuth.isAuthenticated, true);
+assert.equal(sessionAuth.username, "testadmin");
+
+setSessionUser(null);
+assert.equal(getSessionUser(), null);
+
+// Write env config auth test
+await writeEnvConfig({
+  AUTH_USERNAME: "alice",
+  AUTH_PASSWORD: "secretpassword123",
+});
+const envWithAuth = await readEnvConfig();
+assert.equal(envWithAuth.AUTH_USERNAME, "alice");
+assert.equal(envWithAuth.AUTH_PASSWORD, "secretpassword123");
+
+// App Config and System Prompt tests
+const { getDefaultSystemPrompt, buildConfigPanel } = await import("../src/utils/helpers.js");
+const defaultPrompt = getDefaultSystemPrompt();
+assert.ok(defaultPrompt.includes("# Role & Purpose"), "default system prompt loads correctly");
+
+const configPanelHtml = buildConfigPanel();
+assert.ok(configPanelHtml.includes("Application Configuration"), "buildConfigPanel includes title");
+assert.ok(configPanelHtml.includes("ExtApps"), "buildConfigPanel inlines ExtApps bundle");
+assert.ok(configPanelHtml.includes("selectedRepos"), "buildConfigPanel includes repo state");
+
+const { getAppConfigPointId } = await import("../src/services/vector-db.js");
+const pointId1 = getAppConfigPointId("Alice");
+const pointId2 = getAppConfigPointId("alice");
+assert.equal(pointId1, pointId2, "point ID is case-insensitive deterministic UUID");
+assert.match(
+  pointId1,
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/,
+  "point ID matches UUID format",
+);
+
 server.close();
 await fs.rm(dir, { recursive: true, force: true });
 console.log("api tests passed");
+
+
 
