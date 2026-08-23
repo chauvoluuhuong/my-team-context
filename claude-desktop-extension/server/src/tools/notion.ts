@@ -339,6 +339,8 @@ export async function notionCheckConnection(apiKeyOverride?: string): Promise<No
 export async function searchNotionPages(params?: {
   query?: string;
   limit?: number;
+  filterType?: "page" | "database";
+  sortDirection?: "ascending" | "descending";
   apiKeyOverride?: string;
 }): Promise<NotionPageItem[]> {
   const apiKey = params?.apiKeyOverride?.trim() || (await getActiveNotionKey());
@@ -355,10 +357,14 @@ export async function searchNotionPages(params?: {
       const body: Record<string, any> = {
         page_size: Math.min(100, maxPages - items.length),
         sort: {
-          direction: "descending",
+          direction: params?.sortDirection || "descending",
           timestamp: "last_edited_time",
         },
       };
+
+      if (params?.filterType) {
+        body.filter = { value: params.filterType, property: "object" };
+      }
 
       if (startCursor) {
         body.start_cursor = startCursor;
@@ -587,7 +593,7 @@ export function registerNotionTools(server: McpServer): void {
     "notion_list_pages",
     {
       title: "List Notion Pages",
-      description: "Search and list accessible pages in the connected Notion workspace.",
+      description: "Search and list accessible pages and databases in the connected Notion workspace.",
       annotations: { title: "List Notion Pages", readOnlyHint: true },
       inputSchema: {
         query: z.string().optional().describe("Optional search query to filter Notion pages"),
@@ -602,6 +608,39 @@ export function registerNotionTools(server: McpServer): void {
         pages,
       });
     }),
+  );
+
+  server.registerTool(
+    "notion_search",
+    {
+      title: "Search Notion Workspace",
+      description: "Search pages, databases, and text across the connected Notion workspace.",
+      annotations: { title: "Search Notion Workspace", readOnlyHint: true },
+      inputSchema: {
+        query: z.string().min(1).describe("Search text query to match page and database titles and content"),
+        limit: z.number().optional().describe("Maximum number of results to return (default: 50)"),
+      },
+    },
+    guarded(
+      async ({
+        query,
+        limit,
+      }: {
+        query: string;
+        limit?: number;
+      }) => {
+        const results = await searchNotionPages({
+          query,
+          limit: limit || 50,
+        });
+        return text({
+          status: "ok",
+          query,
+          total: results.length,
+          results,
+        });
+      },
+    ),
   );
 
   server.registerTool(
