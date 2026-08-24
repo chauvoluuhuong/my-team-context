@@ -179,6 +179,31 @@ export interface ListSkillsResult {
   collection: string;
 }
 
+export interface TeamUserItem {
+  id: string;
+  name: string;
+  role: string;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface SetupStatusResult {
+  isSetupComplete: boolean;
+  step: "qdrant_config" | "user_selection" | "completed";
+  qdrant: {
+    configured: boolean;
+    connected: boolean;
+    endpoint?: string | null;
+    error?: string | null;
+  };
+  currentUser: {
+    name: string | null;
+    role: string | null;
+  };
+  users: TeamUserItem[];
+  error?: string | null;
+}
+
 /* ------------------------------------------------------------------ *
  * Team Context Init & Aggregate Status Types
  * ------------------------------------------------------------------ */
@@ -234,12 +259,13 @@ export interface ListFilesEntry {
 
 export interface ListFilesResult {
   repo: string;
-  ref: string;
+  ref?: string;
   path: string;
   entries: ListFilesEntry[];
   fileCount?: number;
   truncated?: boolean;
   note?: string;
+  error?: string;
 }
 
 export interface ReadFileOptions {
@@ -253,13 +279,14 @@ export interface ReadFileOptions {
 
 export interface ReadFileResult {
   repo: string;
-  ref: string;
+  ref?: string;
   path: string;
-  lines: number;
-  shown: string;
-  truncated: boolean;
+  lines?: number;
+  shown?: string;
+  truncated?: boolean;
   note?: string;
-  content: string;
+  content?: string;
+  error?: string;
 }
 
 export interface SearchCodeOptions {
@@ -279,17 +306,20 @@ export interface SearchCodeResult {
   totalCount: number;
   results: SearchCodeMatch[];
   note?: string;
+  error?: string;
 }
 
 export interface OverviewOptions {
   repo?: string;
 }
 
-export interface OverviewResult extends RepoMetaResult {
-  ref: string;
-  languages: string[];
-  topLevel: string[];
-  readme: string | null;
+export interface OverviewResult extends Partial<RepoMetaResult> {
+  repo: string;
+  ref?: string;
+  languages?: string[];
+  topLevel?: string[];
+  readme?: string | null;
+  error?: string;
 }
 
 /* ------------------------------------------------------------------ *

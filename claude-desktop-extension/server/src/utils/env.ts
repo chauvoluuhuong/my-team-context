@@ -27,6 +27,10 @@ export function getEnvPath(): string {
 }
 
 export interface TeamEnvConfig {
+  CURRENT_USER_NAME?: string;
+  CURRENT_USER_ROLE?: string;
+  USER_NAME?: string;
+  USER_ROLE?: string;
   AUTH_USERNAME?: string;
   AUTH_PASSWORD?: string;
   GITHUB_TOKEN?: string;
@@ -109,8 +113,28 @@ export async function readEnvConfig(): Promise<TeamEnvConfig> {
     // Return what's available
   }
 
+  const currentUserName =
+    fileConfig.CURRENT_USER_NAME ||
+    fileConfig.USER_NAME ||
+    fileConfig.AUTH_USERNAME ||
+    process.env.CURRENT_USER_NAME ||
+    process.env.USER_NAME ||
+    process.env.AUTH_USERNAME ||
+    "";
+
+  const currentUserRole =
+    fileConfig.CURRENT_USER_ROLE ||
+    fileConfig.USER_ROLE ||
+    process.env.CURRENT_USER_ROLE ||
+    process.env.USER_ROLE ||
+    "";
+
   return {
-    AUTH_USERNAME: fileConfig.AUTH_USERNAME || process.env.AUTH_USERNAME || "",
+    CURRENT_USER_NAME: currentUserName,
+    CURRENT_USER_ROLE: currentUserRole,
+    USER_NAME: currentUserName,
+    USER_ROLE: currentUserRole,
+    AUTH_USERNAME: currentUserName,
     AUTH_PASSWORD: fileConfig.AUTH_PASSWORD || process.env.AUTH_PASSWORD || "",
     GITHUB_TOKEN: fileConfig.GITHUB_TOKEN || process.env.GITHUB_TOKEN || process.env.REPO_CONTEXT_TOKEN || "",
     NOTION_API_KEY: fileConfig.NOTION_API_KEY || process.env.NOTION_API_KEY || "",
@@ -176,3 +200,38 @@ export async function writeEnvConfig(newVars: TeamEnvConfig): Promise<void> {
     mode: 0o600,
   });
 }
+
+/**
+ * Completely clears server/.env file contents and resets tracked environment variables.
+ */
+export async function clearEnvConfig(): Promise<void> {
+  const envPath = getEnvPath();
+  try {
+    await fsPromises.writeFile(envPath, "", { mode: 0o600 });
+  } catch {
+    // Ignore error if file cannot be written
+  }
+
+  // Clear tracked keys from process.env
+  const keysToClear = [
+    "CURRENT_USER_NAME",
+    "CURRENT_USER_ROLE",
+    "USER_NAME",
+    "USER_ROLE",
+    "AUTH_USERNAME",
+    "AUTH_PASSWORD",
+    "GITHUB_TOKEN",
+    "REPO_CONTEXT_TOKEN",
+    "NOTION_API_KEY",
+    "QDRANT_URL",
+    "QDRANT_ENDPOINT",
+    "QDRANT_API_KEY",
+    "DATABASE_URL",
+    "GEMINI_API_KEY",
+  ];
+
+  for (const key of keysToClear) {
+    delete process.env[key];
+  }
+}
+

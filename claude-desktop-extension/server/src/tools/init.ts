@@ -20,12 +20,20 @@ import {
   saveQdrantConfig,
   saveSqlConnectionString,
   saveGeminiKey,
+  clearAllCredentials,
 } from "../utils/store.js";
-import { readEnvConfig, writeEnvConfig } from "../utils/env.js";
+import { readEnvConfig, writeEnvConfig, clearEnvConfig } from "../utils/env.js";
 import { text, guarded } from "../utils/helpers.js";
 import { whoami, validateToken } from "./github.js";
 import { notionCheckConnection, validateNotionKey } from "./notion.js";
-import { qdrantCheckConnection, validateQdrantConnection } from "../services/vector-db.js";
+import {
+  qdrantCheckConnection,
+  validateQdrantConnection,
+  listUsers,
+  createUser,
+  getUser,
+  ensureUsersCollection,
+} from "../services/vector-db.js";
 import { sqlCheckConnection, validateSqlConnection } from "./sql.js";
 import { validateGeminiKey, geminiCheckConnection } from "../services/embedding.js";
 import type {
@@ -34,29 +42,138 @@ import type {
   QdrantStatusResult,
   SqlStatusResult,
   GeminiStatusResult,
+  SetupStatusResult,
+  TeamUserItem,
 } from "./types.js";
 
 export const PANEL_URI = "ui://repo-context/panel.html";
 
 let currentSessionUser: string | null = null;
+let currentSessionRole: string | null = null;
 
 export function getSessionUser(): string | null {
   return currentSessionUser;
 }
 
-export function setSessionUser(user: string | null): void {
+export function setSessionUser(user: string | null, role: string | null = null): void {
   currentSessionUser = user;
+  currentSessionRole = role;
 }
 
 export async function getAuthState() {
   const env = await readEnvConfig();
-  const hasAccount = Boolean(env.AUTH_USERNAME && env.AUTH_PASSWORD);
+  const currentUserName = env.CURRENT_USER_NAME || env.USER_NAME || currentSessionUser || null;
+  const currentUserRole = env.CURRENT_USER_ROLE || env.USER_ROLE || currentSessionRole || "Member";
   return {
-    hasAccount,
-    isAuthenticated: Boolean(currentSessionUser),
-    username: currentSessionUser,
+    hasAccount: Boolean(currentUserName),
+    isAuthenticated: Boolean(currentUserName),
+    username: currentUserName,
+    role: currentUserRole,
   };
 }
+
+/**
+ * Centralized utility function to check Team Context settings, credentials, and connectivity.
+ */
+export async function checkTeamContextSetup(): Promise<SetupStatusResult> {
+  const envConfig = await readEnvConfig();
+  const qdrantConfig = await readQdrantConfig();
+
+  const endpoint = envConfig.QDRANT_URL || qdrantConfig.endpoint;
+  const apiKey = envConfig.QDRANT_API_KEY || qdrantConfig.apiKey;
+
+  const currentUserName = envConfig.CURRENT_USER_NAME || envConfig.USER_NAME || currentSessionUser || null;
+  const currentUserRole = envConfig.CURRENT_USER_ROLE || envConfig.USER_ROLE || currentSessionRole || null;
+
+  // 1. Check if Qdrant endpoint is provided
+  if (!endpoint || !endpoint.trim()) {
+    return {
+      isSetupComplete: false,
+      step: "qdrant_config",
+      qdrant: {
+        configured: false,
+        connected: false,
+        endpoint: null,
+        error: "Qdrant cluster endpoint URL is missing. Please configure Qdrant endpoint.",
+      },
+      currentUser: {
+        name: currentUserName,
+        role: currentUserRole,
+      },
+      users: [],
+      error: "Qdrant cluster endpoint URL is not configured in server/.env.",
+    };
+  }
+
+  // 2. Validate connection to Qdrant cluster
+  const qdrantCheck = await validateQdrantConnection(endpoint, apiKey);
+  if (!qdrantCheck.valid) {
+    return {
+      isSetupComplete: false,
+      step: "qdrant_config",
+      qdrant: {
+        configured: true,
+        connected: false,
+        endpoint,
+        error: qdrantCheck.reason || "Could not connect to Qdrant.",
+      },
+      currentUser: {
+        name: currentUserName,
+        role: currentUserRole,
+      },
+      users: [],
+      error: qdrantCheck.reason || "Failed to reach Qdrant vector database.",
+    };
+  }
+
+  // 3. Qdrant is connected. Fetch users from Qdrant 'users' collection
+  let users: TeamUserItem[] = [];
+  try {
+    users = await listUsers();
+  } catch {
+    users = [];
+  }
+
+  // 4. Check if active user identity is selected in .env
+  if (!currentUserName || !currentUserName.trim()) {
+    return {
+      isSetupComplete: false,
+      step: "user_selection",
+      qdrant: {
+        configured: true,
+        connected: true,
+        endpoint: qdrantCheck.endpoint || endpoint,
+      },
+      currentUser: {
+        name: null,
+        role: null,
+      },
+      users,
+      error: null,
+    };
+  }
+
+  // Setup is complete
+  currentSessionUser = currentUserName.trim();
+  currentSessionRole = currentUserRole?.trim() || "Member";
+
+  return {
+    isSetupComplete: true,
+    step: "completed",
+    qdrant: {
+      configured: true,
+      connected: true,
+      endpoint: qdrantCheck.endpoint || endpoint,
+    },
+    currentUser: {
+      name: currentUserName.trim(),
+      role: currentSessionRole,
+    },
+    users,
+    error: null,
+  };
+}
+
 
 
 /**
@@ -192,7 +309,11 @@ export function registerInitTools(server: McpServer): void {
         status: "ok",
         auth,
         config: {
-          AUTH_USERNAME: envConfig.AUTH_USERNAME || "",
+          CURRENT_USER_NAME: envConfig.CURRENT_USER_NAME || envConfig.USER_NAME || auth.username || "",
+          CURRENT_USER_ROLE: envConfig.CURRENT_USER_ROLE || envConfig.USER_ROLE || auth.role || "Member",
+          USER_NAME: envConfig.CURRENT_USER_NAME || envConfig.USER_NAME || auth.username || "",
+          USER_ROLE: envConfig.CURRENT_USER_ROLE || envConfig.USER_ROLE || auth.role || "Member",
+          AUTH_USERNAME: envConfig.CURRENT_USER_NAME || envConfig.USER_NAME || auth.username || "",
           GITHUB_TOKEN: envConfig.GITHUB_TOKEN || ghToken || "",
           NOTION_API_KEY: envConfig.NOTION_API_KEY || notionKey || "",
           QDRANT_URL: envConfig.QDRANT_URL || qdrantConfig.endpoint || "",
@@ -207,113 +328,189 @@ export function registerInitTools(server: McpServer): void {
 
   registerAppTool(
     server,
-    "panel_login",
+    "panel_check_setup",
     {
-      title: "Panel Login",
-      description: "Internal: verify username and password to log in to the settings panel.",
-      annotations: { title: "Panel Login", readOnlyHint: false },
-      inputSchema: {
-        username: z.string().describe("Username"),
-        password: z.string().describe("Password"),
-      },
+      title: "Check Setup Status",
+      description: "Internal: check Qdrant connection and user identity setup state for the panel widget.",
+      annotations: { title: "Check Setup Status", readOnlyHint: true },
+      inputSchema: {},
       _meta: { ui: { visibility: ["app"] } },
     },
-    guarded(async (args: { username: string; password: string }) => {
-      const envConfig = await readEnvConfig();
-      const storedUser = envConfig.AUTH_USERNAME?.trim();
-      const storedPass = envConfig.AUTH_PASSWORD?.trim();
-
-      if (!storedUser || !storedPass) {
-        return text({
-          success: false,
-          reason: "No user account exists yet. Please create a new account.",
-          needsAccountCreation: true,
-        });
-      }
-
-      const inputUser = args.username?.trim() || "";
-      const inputPass = args.password?.trim() || "";
-
-      if (inputUser.toLowerCase() !== storedUser.toLowerCase()) {
-        return text({
-          success: false,
-          reason: `Username "${inputUser}" does not exist. (Configured user is "${storedUser}")`,
-          userNotFound: true,
-        });
-      }
-
-      if (inputPass !== storedPass) {
-        return text({
-          success: false,
-          reason: "Incorrect password.",
-        });
-      }
-
-      currentSessionUser = storedUser;
-      return text({
-        success: true,
-        message: `Logged in successfully as ${storedUser}.`,
-        username: storedUser,
-      });
-    }),
+    guarded(async () => text(await checkTeamContextSetup())),
   );
 
   registerAppTool(
     server,
-    "panel_create_account",
+    "panel_save_qdrant_config",
     {
-      title: "Create Account",
-      description: "Internal: create new login username and password and store in server/.env.",
-      annotations: { title: "Create Account", readOnlyHint: false },
+      title: "Save Qdrant Config",
+      description: "Internal: validate Qdrant endpoint and API key, save to server/.env and initialize users collection.",
+      annotations: { title: "Save Qdrant Config", readOnlyHint: false },
       inputSchema: {
-        username: z.string().min(1).describe("Username"),
-        password: z.string().min(1).describe("Password"),
+        qdrantUrl: z.string().min(1).describe("Qdrant Cluster Endpoint URL"),
+        qdrantApiKey: z.string().optional().describe("Qdrant API Key"),
       },
       _meta: { ui: { visibility: ["app"] } },
     },
-    guarded(async (args: { username: string; password: string }) => {
-      const username = args.username?.trim() || "";
-      const password = args.password?.trim() || "";
+    guarded(async (args: { qdrantUrl: string; qdrantApiKey?: string }) => {
+      const url = args.qdrantUrl?.trim();
+      const apiKey = args.qdrantApiKey?.trim() || "";
 
-      if (!username) {
-        return text({ success: false, reason: "Username cannot be empty." });
-      }
-      if (!password) {
-        return text({ success: false, reason: "Password cannot be empty." });
+      if (!url) {
+        return text({ success: false, reason: "Qdrant endpoint URL cannot be empty." });
       }
 
+      const check = await validateQdrantConnection(url, apiKey);
+      if (!check.valid) {
+        return text({
+          success: false,
+          reason: check.reason || "Failed to connect to Qdrant with the provided URL / API key.",
+        });
+      }
+
+      // Save to .env and keychain
       await writeEnvConfig({
-        AUTH_USERNAME: username,
-        AUTH_PASSWORD: password,
+        QDRANT_URL: check.endpoint || url,
+        QDRANT_API_KEY: apiKey || undefined,
       });
+      await saveQdrantConfig(check.endpoint || url, apiKey || undefined);
 
-      currentSessionUser = username;
+      // Ensure users collection is ready and retrieve existing users
+      await ensureUsersCollection().catch(() => {});
+      let users: TeamUserItem[] = [];
+      try {
+        users = await listUsers();
+      } catch {
+        users = [];
+      }
+
       return text({
         success: true,
-        message: "Account created and credentials saved to server/.env.",
-        username,
+        endpoint: check.endpoint || url,
+        users,
+        message: "Qdrant endpoint successfully configured and connected.",
       });
     }),
   );
 
   registerAppTool(
     server,
-    "panel_signout",
+    "panel_list_users",
     {
-      title: "Sign Out",
-      description: "Internal: sign out from current settings panel session.",
-      annotations: { title: "Sign Out", readOnlyHint: false },
+      title: "List Team Users",
+      description: "Internal: list all team users from the Qdrant users collection.",
+      annotations: { title: "List Team Users", readOnlyHint: true },
       inputSchema: {},
       _meta: { ui: { visibility: ["app"] } },
     },
     guarded(async () => {
-      currentSessionUser = null;
+      const users = await listUsers();
       return text({
         success: true,
-        message: "Signed out successfully.",
+        users,
       });
     }),
   );
+
+  registerAppTool(
+    server,
+    "panel_select_user",
+    {
+      title: "Select Active User",
+      description: "Internal: select active user identity and save to server/.env.",
+      annotations: { title: "Select Active User", readOnlyHint: false },
+      inputSchema: {
+        name: z.string().min(1).describe("User Name"),
+        role: z.string().optional().describe("User Role"),
+      },
+      _meta: { ui: { visibility: ["app"] } },
+    },
+    guarded(async (args: { name: string; role?: string }) => {
+      const name = args.name?.trim();
+      const role = args.role?.trim() || "Member";
+
+      if (!name) {
+        return text({ success: false, reason: "User name cannot be empty." });
+      }
+
+      await writeEnvConfig({
+        CURRENT_USER_NAME: name,
+        CURRENT_USER_ROLE: role,
+        USER_NAME: name,
+        USER_ROLE: role,
+      });
+
+      setSessionUser(name, role);
+
+      return text({
+        success: true,
+        user: { name, role },
+        message: `Active user set to ${name} (${role}).`,
+      });
+    }),
+  );
+
+  registerAppTool(
+    server,
+    "panel_create_user",
+    {
+      title: "Create Team User",
+      description: "Internal: create a new user in Qdrant users collection and select them as active user.",
+      annotations: { title: "Create Team User", readOnlyHint: false },
+      inputSchema: {
+        name: z.string().min(1).describe("User Name"),
+        role: z.string().min(1).describe("User Role (e.g. Developer, Lead, QA)"),
+      },
+      _meta: { ui: { visibility: ["app"] } },
+    },
+    guarded(async (args: { name: string; role: string }) => {
+      const name = args.name?.trim();
+      const role = args.role?.trim() || "Member";
+
+      if (!name) {
+        return text({ success: false, reason: "User name cannot be empty." });
+      }
+
+      const user = await createUser({ name, role });
+
+      await writeEnvConfig({
+        CURRENT_USER_NAME: name,
+        CURRENT_USER_ROLE: role,
+        USER_NAME: name,
+        USER_ROLE: role,
+      });
+
+      setSessionUser(name, role);
+
+      return text({
+        success: true,
+        user,
+        message: `Created user ${name} (${role}) and selected as active.`,
+      });
+    }),
+  );
+
+  registerAppTool(
+    server,
+    "panel_logout",
+    {
+      title: "Logout & Reset Environment",
+      description: "Internal: clear server/.env completely, clear stored credentials, and reset active session.",
+      annotations: { title: "Logout", readOnlyHint: false },
+      inputSchema: {},
+      _meta: { ui: { visibility: ["app"] } },
+    },
+    guarded(async () => {
+      await clearEnvConfig();
+      await clearAllCredentials();
+      setSessionUser(null, null);
+      return text({
+        success: true,
+        message: "Successfully logged out. server/.env has been wiped clean.",
+      });
+    }),
+  );
+
 
   registerAppTool(
     server,

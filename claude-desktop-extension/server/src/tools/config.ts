@@ -103,11 +103,42 @@ export function registerConfigTools(server: McpServer): void {
         notionError = err instanceof Error ? err.message : String(err);
       }
 
-      const [appConfig, defaultPrompt, auth] = await Promise.all([
+      let [appConfig, auth] = await Promise.all([
         getAppConfig(username).catch(() => null),
-        Promise.resolve(getDefaultSystemPrompt()),
-        getAuthState().catch(() => ({ hasAccount: false, isAuthenticated: false, username: null })),
+        getAuthState().catch(() => ({ hasAccount: false, isAuthenticated: false, username: null, role: "Member" })),
       ]);
+
+      const defaultPrompt = getDefaultSystemPrompt({
+        userName: username,
+        userRole: auth.role || undefined,
+        activeRepos: appConfig?.activeRepos,
+        // activeNotionPages: appConfig?.activeNotionPages, // Will implement selective Notion pages later, all pages accessible for now
+      });
+
+      if (!appConfig) {
+        appConfig = await saveAppConfig({
+          username,
+          activeRepos: [],
+          activeNotionPages: [],
+          systemPrompt: defaultPrompt,
+        }).catch(() => ({
+          id: "",
+          username,
+          activeRepos: [],
+          activeNotionPages: [],
+          systemPrompt: defaultPrompt,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        }));
+      } else if (!appConfig.systemPrompt || !appConfig.systemPrompt.trim()) {
+        appConfig.systemPrompt = defaultPrompt;
+        await saveAppConfig({
+          username,
+          activeRepos: appConfig.activeRepos,
+          activeNotionPages: appConfig.activeNotionPages,
+          systemPrompt: defaultPrompt,
+        }).catch(() => {});
+      }
 
       return text({
         status: "ok",
@@ -120,20 +151,10 @@ export function registerConfigTools(server: McpServer): void {
         notionError,
         notionPages,
         auth,
-        appConfig: appConfig
-          ? {
-            ...appConfig,
-            systemPrompt: appConfig.systemPrompt || defaultPrompt,
-          }
-          : {
-            id: "",
-            username,
-            activeRepos: [],
-            activeNotionPages: [],
-            systemPrompt: defaultPrompt,
-            createdAt: "",
-            updatedAt: "",
-          },
+        appConfig: {
+          ...appConfig,
+          systemPrompt: appConfig.systemPrompt || defaultPrompt,
+        },
         defaultSystemPrompt: defaultPrompt,
         repos,
         reposCount: repos.length,
@@ -189,11 +210,42 @@ export function registerConfigTools(server: McpServer): void {
         notionError = err instanceof Error ? err.message : String(err);
       }
 
-      const [appConfig, defaultPrompt, auth] = await Promise.all([
+      let [appConfig, auth] = await Promise.all([
         getAppConfig(username).catch(() => null),
-        Promise.resolve(getDefaultSystemPrompt()),
-        getAuthState().catch(() => ({ hasAccount: false, isAuthenticated: false, username: null })),
+        getAuthState().catch(() => ({ hasAccount: false, isAuthenticated: false, username: null, role: "Member" })),
       ]);
+
+      const defaultPrompt = getDefaultSystemPrompt({
+        userName: username,
+        userRole: auth.role || undefined,
+        activeRepos: appConfig?.activeRepos,
+        // activeNotionPages: appConfig?.activeNotionPages, // Will implement selective Notion pages later, all pages accessible for now
+      });
+
+      if (!appConfig) {
+        appConfig = await saveAppConfig({
+          username,
+          activeRepos: [],
+          activeNotionPages: [],
+          systemPrompt: defaultPrompt,
+        }).catch(() => ({
+          id: "",
+          username,
+          activeRepos: [],
+          activeNotionPages: [],
+          systemPrompt: defaultPrompt,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        }));
+      } else if (!appConfig.systemPrompt || !appConfig.systemPrompt.trim()) {
+        appConfig.systemPrompt = defaultPrompt;
+        await saveAppConfig({
+          username,
+          activeRepos: appConfig.activeRepos,
+          activeNotionPages: appConfig.activeNotionPages,
+          systemPrompt: defaultPrompt,
+        }).catch(() => {});
+      }
 
       return text({
         status: "ok",
@@ -206,20 +258,10 @@ export function registerConfigTools(server: McpServer): void {
         notionError,
         notionPages,
         auth,
-        appConfig: appConfig
-          ? {
-            ...appConfig,
-            systemPrompt: appConfig.systemPrompt || defaultPrompt,
-          }
-          : {
-            id: "",
-            username,
-            activeRepos: [],
-            activeNotionPages: [],
-            systemPrompt: defaultPrompt,
-            createdAt: "",
-            updatedAt: "",
-          },
+        appConfig: {
+          ...appConfig,
+          systemPrompt: appConfig.systemPrompt || defaultPrompt,
+        },
         defaultSystemPrompt: defaultPrompt,
         repos,
       });
@@ -327,8 +369,9 @@ export function registerConfigTools(server: McpServer): void {
       _meta: { ui: { visibility: ["app"] } },
     },
     guarded(async ({ repo }: { repo: string }) => {
-      const res = await listFiles({ repo, recursive: true, limit: 1000 });
-      const mdEntries = (res.entries || []).filter((e) => {
+      const listRes = await listFiles({ repo, recursive: true, limit: 1000 });
+      const res = Array.isArray(listRes) ? listRes[0] : listRes;
+      const mdEntries = ((res && res.entries) || []).filter((e) => {
         const lower = e.path.toLowerCase();
         return lower.endsWith(".md") || lower.endsWith(".mdx");
       });
@@ -376,8 +419,9 @@ export function registerConfigTools(server: McpServer): void {
       _meta: { ui: { visibility: ["app"] } },
     },
     guarded(async ({ repo, filePath }: { repo: string; filePath: string }) => {
-      const fileData = await readFile({ repo, path: filePath });
-      const content = fileData.content || "";
+      const readRes = await readFile({ repo, path: filePath });
+      const fileData = Array.isArray(readRes) ? readRes[0] : readRes;
+      const content = fileData?.content || "";
 
       // Extract title from first markdown heading or filename
       const titleMatch = content.match(/^#+\s+(.+)$/m);
@@ -486,8 +530,9 @@ export function registerConfigTools(server: McpServer): void {
           try {
             let content = item.content;
             if (!content || !content.trim()) {
-              const fileData = await readFile({ repo, path: filePath });
-              content = fileData.content || "";
+              const readRes = await readFile({ repo, path: filePath });
+              const fileData = Array.isArray(readRes) ? readRes[0] : readRes;
+              content = fileData?.content || "";
             }
 
             if (!content.trim()) {

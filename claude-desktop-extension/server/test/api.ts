@@ -109,10 +109,13 @@ const address = server.address() as AddressInfo;
 process.env.REPO_CONTEXT_API = `http://127.0.0.1:${address.port}`;
 
 // Imported after the env vars are set — the modules read them at load time.
-const { listRepos, listFiles, readFile, searchCode, overview, repoMeta } = await import(
+const { listRepos, listFiles, readFile, searchCode, overview, repoMeta, resolveActiveRepos } = await import(
   "../src/tools/github.js"
 );
 const { setActiveRepo, readState } = await import("../src/utils/store.js");
+
+const resolvedOverride = await resolveActiveRepos("octo/site");
+assert.deepEqual(resolvedOverride, ["octo/site"], "explicit repo override resolved");
 
 const repos = await listRepos({});
 assert.equal(repos.length, 2);
@@ -124,50 +127,69 @@ assert.equal(meta.defaultBranch, "main");
 await setActiveRepo(meta.fullName, meta.defaultBranch);
 assert.equal((await readState()).repo, "octo/app", "selection persists");
 
-const dirListing = await listFiles({});
+const dirListings = await listFiles({});
+assert.ok(Array.isArray(dirListings));
+assert.equal(dirListings[0].repo, "octo/app");
 assert.deepEqual(
-  dirListing.entries.map((e) => e.path),
+  dirListings[0].entries.map((e) => e.path),
   ["src", "README.md"],
   "dirs sort first",
 );
-assert.equal(dirListing.ref, "main", "falls back to the stored default branch");
+assert.equal(dirListings[0].ref, "main", "falls back to the stored default branch");
 
-const tree = await listFiles({ recursive: true, path: "src" });
+const trees = await listFiles({ recursive: true, path: "src" });
+assert.ok(Array.isArray(trees));
 assert.deepEqual(
-  tree.entries.map((e) => e.path),
+  trees[0].entries.map((e) => e.path),
   ["src/index.ts", "src/lib/util.ts"],
   "prefix filter",
 );
-assert.equal(tree.fileCount, 2);
+assert.equal(trees[0].fileCount, 2);
 
 const capped = await listFiles({ recursive: true, limit: 1 });
-assert.equal(capped.entries.length, 1);
-assert.ok(capped.truncated && capped.note?.includes("Narrow"), "truncation is reported");
+assert.ok(Array.isArray(capped));
+assert.equal(capped[0].entries.length, 1);
+assert.ok(capped[0].truncated && capped[0].note?.includes("Narrow"), "truncation is reported");
 
 const whole = await readFile({ path: "src/index.ts" });
-assert.equal(whole.lines, 5);
-assert.equal(whole.content, "one\ntwo\nthree\nfour\n");
+assert.ok(Array.isArray(whole));
+assert.equal(whole[0].lines, 5);
+assert.equal(whole[0].content, "one\ntwo\nthree\nfour\n");
 
 const slice = await readFile({ path: "src/index.ts", startLine: 2, endLine: 3 });
-assert.equal(slice.content, "two\nthree");
-assert.equal(slice.shown, "2-3");
+assert.ok(Array.isArray(slice));
+assert.equal(slice[0].content, "two\nthree");
+assert.equal(slice[0].shown, "2-3");
 
 const clipped = await readFile({ path: "src/index.ts", maxChars: 5 });
-assert.ok(clipped.truncated && clipped.content.length === 5, "maxChars clips");
+assert.ok(Array.isArray(clipped));
+assert.ok(clipped[0].truncated && clipped[0].content?.length === 5, "maxChars clips");
 
 const hits = await searchCode({ query: "answer" });
-assert.equal(hits.totalCount, 1);
-assert.deepEqual(hits.results[0].matches, ["export const answer = 42"]);
+assert.ok(Array.isArray(hits), "searchCode returns an array of repo search results");
+assert.equal(hits.length, 1);
+assert.equal(hits[0].repo, "octo/app");
+assert.equal(hits[0].totalCount, 1);
+assert.deepEqual(hits[0].results[0].matches, ["export const answer = 42"]);
 
-const primer = await overview({});
-assert.deepEqual(primer.languages, ["TypeScript", "CSS"]);
-assert.deepEqual(primer.topLevel, ["src/", "README.md"]);
-assert.ok(primer.readme?.startsWith("# The app"));
+// Explicit repo override test
+const explicitHits = await searchCode({ repo: "octo/app", query: "answer" });
+assert.ok(Array.isArray(explicitHits));
+assert.equal(explicitHits.length, 1);
+assert.equal(explicitHits[0].repo, "octo/app");
+assert.equal(explicitHits[0].totalCount, 1);
 
-await assert.rejects(
-  () => readFile({ path: "nope.ts" }),
-  /GitHub error: 404/,
-  "404s surface readably",
+const primers = await overview({});
+assert.ok(Array.isArray(primers));
+assert.equal(primers[0].repo, "octo/app");
+assert.deepEqual(primers[0].languages, ["TypeScript", "CSS"]);
+assert.deepEqual(primers[0].topLevel, ["src/", "README.md"]);
+assert.ok(primers[0].readme?.startsWith("# The app"));
+
+const missingRead = await readFile({ path: "nope.ts" });
+assert.ok(
+  missingRead[0].error?.includes("404") || missingRead[0].note?.includes("404"),
+  "404s surface in result object",
 );
 await assert.rejects(
   () => listFiles({ repo: "not-a-repo" }),
@@ -296,38 +318,78 @@ assert.equal(sessionAuth.username, "testadmin");
 setSessionUser(null);
 assert.equal(getSessionUser(), null);
 
-// Write env config auth test
-await writeEnvConfig({
-  AUTH_USERNAME: "alice",
-  AUTH_PASSWORD: "secretpassword123",
-});
-const envWithAuth = await readEnvConfig();
-assert.equal(envWithAuth.AUTH_USERNAME, "alice");
-assert.equal(envWithAuth.AUTH_PASSWORD, "secretpassword123");
-
-// App Config and System Prompt tests
-const { getDefaultSystemPrompt, buildConfigPanel } = await import("../src/utils/helpers.js");
-const defaultPrompt = getDefaultSystemPrompt();
-assert.ok(defaultPrompt.includes("# Role & Purpose"), "default system prompt loads correctly");
-
-const configPanelHtml = buildConfigPanel();
-assert.ok(configPanelHtml.includes("Application Configuration"), "buildConfigPanel includes title");
-assert.ok(configPanelHtml.includes("ExtApps"), "buildConfigPanel inlines ExtApps bundle");
-assert.ok(configPanelHtml.includes("selectedRepos"), "buildConfigPanel includes repo state");
-
-const { getAppConfigPointId } = await import("../src/services/vector-db.js");
-const pointId1 = getAppConfigPointId("Alice");
-const pointId2 = getAppConfigPointId("alice");
-assert.equal(pointId1, pointId2, "point ID is case-insensitive deterministic UUID");
+// User point ID and team users tests
+const { getUserPointId } = await import("../src/services/vector-db.js");
+const userPointId1 = getUserPointId("Huong");
+const userPointId2 = getUserPointId("huong");
+assert.equal(userPointId1, userPointId2, "user point ID is deterministic and case-insensitive");
 assert.match(
-  pointId1,
+  userPointId1,
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/,
-  "point ID matches UUID format",
+  "user point ID matches UUID format",
 );
+
+// Centralized checkTeamContextSetup test
+const { checkTeamContextSetup } = await import("../src/tools/init.js");
+const initialSetup = await checkTeamContextSetup();
+assert.equal(initialSetup.isSetupComplete, false, "setup is not complete when qdrant is not configured");
+assert.equal(initialSetup.step, "qdrant_config");
+
+// Test user profile in env
+await writeEnvConfig({
+  CURRENT_USER_NAME: "huong",
+  CURRENT_USER_ROLE: "Full Stack Engineer",
+});
+const envWithUser = await readEnvConfig();
+assert.equal(envWithUser.CURRENT_USER_NAME, "huong");
+assert.equal(envWithUser.CURRENT_USER_ROLE, "Full Stack Engineer");
+
+// Panel & Skills Component Builder tests
+const { buildPanel, buildSkillsPanel, buildTeamContextSystemPrompt, getDefaultSystemPrompt } = await import("../src/utils/helpers.js");
+const panelHtml = buildPanel("config");
+assert.ok(panelHtml.includes("SkillsComponent"), "buildPanel injects reusable SkillsComponent");
+assert.ok(panelHtml.includes("ExtApps"), "buildPanel inlines ExtApps bundle");
+assert.ok(panelHtml.includes("buildDefaultSystemPrompt"), "buildPanel includes buildDefaultSystemPrompt");
+
+const skillsPanelHtml = buildSkillsPanel();
+assert.ok(skillsPanelHtml.includes("SkillsComponent"), "buildSkillsPanel injects reusable SkillsComponent");
+assert.ok(skillsPanelHtml.includes("TeamSkillsManagement"), "buildSkillsPanel inlines standalone skills app");
+
+// Test buildTeamContextSystemPrompt
+const generatedPrompt = buildTeamContextSystemPrompt({
+  userName: "Alice",
+  userRole: "Staff Engineer",
+  activeRepos: [{ name: "my-org/core-api", description: "Core backend" }],
+  activeNotionPages: [{ id: "p-1", title: "Architecture RFC" }],
+});
+assert.ok(generatedPrompt.includes("Current User: Alice (Staff Engineer)"));
+assert.ok(generatedPrompt.includes("Active Repositories: my-org/core-api"));
+assert.ok(generatedPrompt.includes("Notion Workspace: All workspace documentation accessible"));
+assert.ok(generatedPrompt.includes("SQL Database Querying: Use `sql_get_schema` and `sql_execute_query`"));
+assert.ok(generatedPrompt.includes("Always ask for explicit user approval before executing any actions that edit or modify data"));
+assert.ok(generatedPrompt.includes("my-team-context-mcp-server"));
+assert.equal(getDefaultSystemPrompt({ userName: "Alice" }), buildTeamContextSystemPrompt({ userName: "Alice" }));
+
+// SQL Tools Tests (SQLite file/memory test)
+const testDbPath = path.join(dir, "test.sqlite");
+const sqliteMod = await import("node:sqlite");
+const testDb = new sqliteMod.DatabaseSync(testDbPath);
+testDb.exec(`
+  CREATE TABLE users (id INTEGER PRIMARY KEY AUTOINCREMENT, username TEXT NOT NULL, email TEXT);
+  INSERT INTO users (username, email) VALUES ('alice', 'alice@team.com'), ('bob', 'bob@team.com');
+  CREATE TABLE posts (id INTEGER PRIMARY KEY, user_id INTEGER, title TEXT, content TEXT);
+`);
+testDb.close();
+
+// Test sqlCheckConnection and validateSqlConnection with SQLite
+const sqliteValidation = await validateSqlConnection(`sqlite://${testDbPath}`);
+assert.equal(sqliteValidation.valid, true);
+assert.equal(sqliteValidation.dialect, "sqlite");
 
 server.close();
 await fs.rm(dir, { recursive: true, force: true });
 console.log("api tests passed");
+
 
 
 
