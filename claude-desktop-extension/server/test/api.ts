@@ -365,6 +365,8 @@ const generatedPrompt = buildTeamContextSystemPrompt({
 assert.ok(generatedPrompt.includes("Current User: Alice (Staff Engineer)"));
 assert.ok(generatedPrompt.includes("Active Repositories: my-org/core-api"));
 assert.ok(generatedPrompt.includes("Notion Workspace: All workspace documentation accessible"));
+assert.ok(generatedPrompt.includes("SQL Database Querying: Use `sql_get_schema` and `sql_execute_query`"));
+assert.ok(generatedPrompt.includes("Always ask for explicit user approval before executing any actions that edit or modify data"));
 assert.ok(generatedPrompt.includes("my-team-context-mcp-server"));
 assert.equal(getDefaultSystemPrompt({ userName: "Alice" }), buildTeamContextSystemPrompt({ userName: "Alice" }));
 
