@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "description": "MCP server backing the GitHub Repo Context extension",
+  "description": "MCP server backing the My Team Context extension",
   "engines": {
     "node": ">=20"
   },
@@ -13,9 +13,9 @@
     "build:ts": "tsc",
     "build": "npm run build:ts && npm test && npm run validate && npm run build:deps && npm run build:pack && npm install",
     "build:deps": "npm install --omit=dev --no-audit --no-fund",
-    "build:pack": "node -e \"require('node:fs').mkdirSync('../../dist',{recursive:true})\" && npx --yes @anthropic-ai/mcpb pack .. ../../dist/repo-context.mcpb",
+    "build:pack": "node -e \"require('node:fs').mkdirSync('../../dist',{recursive:true}); require('node:fs').mkdirSync('../dist',{recursive:true})\" && npx --yes @anthropic-ai/mcpb pack .. ../../dist/my-team-context.mcpb && node -e \"require('node:fs').copyFileSync('../../dist/my-team-context.mcpb', '../dist/my-team-context.mcpb'); require('node:fs').copyFileSync('../../dist/my-team-context.mcpb', '../../dist/my-team-context.pmcp'); require('node:fs').copyFileSync('../../dist/my-team-context.mcpb', '../dist/my-team-context.pmcp')\"",
     "validate": "npx --yes @anthropic-ai/mcpb validate ../manifest.json",
-    "info": "npx --yes @anthropic-ai/mcpb info ../../dist/repo-context.mcpb",
+    "info": "npx --yes @anthropic-ai/mcpb info ../../dist/my-team-context.mcpb",
     "test": "npx --yes tsx test/api.ts",
     "smoke": "npx --yes tsx test/smoke.ts",
     "inspect": "npx --yes @modelcontextprotocol/inspector node dist/index.js"
@@ -23,10 +23,13 @@
   "dependencies": {
     "@modelcontextprotocol/ext-apps": "^1.7.5",
     "@modelcontextprotocol/sdk": "^1.30.0",
+    "mysql2": "^3.24.0",
+    "pg": "^8.23.0",
     "zod": "^4.4.3"
   },
   "devDependencies": {
     "@types/node": "^25.2.1",
+    "@types/pg": "^8.23.1",
     "tsx": "^4.19.4",
     "typescript": "^5.9.3"
   }

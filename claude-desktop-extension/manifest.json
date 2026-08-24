@@ -1,36 +1,134 @@
 {
   "$schema": "https://raw.githubusercontent.com/anthropics/mcpb/main/schemas/mcpb-manifest-v0.4.schema.json",
   "manifest_version": "0.4",
-  "name": "innostaas-repo-context",
-  "display_name": "GitHub Repo Context",
+  "name": "my-team-context",
+  "display_name": "My Team Context",
   "version": "0.1.0",
-  "description": "Read your GitHub code as context: sign in with a personal access token in a panel, pick a repo, then browse, read, and search that repo's files",
-  "long_description": "Adds an in-chat panel for pasting a GitHub personal access token, lists every repo that token can see, and lets you pick one as the active repo. From then on Claude can list the repo's file tree, read individual files, and search its code — so it can answer questions about a codebase that is not checked out locally.\n\nThe token is validated against GitHub and stored in this machine's OS keychain. It is never written into the conversation.",
+  "description": "Unified team context for Claude: GitHub code, Notion workspace, Qdrant vector knowledge base, SQL databases, and active app configuration.",
+  "long_description": "Gives Claude full access to your team's live context: browse and search GitHub code, query Notion documentation and tasks, search and manage shared team skills in Qdrant vector database, execute SQL queries, and configure active repositories and AI system prompt with interactive widgets.\n\nCredentials are authenticated and securely stored in your machine's OS keychain and never exposed in conversations.",
   "author": {
     "name": "Innostaas",
     "email": "lucas.luu@innostaas.com"
   },
-  "keywords": ["github", "code", "context", "repository", "search"],
+  "keywords": [
+    "team-context",
+    "github",
+    "notion",
+    "qdrant",
+    "skills",
+    "knowledge-base",
+    "sql",
+    "context",
+    "settings"
+  ],
   "server": {
     "type": "node",
     "entry_point": "server/dist/index.js",
     "mcp_config": {
       "command": "node",
-      "args": ["${__dirname}/server/dist/index.js"]
+      "args": [
+        "${__dirname}/server/dist/index.js"
+      ]
     }
   },
   "tools": [
-    { "name": "connect_github_repo", "description": "Open the panel to sign in with a GitHub token and pick the active repo" },
-    { "name": "github_repo_status", "description": "Report sign-in state and which repo is active" },
-    { "name": "repo_overview", "description": "Summarize the active repo: branch, languages, top-level layout, README" },
-    { "name": "list_repo_files", "description": "List files and directories in the active repo" },
-    { "name": "read_repo_file", "description": "Read one file from the active repo" },
-    { "name": "search_repo_code", "description": "Search code in the active repo" },
-    { "name": "set_active_repo", "description": "Set the active repo by name, without the panel" },
-    { "name": "github_disconnect", "description": "Delete the stored token and clear the active repo" }
+    {
+      "name": "connect_team_context",
+      "description": "Open settings panel to configure team connections: GitHub token, Notion workspace, Qdrant cluster, SQL database, and Gemini embeddings"
+    },
+    {
+      "name": "configure_app",
+      "description": "Open the interactive configuration widget for selecting active GitHub repositories with descriptions and customizing system prompt"
+    },
+    {
+      "name": "manage_skills",
+      "description": "Open interactive skills & knowledge base widget to list, create, edit, delete, and semantically search team skills in Qdrant"
+    },
+    {
+      "name": "team_context_status",
+      "description": "Report connection and authentication status for all team services (GitHub, Notion, Qdrant, SQL, Gemini)"
+    },
+    {
+      "name": "get_app_config",
+      "description": "Retrieve saved application configuration (active repos with descriptions, system prompt, and timestamps) from app-config collection"
+    },
+    {
+      "name": "save_app_config",
+      "description": "Store or update active repositories and system prompt inside the app-config collection"
+    },
+    {
+      "name": "search_skills",
+      "description": "Semantically search team skills, guidelines, and procedures stored in Qdrant knowledge base using vector embeddings"
+    },
+    {
+      "name": "list_skills",
+      "description": "List all skills and guideline documents stored in the team knowledge base"
+    },
+    {
+      "name": "get_skill",
+      "description": "Retrieve full content, instructions, and details for a specific skill from the knowledge base by ID or name"
+    },
+    {
+      "name": "github_repo_status",
+      "description": "Report sign-in state and which GitHub repo is currently active"
+    },
+    {
+      "name": "repo_overview",
+      "description": "Summarize the active repo: branch, languages, top-level layout, README"
+    },
+    {
+      "name": "list_repo_files",
+      "description": "List files and directories in the active repo"
+    },
+    {
+      "name": "read_repo_file",
+      "description": "Read one file from the active repo"
+    },
+    {
+      "name": "search_repo_code",
+      "description": "Search code in the active repo"
+    },
+    {
+      "name": "set_active_repo",
+      "description": "Set the active repo by name, without the panel"
+    },
+    {
+      "name": "github_disconnect",
+      "description": "Delete the stored GitHub token and clear the active repo"
+    },
+    {
+      "name": "notion_check_connection",
+      "description": "Test connectivity to Notion workspace"
+    },
+    {
+      "name": "save_notion_key",
+      "description": "Validate and store Notion internal integration token"
+    },
+    {
+      "name": "notion_disconnect",
+      "description": "Remove stored Notion API key from keychain"
+    },
+    {
+      "name": "sql_check_connection",
+      "description": "Test connectivity to SQL database"
+    },
+    {
+      "name": "save_sql_connection",
+      "description": "Validate and store SQL database connection URI"
+    },
+    {
+      "name": "sql_disconnect",
+      "description": "Remove stored SQL database connection URI"
+    }
   ],
   "compatibility": {
-    "platforms": ["darwin", "win32", "linux"],
-    "runtimes": { "node": ">=20" }
+    "platforms": [
+      "darwin",
+      "win32",
+      "linux"
+    ],
+    "runtimes": {
+      "node": ">=20"
+    }
   }
 }

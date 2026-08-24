@@ -1,156 +1,147 @@
 # My Team Context
 
-A Claude Desktop extension that gives Claude a live view of how your team
-actually works: the source code on GitHub, the docs and specs in Notion, and
-the team's shared library of skills — all as context in one place.
+> **Bridging the gap between engineering context, product ideation, and collaborative team intelligence in Claude Desktop.**
 
-## Goal
+---
 
-Today, answering "what's going on with X" or "build me a mockup of Y" means
-manually pulling context from three different tools and pasting it into a
-prompt. This project aims to remove that step, so the team can just ask:
+## 💡 The Problem: Fragmented Work & Context Silos
 
-- **Ask what's going on** — prompt Claude and have it pull the real answer
-  from the codebase (GitHub) and the team's specs/decisions (Notion), instead
-  of asking a person to summarize it.
-- **Generate UI mockups quickly** — grounded in the team's actual data
-  structures, visual style, and business context, and checked against real
-  data on staging, so a mockup isn't just plausible-looking, it's consistent
-  with what the team already has.
-- **Manage the team's skills centrally** — skills live in a vector database
-  so they can be searched, reused, and kept up to date across the team rather
-  than copy-pasted between individual setups.
+In modern software teams, critical project context is fragmented across disconnected tools and applications:
 
-## GitHub Repo Context
+- **Code & Architecture** live in **GitHub** (repositories, branches, components, file trees).
+- **Product Specs & Tasks** live in **Notion** (PRDs, sprint backlogs, design guidelines, meeting notes).
+- **Data Models** live in **SQL Databases** (schemas, tables, relationships).
+- **Team Knowledge & Standards** are scattered across chats, docs, or trapped as tribal knowledge.
 
-An MCP bundle that lets Claude read one of your GitHub repositories as context.
+### The Real-World Costs:
 
-You paste a personal access token into a panel, pick a repo from the list of
-everything that token can see, and from then on Claude can list, read, and
-search that repo's files — no local checkout required, and the choice sticks
-across sessions.
+1. **High Synchronization Overhead**: Teams waste countless hours hunting for context, copying information between tools, and constantly aligning on "what exists" vs. "what is being built".
+2. **The Non-Technical Gap in Ideation & Mockup UI**:
+   - For non-technical team members (Product Managers, Designers, Marketers, QA), it is notoriously difficult to translate ideas into realistic UI mockups or actionable specs that align with the actual codebase.
+   - Prototyping often results in disconnects: proposed UI designs disregard existing reusable components, break design systems, or mismatch current backend schemas and sprint tickets.
+3. **Siloed AI Prompts & Lack of Shared Team Skills**:
+   - AI assistants usually operate in isolation with zero institutional memory.
+   - Team members repeat the same prompts, re-teach coding standards, or miss critical team guidelines.
+   - Teams need a shared, collaborative way to **manage, evolve, and execute team skills together**.
 
-## The flow
+---
 
-Say something like *"list my repos"*, *"connect my GitHub repo"*, or ask a
-question about your code before anything is connected:
+## 🚀 The Solution: A Unified Team Context for AI
 
-1. **A panel opens.** Paste a personal access token. It is validated against
-   `api.github.com`, then stored in this machine's keychain.
-2. **The panel lists your repos** — most recently pushed first, with a filter
-   box. Click one and press **Use this repo**.
-3. **The choice is saved** to `~/.claude/repo-context/state.json`, and the panel
-   tells Claude to start with an overview of the repo.
+**My Team Context** transforms Claude Desktop into a fully context-aware team member that bridges engineering reality with product vision.
 
-After that, `owner/name` is the active repo for every later session until you
-pick a different one.
+```
+       ┌─────────────────────────────────────────────────────────────┐
+       │                     Claude Desktop App                      │
+       └──────────────────────────────┬──────────────────────────────┘
+                                      │
+                         [ MCP / Interactive UI ]
+                                      │
+     ┌────────────────────────────────┼────────────────────────────────┐
+     ▼                                ▼                                ▼
+┌──────────────┐             ┌──────────────────┐             ┌─────────────────┐
+│ 🐙 GitHub     │             │ 🧠 Shared Skills │             │ 📝 Notion & SQL │
+│ Repositories │             │  & Guidelines    │             │ Specs & Schemas │
+│ Components   │             │ (Qdrant Vectors) │             │ Live Tickets    │
+└──────────────┘             └──────────────────┘             └─────────────────┘
+```
 
-## Tools
+### Key Value Drivers:
 
-| Tool | What it does |
+- **🎨 Grounded UI Mockups & Ideation**: Non-technical team members can easily brainstorm, generate realistic UI mockups, and draft feature requirements grounded directly in existing frontend components, design guidelines, and active Notion tickets.
+- **🤝 Collaborative Skill Management**: Centrally manage, search, and share team skills, SOPs, and coding conventions across the entire team using vector embeddings.
+- **⚡ Seamless Multi-Tool Sync**: Claude connects GitHub repositories, Notion workspaces, and SQL databases into a single conversational session.
+- **🖥️ Interactive UI Panels**: Visual in-chat widgets (`config.html`, `skills.html`, `panel.html`) so anyone—technical or not—can configure credentials, select repositories, and curate skills without touching CLI configs.
+
+---
+
+## 🌟 Core Capabilities
+
+### 1. Collaborative Team Skills (`manage_skills`)
+- **Shared Knowledge Base**: Create, edit, tag, and organize team guidelines, prompt workflows, and engineering conventions.
+- **Semantic Vector Search**: Powered by Qdrant and Google Gemini 3072-dimensional embeddings, Claude automatically pulls relevant skills and SOPs into conversation.
+- **Crowdsourced Team Intelligence**: Everyone on the team can contribute skills so the whole team benefits from shared best practices.
+
+### 2. Cross-Functional UI Prototyping & Ideation
+- **Component-Aware Mockups**: Claude inspects active GitHub UI components and styling guidelines to propose UI changes that actually match the codebase.
+- **Spec-to-Ticket Alignment**: Cross-reference Notion PRDs and database schemas when creating mockups or technical implementation plans.
+
+### 3. Multi-Session App & Repository Configuration (`configure_app`)
+- Select multiple active GitHub repositories simultaneously.
+- Assign custom contextual descriptions for each repo so Claude knows how they interconnect.
+- Customize shared AI system prompts stored centrally in Qdrant (`app-config`).
+
+### 4. Direct GitHub, Notion & Database Integrations
+- **GitHub**: Search code, explore file trees, read files with line slicing, and inspect repo layout.
+- **Notion**: Query databases and search pages directly from the prompt.
+- **SQL Databases**: Inspect table schemas and query relational data securely.
+
+---
+
+## 🛠️ Interactive Widgets & Tools Reference
+
+### 1. Interactive Widgets
+
+| Widget Tool | URI | Purpose & Experience |
+|---|---|---|
+| `configure_app` | `ui://repo-context/config.html` | Multi-select active GitHub repositories with custom context notes, edit team system prompt, and configure integrations. |
+| `manage_skills` | `ui://repo-context/skills.html` | Visual CRUD and semantic search interface for managing shared team skills and guidelines. |
+| `connect_team_context` | `ui://repo-context/panel.html` | Unified credential management and instant connection testing for GitHub, Notion, Qdrant, SQL, and Gemini. |
+
+### 2. Team Skills Tools
+
+| Tool | Description |
 |---|---|
-| `connect_github_repo` | Opens the panel — sign in and pick the active repo |
-| `github_repo_status` | Who is signed in, which repo is active |
-| `repo_overview` | Branch, languages, top-level layout, README — one call |
-| `list_repo_files` | One directory, or every file under a path with `recursive: true` |
-| `read_repo_file` | One file, optionally a line range |
-| `search_repo_code` | GitHub code search scoped to the active repo |
-| `set_active_repo` | Switch repos by name, skipping the panel |
-| `github_disconnect` | Delete the token and clear the active repo |
+| `search_skills` | Semantically searches team skills and guidelines in Qdrant using vector similarity. |
+| `list_skills` | Lists all available skills and guideline documents in the knowledge base. |
+| `get_skill` | Retrieves full instructions and content for a specific skill by name or UUID. |
 
-Every read tool takes an optional `repo` argument to hit a different repository
-without changing the active one.
+### 3. Application Configuration Tools
 
-## The token
+| Tool | Description |
+|---|---|
+| `get_app_config` | Retrieves the active repositories, contextual descriptions, and system prompt. |
+| `save_app_config` | Saves or updates active repository configurations and system prompts in Qdrant. |
 
-Create one at **github.com → Settings → Developer settings → Personal access
-tokens** (the panel's *Create a token* button links straight there):
+### 4. GitHub Tools
 
-- **Classic:** `repo` scope.
-- **Fine-grained:** `Contents: Read-only`, granted to the repos you want
-  readable. Note that a fine-grained token only lists the repos it was granted —
-  if the list looks short, that's the token's scope, not a bug.
+| Tool | Description |
+|---|---|
+| `github_repo_status` | Checks sign-in state and active repository status. |
+| `repo_overview` | Summarizes branch, language breakdown, top-level layout, and README. |
+| `list_repo_files` | Explores files and directories with recursive tree support. |
+| `read_repo_file` | Reads file contents with line slicing support. |
+| `search_repo_code` | Performs full-text code search across the active repository. |
+| `set_active_repo` | Switches the active repository (`owner/repo`). |
+| `github_disconnect` | Clears stored token and resets repository state. |
 
-The token goes from the panel straight to the extension's own process. It never
-passes through the conversation, is never used as a command-line argument, and
-is stored in the macOS login keychain, libsecret on Linux, or a `0600` file as a
-last resort (with a warning when that happens).
+---
 
-`github_disconnect` deletes it.
+## 🔒 Security & Credential Storage
 
-## Build
+- **Local & OS Keychain Storage**: Credentials entered via extension panels are stored securely in macOS Keychain (or Linux Secret Service) and local configuration files.
+- **Direct Validation**: API keys and tokens are validated directly against provider endpoints (GitHub, Notion, Qdrant, Gemini).
+- **Privacy First**: Sensitive credentials are never exposed in conversation prompts or sent to third-party tracking services.
+
+---
+
+## 📦 Getting Started & Development
+
+### Prerequisites
+- Node.js (v18+)
+- Claude Desktop App
+
+### Build Commands
 
 ```bash
-npm --prefix server run build
+# Build TypeScript server
+npm run build:ts
+
+# Run test suite
+npm test
+
+# Build and bundle Claude Desktop extension (.mcpb & .pmcp)
+npm run build
 ```
 
-Installs production dependencies, validates `manifest.json` against the MCPB
-schema, runs the tests, and writes `../dist/repo-context.mcpb`. Install that
-file by opening it, or drag it into the extensions settings pane.
-
-Bump `version` in `manifest.json` before rebuilding — the output filename stays
-the same, so the manifest version is the only thing that distinguishes builds.
-
-| Script | Does |
-|---|---|
-| `npm --prefix server run build` | The whole chain: TS build → test → validate → deps → pack |
-| `npm --prefix server run build:ts` | TypeScript compilation only (`tsc`) |
-| `npm --prefix server run validate` | Manifest schema check on its own |
-| `npm --prefix server run build:pack` | Re-zip only, skipping deps and tests |
-| `npm --prefix server run info` | Size and signature status of the built bundle |
-
-`build:deps` installs with `--omit=dev`, because everything in
-`server/node_modules` ends up inside the bundle — a dev dependency added here
-ships to every user.
-
-## Layout
-
-```
-manifest.json               # MCPB manifest — entry point, tool list, metadata
-server/src/index.ts         # MCP server entry point: tool registration, panel resource
-server/src/types.ts         # TypeScript interfaces & domain types
-server/src/tools/github.ts  # GitHub REST calls (read-only) & tool handlers
-server/src/utils/store.ts   # Keychain token storage + active-repo state
-server/src/utils/helpers.ts # Response formatting, error handling, widget builder
-server/widgets/panel.html   # The sign-in / repo-picker panel
-server/test/api.ts          # Read path against a stub GitHub — no credential
-server/test/smoke.ts        # Server starts, tools register, panel renders
-```
-
-## Tests & Development
-
-```bash
-# Run tests
-npm --prefix server test
-npm --prefix server run smoke
-
-# Interactive MCP Inspector with Hot-Reload (auto-restarts on code change)
-npm run dev
-
-# Interactive MCP Inspector (runs compiled server)
-npm run inspect
-```
-
-Neither test touches a real token or reaches github.com: `api.ts` runs against
-a local stub that rejects anything but its fake credential, and `smoke.ts`
-drives the server over stdio with a throwaway data directory.
-
-When using `npm run dev`, `tsx watch` continuously monitors `src/` and restarts the MCP server automatically whenever you modify your TypeScript code.
-
-## Environment overrides
-
-| Variable | Effect |
-|---|---|
-| `REPO_CONTEXT_TOKEN` | Use this token instead of the keychain (headless runs, CI) |
-| `REPO_CONTEXT_DATA` | Where the active-repo state and fallback token file live |
-| `REPO_CONTEXT_API` | Point at a different GitHub API base (testing, GHE) |
-
-## Limits worth knowing
-
-- **Code search matches whole tokens, not substrings**, and skips very large
-  files. A miss is not proof a string is absent — fall back to
-  `list_repo_files` then `read_repo_file`.
-- `list_repo_files` with `recursive: true` returns at most 400 entries per call
-  and says so when it truncates; narrow with `path`.
-- `read_repo_file` cuts output at 60,000 characters and tells you the line range
-  to re-request.
+The output bundle is generated at `dist/repo-context.mcpb`.

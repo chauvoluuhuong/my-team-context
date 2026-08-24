@@ -56,6 +56,30 @@ export interface NotionStatusResult {
   reason?: string;
 }
 
+export interface NotionPageItem {
+  id: string;
+  title: string;
+  url: string;
+  icon?: string;
+  createdTime?: string;
+  lastEditedTime?: string;
+  isSynced?: boolean;
+  pointId?: string;
+}
+
+export interface NotionPagePreviewResult {
+  id: string;
+  title: string;
+  url: string;
+  icon?: string;
+  prefix: string;
+  suggestedName: string;
+  suggestedDescription: string;
+  content: string;
+  exists: boolean;
+  existingSkill?: SkillItem | null;
+}
+
 /* ------------------------------------------------------------------ *
  * Qdrant Types
  * ------------------------------------------------------------------ */
@@ -119,11 +143,17 @@ export interface GeminiStatusResult {
  * Skills & Knowledge Base Types
  * ------------------------------------------------------------------ */
 
+export interface SkillDocumentMetadata {
+  importFromFile?: string;
+  [key: string]: unknown;
+}
+
 export interface SkillDocument {
   id?: string;
   name: string;
   description: string;
   content: string;
+  metadata?: SkillDocumentMetadata;
   createdAt?: string;
   updatedAt?: string;
 }
@@ -133,6 +163,7 @@ export interface SkillItem {
   name: string;
   description: string;
   content: string;
+  metadata?: SkillDocumentMetadata;
   serialized?: string;
   createdAt?: string;
   updatedAt?: string;
@@ -146,6 +177,31 @@ export interface ListSkillsResult {
   skills: SkillItem[];
   total: number;
   collection: string;
+}
+
+export interface TeamUserItem {
+  id: string;
+  name: string;
+  role: string;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface SetupStatusResult {
+  isSetupComplete: boolean;
+  step: "qdrant_config" | "user_selection" | "completed";
+  qdrant: {
+    configured: boolean;
+    connected: boolean;
+    endpoint?: string | null;
+    error?: string | null;
+  };
+  currentUser: {
+    name: string | null;
+    role: string | null;
+  };
+  users: TeamUserItem[];
+  error?: string | null;
 }
 
 /* ------------------------------------------------------------------ *
@@ -203,12 +259,13 @@ export interface ListFilesEntry {
 
 export interface ListFilesResult {
   repo: string;
-  ref: string;
+  ref?: string;
   path: string;
   entries: ListFilesEntry[];
   fileCount?: number;
   truncated?: boolean;
   note?: string;
+  error?: string;
 }
 
 export interface ReadFileOptions {
@@ -222,13 +279,14 @@ export interface ReadFileOptions {
 
 export interface ReadFileResult {
   repo: string;
-  ref: string;
+  ref?: string;
   path: string;
-  lines: number;
-  shown: string;
-  truncated: boolean;
+  lines?: number;
+  shown?: string;
+  truncated?: boolean;
   note?: string;
-  content: string;
+  content?: string;
+  error?: string;
 }
 
 export interface SearchCodeOptions {
@@ -248,17 +306,57 @@ export interface SearchCodeResult {
   totalCount: number;
   results: SearchCodeMatch[];
   note?: string;
+  error?: string;
 }
 
 export interface OverviewOptions {
   repo?: string;
 }
 
-export interface OverviewResult extends RepoMetaResult {
-  ref: string;
-  languages: string[];
-  topLevel: string[];
-  readme: string | null;
+export interface OverviewResult extends Partial<RepoMetaResult> {
+  repo: string;
+  ref?: string;
+  languages?: string[];
+  topLevel?: string[];
+  readme?: string | null;
+  error?: string;
+}
+
+/* ------------------------------------------------------------------ *
+ * Application Configuration Types
+ * ------------------------------------------------------------------ */
+
+export interface ActiveRepoConfigItem {
+  name: string;
+  description: string;
+}
+
+export interface ActiveNotionPageConfigItem {
+  id: string;
+  title: string;
+  url?: string;
+  description?: string;
+  lastEditedTime?: string;
+  icon?: string;
+}
+
+export interface AppConfigPayload {
+  username: string;
+  "active-repos": ActiveRepoConfigItem[];
+  "active-notion-pages"?: ActiveNotionPageConfigItem[];
+  systemPrompt?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface AppConfigItem {
+  id: string;
+  username: string;
+  activeRepos: ActiveRepoConfigItem[];
+  activeNotionPages: ActiveNotionPageConfigItem[];
+  systemPrompt: string;
+  createdAt: string;
+  updatedAt: string;
 }
 
 /* ------------------------------------------------------------------ *
@@ -270,3 +368,4 @@ export interface ToolTextResponse {
   content: Array<{ type: "text"; text: string }>;
   isError?: boolean;
 }
+

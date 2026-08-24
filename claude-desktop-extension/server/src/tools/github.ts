@@ -34,7 +34,8 @@ import type {
   OverviewOptions,
   OverviewResult,
 } from "./types.js";
-import { PANEL_URI } from "./init.js";
+import { PANEL_URI, getSessionUser, getAuthState } from "./init.js";
+import { getAppConfig } from "../services/vector-db.js";
 
 const API = process.env.REPO_CONTEXT_API || "https://api.github.com";
 const UA = "claude-repo-context";
@@ -221,18 +222,63 @@ export async function repoMeta(repo: string): Promise<RepoMetaResult> {
   };
 }
 
-/**
- * The repo every read/list/search tool operates on, unless one is passed
- * explicitly. Stored by the panel; falls back to nothing rather than guessing.
- */
-async function resolveTarget(repoOverride?: string): Promise<{ repo: string; ref?: string }> {
-  if (repoOverride) {
-    splitRepo(repoOverride);
-    return { repo: repoOverride, ref: undefined };
+async function resolveEffectiveUsername(providedUsername?: string): Promise<string> {
+  if (providedUsername && providedUsername.trim()) {
+    return providedUsername.trim();
   }
+
+  const sessionUser = getSessionUser();
+  if (sessionUser && sessionUser.trim()) {
+    return sessionUser.trim();
+  }
+
+  const gh = await whoami().catch(() => ({ authenticated: false, login: undefined }));
+  if (gh.login && gh.login.trim()) {
+    return gh.login.trim();
+  }
+
+  const auth = await getAuthState().catch(() => ({ username: null }));
+  if (auth.username && auth.username.trim()) {
+    return auth.username.trim();
+  }
+
+  return "admin";
+}
+
+/**
+ * Resolve target repository or repositories for multi-repo operations.
+ * If repoOverride is provided, returns [repoOverride].
+ * Otherwise, retrieves activeRepos configured in appConfig (Qdrant).
+ * Falls back to active repo in stored state, or throws RepoContextError if none found.
+ */
+export async function resolveActiveRepos(repoOverride?: string): Promise<string[]> {
+  if (repoOverride && repoOverride.trim()) {
+    const clean = repoOverride.trim();
+    splitRepo(clean);
+    return [clean];
+  }
+
+  try {
+    const username = await resolveEffectiveUsername();
+    const config = await getAppConfig(username);
+    if (config?.activeRepos && config.activeRepos.length > 0) {
+      const active = config.activeRepos
+        .map((r) => r.name?.trim())
+        .filter((name): name is string => Boolean(name));
+      if (active.length > 0) {
+        return active;
+      }
+    }
+  } catch {
+    // Qdrant might not be reachable or configured; fallback to stored state
+  }
+
   const state = await readState();
-  if (!state.repo) throw new RepoContextError(NO_REPO);
-  return { repo: state.repo, ref: state.defaultBranch };
+  if (state.repo && state.repo.trim()) {
+    return [state.repo.trim()];
+  }
+
+  throw new RepoContextError(NO_REPO);
 }
 
 /* ------------------------------------------------------------------ *
@@ -257,11 +303,8 @@ interface RawTreeResponse {
 }
 
 /**
- * List one directory (default) or the whole tree under a path (`recursive`).
- *
- * The recursive path uses the git trees API — one request for the entire repo
- * instead of one per directory, which is what makes "show me the layout" cheap
- * on a large codebase.
+ * List one directory (default) or the whole tree under a path (`recursive`)
+ * across active repositories or a specified repo.
  */
 export async function listFiles({
   repo,
@@ -269,64 +312,88 @@ export async function listFiles({
   ref,
   recursive = false,
   limit = 400,
-}: ListFilesOptions = {}): Promise<ListFilesResult> {
+}: ListFilesOptions = {}): Promise<ListFilesResult[]> {
   const token = await tokenOrThrow();
-  const target = await resolveTarget(repo);
-  const { owner, name } = splitRepo(target.repo);
-  const branch = ref || target.ref || (await repoMeta(target.repo)).defaultBranch;
+  const targetRepos = await resolveActiveRepos(repo);
   const clean = dirPath.replace(/^\/+|\/+$/g, "");
 
-  if (!recursive) {
-    const url =
-      `${API}/repos/${owner}/${name}/contents/${clean.split("/").map(encodeURIComponent).join("/")}` +
-      `?ref=${encodeURIComponent(branch)}`;
-    const entries = await gh<RawContentEntry[] | RawContentEntry>(token, url);
+  const results = await Promise.all(
+    targetRepos.map(async (targetRepo) => {
+      try {
+        const { owner, name } = splitRepo(targetRepo);
+        const meta = await repoMeta(targetRepo).catch(() => ({ defaultBranch: "main" }));
+        const branch = ref || meta.defaultBranch;
 
-    if (!Array.isArray(entries)) {
-      throw new RepoContextError(
-        `"${clean || "/"}" in ${target.repo} is a file, not a directory — use read_repo_file.`,
-      );
-    }
+        if (!recursive) {
+          const url =
+            `${API}/repos/${owner}/${name}/contents/${clean.split("/").map(encodeURIComponent).join("/")}` +
+            `?ref=${encodeURIComponent(branch)}`;
+          const entries = await gh<RawContentEntry[] | RawContentEntry>(token, url);
 
-    return {
-      repo: target.repo,
-      ref: branch,
-      path: clean || "/",
-      entries: entries
-        .map((e) => ({ path: e.path, type: e.type, size: e.type === "file" ? e.size : undefined }))
-        .sort((a, b) =>
-          a.type === b.type ? a.path.localeCompare(b.path) : a.type === "dir" ? -1 : 1,
-        ),
-    };
-  }
+          if (!Array.isArray(entries)) {
+            return {
+              repo: targetRepo,
+              ref: branch,
+              path: clean || "/",
+              entries: [],
+              note: `"${clean || "/"}" in ${targetRepo} is a file, not a directory — use read_repo_file.`,
+            };
+          }
 
-  const tree = await gh<RawTreeResponse>(
-    token,
-    `${API}/repos/${owner}/${name}/git/trees/${encodeURIComponent(branch)}?recursive=1`,
+          return {
+            repo: targetRepo,
+            ref: branch,
+            path: clean || "/",
+            entries: entries
+              .map((e) => ({ path: e.path, type: e.type, size: e.type === "file" ? e.size : undefined }))
+              .sort((a, b) =>
+                a.type === b.type ? a.path.localeCompare(b.path) : a.type === "dir" ? -1 : 1,
+              ),
+          };
+        }
+
+        const tree = await gh<RawTreeResponse>(
+          token,
+          `${API}/repos/${owner}/${name}/git/trees/${encodeURIComponent(branch)}?recursive=1`,
+        );
+
+        const prefix = clean ? `${clean}/` : "";
+        const all = (tree.tree ?? [])
+          .filter((e) => e.type === "blob" && e.path.startsWith(prefix))
+          .map((e) => ({ path: e.path, type: "file", size: e.size }));
+
+        return {
+          repo: targetRepo,
+          ref: branch,
+          path: clean || "/",
+          fileCount: all.length,
+          truncated: Boolean(tree.truncated) || all.length > limit,
+          entries: all.slice(0, limit),
+          note:
+            all.length > limit
+              ? `Showing ${limit} of ${all.length} files. Narrow with the path argument.`
+              : undefined,
+        };
+      } catch (err: unknown) {
+        const message = err instanceof Error ? err.message : String(err);
+        return {
+          repo: targetRepo,
+          ref: ref || "main",
+          path: clean || "/",
+          entries: [],
+          error: message,
+          note: `Failed to list files in ${targetRepo}: ${message}`,
+        };
+      }
+    }),
   );
 
-  const prefix = clean ? `${clean}/` : "";
-  const all = (tree.tree ?? [])
-    .filter((e) => e.type === "blob" && e.path.startsWith(prefix))
-    .map((e) => ({ path: e.path, type: "file", size: e.size }));
-
-  return {
-    repo: target.repo,
-    ref: branch,
-    path: clean || "/",
-    fileCount: all.length,
-    truncated: Boolean(tree.truncated) || all.length > limit,
-    entries: all.slice(0, limit),
-    note:
-      all.length > limit
-        ? `Showing ${limit} of ${all.length} files. Narrow with the path argument.`
-        : undefined,
-  };
+  return results;
 }
 
 const MAX_CHARS = 60_000;
 
-/** Read one file, optionally a line range of it. */
+/** Read one file across active repositories or a specified repo, optionally a line range of it. */
 export async function readFile({
   repo,
   path: filePath,
@@ -334,50 +401,80 @@ export async function readFile({
   startLine,
   endLine,
   maxChars = MAX_CHARS,
-}: ReadFileOptions): Promise<ReadFileResult> {
+}: ReadFileOptions): Promise<ReadFileResult[]> {
   if (!filePath) throw new RepoContextError("path is required — the file to read.");
   const token = await tokenOrThrow();
-  const target = await resolveTarget(repo);
-  const { owner, name } = splitRepo(target.repo);
-  const branch = ref || target.ref || (await repoMeta(target.repo)).defaultBranch;
+  const targetRepos = await resolveActiveRepos(repo);
   const clean = filePath.replace(/^\/+/, "");
 
-  const url =
-    `${API}/repos/${owner}/${name}/contents/${clean.split("/").map(encodeURIComponent).join("/")}` +
-    `?ref=${encodeURIComponent(branch)}`;
+  const results = await Promise.all(
+    targetRepos.map(async (targetRepo) => {
+      try {
+        const { owner, name } = splitRepo(targetRepo);
+        const meta = await repoMeta(targetRepo).catch(() => ({ defaultBranch: "main" }));
+        const branch = ref || meta.defaultBranch;
 
-  // The raw media type returns file bytes directly, which sidesteps the 1 MB
-  // ceiling the JSON (base64) representation has.
-  const res = await request(token, url, { accept: "application/vnd.github.raw" });
-  const buffer = Buffer.from(await res.arrayBuffer());
+        const url =
+          `${API}/repos/${owner}/${name}/contents/${clean.split("/").map(encodeURIComponent).join("/")}` +
+          `?ref=${encodeURIComponent(branch)}`;
 
-  if (buffer.includes(0)) {
-    throw new RepoContextError(`${clean} looks like a binary file (${buffer.length} bytes).`);
-  }
+        const res = await request(token, url, { accept: "application/vnd.github.raw" });
+        const buffer = Buffer.from(await res.arrayBuffer());
 
-  const lines = buffer.toString("utf8").split("\n");
-  const from = startLine ? Math.max(1, startLine) : 1;
-  const to = endLine ? Math.min(lines.length, endLine) : lines.length;
-  let content = lines.slice(from - 1, to).join("\n");
+        if (buffer.includes(0)) {
+          return {
+            repo: targetRepo,
+            ref: branch,
+            path: clean,
+            lines: 0,
+            shown: "none",
+            truncated: false,
+            note: `${clean} looks like a binary file (${buffer.length} bytes).`,
+            content: "",
+          };
+        }
 
-  let truncated = false;
-  if (content.length > maxChars) {
-    content = content.slice(0, maxChars);
-    truncated = true;
-  }
+        const lines = buffer.toString("utf8").split("\n");
+        const from = startLine ? Math.max(1, startLine) : 1;
+        const to = endLine ? Math.min(lines.length, endLine) : lines.length;
+        let content = lines.slice(from - 1, to).join("\n");
 
-  return {
-    repo: target.repo,
-    ref: branch,
-    path: clean,
-    lines: lines.length,
-    shown: startLine || endLine ? `${from}-${to}` : "all",
-    truncated,
-    note: truncated
-      ? `Output cut at ${maxChars} characters — re-read with startLine/endLine for the rest.`
-      : undefined,
-    content,
-  };
+        let truncated = false;
+        if (content.length > maxChars) {
+          content = content.slice(0, maxChars);
+          truncated = true;
+        }
+
+        return {
+          repo: targetRepo,
+          ref: branch,
+          path: clean,
+          lines: lines.length,
+          shown: startLine || endLine ? `${from}-${to}` : "all",
+          truncated,
+          note: truncated
+            ? `Output cut at ${maxChars} characters — re-read with startLine/endLine for the rest.`
+            : undefined,
+          content,
+        };
+      } catch (err: unknown) {
+        const message = err instanceof Error ? err.message : String(err);
+        return {
+          repo: targetRepo,
+          ref: ref || "main",
+          path: clean,
+          lines: 0,
+          shown: "none",
+          truncated: false,
+          error: message,
+          note: `Could not read ${clean} from ${targetRepo}: ${message}`,
+          content: "",
+        };
+      }
+    }),
+  );
+
+  return results;
 }
 
 interface RawSearchItem {
@@ -391,72 +488,119 @@ interface RawSearchResponse {
 }
 
 /**
- * Code search scoped to the repo. GitHub's index, not a grep: it matches whole
- * tokens rather than substrings and skips very large files, so a miss here is
- * not proof the string is absent.
+ * Code search scoped to active repositories or a specified repo. GitHub's index,
+ * not a grep: it matches whole tokens rather than substrings and skips very large
+ * files, so a miss here is not proof the string is absent.
+ *
+ * Returns a list of objects, each containing the repo name and its search result.
  */
 export async function searchCode({
   repo,
   query,
   limit = 20,
-}: SearchCodeOptions): Promise<SearchCodeResult> {
-  if (!query) throw new RepoContextError("query is required.");
+}: SearchCodeOptions): Promise<SearchCodeResult[]> {
+  if (!query || !query.trim()) throw new RepoContextError("query is required.");
   const token = await tokenOrThrow();
-  const target = await resolveTarget(repo);
+  const targetRepos = await resolveActiveRepos(repo);
 
-  const q = `${query} repo:${target.repo}`;
-  const data = await gh<RawSearchResponse>(
-    token,
-    `${API}/search/code?q=${encodeURIComponent(q)}&per_page=${Math.min(limit, 50)}`,
-    { accept: "application/vnd.github.text-match+json" },
-  );
+  const searchPromises = targetRepos.map(async (targetRepo) => {
+    try {
+      splitRepo(targetRepo);
+      const q = `${query.trim()} repo:${targetRepo}`;
+      const data = await gh<RawSearchResponse>(
+        token,
+        `${API}/search/code?q=${encodeURIComponent(q)}&per_page=${Math.min(limit, 50)}`,
+        { accept: "application/vnd.github.text-match+json" },
+      );
 
-  return {
-    repo: target.repo,
-    query,
-    totalCount: data.total_count,
-    results: (data.items ?? []).map((item) => ({
-      path: item.path,
-      matches: (item.text_matches ?? []).map((m) => m.fragment?.trim() ?? "").filter(Boolean),
-    })),
-    note:
-      data.total_count === 0
-        ? "No matches. GitHub code search matches whole tokens, not substrings — try a shorter term or list_repo_files instead."
-        : undefined,
-  };
+      return {
+        repo: targetRepo,
+        query: query.trim(),
+        totalCount: data.total_count ?? 0,
+        results: (data.items ?? []).map((item) => ({
+          path: item.path,
+          matches: (item.text_matches ?? []).map((m) => m.fragment?.trim() ?? "").filter(Boolean),
+        })),
+        note:
+          data.total_count === 0
+            ? "No matches. GitHub code search matches whole tokens, not substrings — try a shorter term or list_repo_files instead."
+            : undefined,
+      };
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : String(err);
+      return {
+        repo: targetRepo,
+        query: query.trim(),
+        totalCount: 0,
+        results: [],
+        error: message,
+        note: `Search failed for repo "${targetRepo}": ${message}`,
+      };
+    }
+  });
+
+  return Promise.all(searchPromises);
 }
 
-/** Branch, languages, top-level layout, and README — a one-call primer. */
-export async function overview({ repo }: OverviewOptions = {}): Promise<OverviewResult> {
+/** Branch, languages, top-level layout, and README across active repositories or a specified repo. */
+export async function overview({ repo }: OverviewOptions = {}): Promise<OverviewResult[]> {
   const token = await tokenOrThrow();
-  const target = await resolveTarget(repo);
-  const { owner, name } = splitRepo(target.repo);
+  const targetRepos = await resolveActiveRepos(repo);
 
-  const meta = await repoMeta(target.repo);
-  const [languages, root, readme] = await Promise.all([
-    gh<Record<string, number>>(token, `${API}/repos/${owner}/${name}/languages`).catch(() => ({})),
-    listFiles({ repo: target.repo, ref: meta.defaultBranch }).catch(() => ({
-      repo: target.repo,
-      ref: meta.defaultBranch,
-      path: "/",
-      entries: [],
-    })),
-    request(
-      token,
-      `${API}/repos/${owner}/${name}/readme?ref=${encodeURIComponent(meta.defaultBranch)}`,
-      { accept: "application/vnd.github.raw" },
-    )
-      .then((r) => r.text())
-      .catch(() => null),
-  ]);
+  const results = await Promise.all(
+    targetRepos.map(async (targetRepo) => {
+      try {
+        const { owner, name } = splitRepo(targetRepo);
+        const meta = await repoMeta(targetRepo);
+        const [languages, rootList, readme] = await Promise.all([
+          gh<Record<string, number>>(token, `${API}/repos/${owner}/${name}/languages`).catch(() => ({})),
+          listFiles({ repo: targetRepo, ref: meta.defaultBranch }).catch(() => [
+            {
+              repo: targetRepo,
+              ref: meta.defaultBranch,
+              path: "/",
+              entries: [],
+            },
+          ]),
+          request(
+            token,
+            `${API}/repos/${owner}/${name}/readme?ref=${encodeURIComponent(meta.defaultBranch)}`,
+            { accept: "application/vnd.github.raw" },
+          )
+            .then((r) => r.text())
+            .catch(() => null),
+        ]);
 
-  return {
-    ...meta,
-    ref: meta.defaultBranch,
-    languages: Object.keys(languages),
-    topLevel: root.entries.map((e) => (e.type === "dir" ? `${e.path}/` : e.path)),
-    readme: readme ? readme.slice(0, 8000) : null,
-  };
+        const root = rootList[0] || { entries: [] };
+        return {
+          ...meta,
+          repo: targetRepo,
+          ref: meta.defaultBranch,
+          languages: Object.keys(languages),
+          topLevel: (root.entries || []).map((e) => (e.type === "dir" ? `${e.path}/` : e.path)),
+          readme: readme ? readme.slice(0, 8000) : null,
+        };
+      } catch (err: unknown) {
+        const message = err instanceof Error ? err.message : String(err);
+        return {
+          repo: targetRepo,
+          fullName: targetRepo,
+          private: false,
+          defaultBranch: "main",
+          description: null,
+          language: null,
+          pushedAt: "",
+          ref: "main",
+          languages: [],
+          topLevel: [],
+          readme: null,
+          error: message,
+        };
+      }
+    }),
+  );
+
+  return results;
 }
 
 /* ------------------------------------------------------------------ *
@@ -551,14 +695,14 @@ export function registerGitHubTools(server: McpServer): void {
   server.registerTool(
     "repo_overview",
     {
-      title: "Overview of the active repo",
+      title: "Overview of active repositories",
       description:
-        "Get a first orientation on the active repo: default branch, languages, top-level " +
+        "Get a first orientation on active repositories (or a specific repo): default branch, languages, top-level " +
         "layout, and the README. Use this before the other repo tools when you need context on " +
-        "an unfamiliar codebase — one call replaces several list/read round trips.",
-      annotations: { title: "Overview of the active repo", readOnlyHint: true, openWorldHint: true },
+        "codebases — one call replaces several list/read round trips.",
+      annotations: { title: "Overview of active repositories", readOnlyHint: true, openWorldHint: true },
       inputSchema: {
-        repo: z.string().optional().describe('Override the active repo, as "owner/name".'),
+        repo: z.string().optional().describe('Optional repository name as "owner/name". If omitted, returns overview for all active repositories.'),
       },
     },
     guarded(async ({ repo }: { repo?: string }) => text(await overview({ repo }))),
@@ -567,12 +711,12 @@ export function registerGitHubTools(server: McpServer): void {
   server.registerTool(
     "list_repo_files",
     {
-      title: "List files in the repo",
+      title: "List files in repositories",
       description:
-        "List what is inside the active GitHub repo — one directory at a time, or every file " +
+        "List what is inside active GitHub repositories (or a specific repo) — one directory at a time, or every file " +
         "under a path with recursive=true. Use to find where something lives before reading it, " +
         "or to see how the project is laid out.",
-      annotations: { title: "List files in the repo", readOnlyHint: true, openWorldHint: true },
+      annotations: { title: "List files in repositories", readOnlyHint: true, openWorldHint: true },
       inputSchema: {
         path: z.string().optional().describe("Directory path; omit for the repo root."),
         recursive: z
@@ -580,7 +724,7 @@ export function registerGitHubTools(server: McpServer): void {
           .optional()
           .describe("List every file underneath instead of one directory level."),
         ref: z.string().optional().describe("Branch, tag, or commit; omit for the default branch."),
-        repo: z.string().optional().describe('Override the active repo, as "owner/name".'),
+        repo: z.string().optional().describe('Optional repository name as "owner/name". If omitted, lists files across all active repositories.'),
       },
     },
     guarded(async (args: { path?: string; recursive?: boolean; ref?: string; repo?: string }) =>
@@ -591,12 +735,12 @@ export function registerGitHubTools(server: McpServer): void {
   server.registerTool(
     "read_repo_file",
     {
-      title: "Read a file from the repo",
+      title: "Read a file from repositories",
       description:
-        "Read one file out of the active GitHub repo, optionally just a line range of it. Use " +
+        "Read a file out of active GitHub repositories (or a specific repo), optionally just a line range of it. Use " +
         "whenever a question depends on what the code actually says — implementation details, " +
         "config values, dependencies, docs.",
-      annotations: { title: "Read a file from the repo", readOnlyHint: true, openWorldHint: true },
+      annotations: { title: "Read a file from repositories", readOnlyHint: true, openWorldHint: true },
       inputSchema: {
         path: z.string().describe("File path within the repo, e.g. src/index.js."),
         startLine: z
@@ -607,7 +751,7 @@ export function registerGitHubTools(server: McpServer): void {
           .describe("First line to return (1-based)."),
         endLine: z.number().int().positive().optional().describe("Last line to return, inclusive."),
         ref: z.string().optional().describe("Branch, tag, or commit; omit for the default branch."),
-        repo: z.string().optional().describe('Override the active repo, as "owner/name".'),
+        repo: z.string().optional().describe('Optional repository name as "owner/name". If omitted, searches and reads the file across all active repositories.'),
       },
     },
     guarded(
@@ -624,13 +768,13 @@ export function registerGitHubTools(server: McpServer): void {
   server.registerTool(
     "search_repo_code",
     {
-      title: "Search code in the repo",
+      title: "Search code in repositories",
       description:
-        "Search the active repo's code through GitHub's index and get matching files with " +
+        "Search code across active GitHub repositories or a specific repository through GitHub's index and get matching files with " +
         "snippets. Use to locate a symbol, string, or config key when you don't know which file " +
         "holds it. Matches whole tokens rather than substrings, so no result is not proof of " +
         "absence — fall back to list_repo_files then read_repo_file.",
-      annotations: { title: "Search code in the repo", readOnlyHint: true, openWorldHint: true },
+      annotations: { title: "Search code in repositories", readOnlyHint: true, openWorldHint: true },
       inputSchema: {
         query: z
           .string()
@@ -643,8 +787,13 @@ export function registerGitHubTools(server: McpServer): void {
           .positive()
           .max(50)
           .optional()
-          .describe("Max files to return (default 20)."),
-        repo: z.string().optional().describe('Override the active repo, as "owner/name".'),
+          .describe("Max files to return per repository (default 20)."),
+        repo: z
+          .string()
+          .optional()
+          .describe(
+            'Optional repository name as "owner/name" to limit the search. If omitted, searches across all active repositories from app configuration.',
+          ),
       },
     },
     guarded(async (args: { query: string; limit?: number; repo?: string }) =>

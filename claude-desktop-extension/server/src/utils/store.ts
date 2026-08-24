@@ -301,3 +301,22 @@ export async function clearActiveRepo(): Promise<void> {
   const { repo, defaultBranch, selectedAt, ...rest } = previous;
   await writeState(rest);
 }
+
+/**
+ * Clear all secrets and local state files on user logout.
+ */
+export async function clearAllCredentials(): Promise<void> {
+  await Promise.all([
+    clearToken().catch(() => {}),
+    clearNotionKey().catch(() => {}),
+    clearQdrantConfig().catch(() => {}),
+    clearSqlConnectionString().catch(() => {}),
+    clearGeminiKey().catch(() => {}),
+  ]);
+  try {
+    await fs.rm(statePath(), { force: true });
+  } catch {
+    // Ignore error
+  }
+}
+

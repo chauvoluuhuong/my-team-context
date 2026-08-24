@@ -10,6 +10,7 @@ import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { registerAppTool } from "@modelcontextprotocol/ext-apps/server";
 import { text, guarded, RepoContextError } from "../utils/helpers.js";
 import { serializeSkillDocument, serializeDocument } from "../utils/serializer.js";
+import type { SkillDocumentMetadata } from "./types.js";
 import {
   listSkills,
   getSkill,
@@ -77,17 +78,31 @@ export function registerSkillsTools(server: McpServer): void {
         name: z.string().min(1).describe("Skill name or title"),
         description: z.string().optional().describe("Brief summary of skill"),
         content: z.string().min(1).describe("Skill guidelines/instructions in Markdown"),
+        metadata: z.record(z.string(), z.unknown()).optional().describe("Arbitrary metadata object, optionally containing importFromFile"),
       },
       _meta: { ui: { visibility: ["app"] } },
     },
-    guarded(async ({ name, description, content }: { name: string; description?: string; content: string }) => {
-      const skill = await upsertSkill({
+    guarded(
+      async ({
         name,
-        description: description || "",
+        description,
         content,
-      });
-      return text(skill);
-    }),
+        metadata,
+      }: {
+        name: string;
+        description?: string;
+        content: string;
+        metadata?: SkillDocumentMetadata;
+      }) => {
+        const skill = await upsertSkill({
+          name,
+          description: description || "",
+          content,
+          metadata,
+        });
+        return text(skill);
+      },
+    ),
   );
 
   registerAppTool(
@@ -102,20 +117,36 @@ export function registerSkillsTools(server: McpServer): void {
         name: z.string().min(1).describe("Skill name"),
         description: z.string().optional().describe("Skill description"),
         content: z.string().min(1).describe("Skill markdown content"),
+        metadata: z.record(z.string(), z.unknown()).optional().describe("Arbitrary metadata object, optionally containing importFromFile"),
       },
       _meta: { ui: { visibility: ["app"] } },
     },
-    guarded(async ({ id, name, description, content }: { id: string; name: string; description?: string; content: string }) => {
-      const existing = await getSkill(id);
-      const skill = await upsertSkill({
+    guarded(
+      async ({
         id,
         name,
-        description: description ?? existing?.description ?? "",
+        description,
         content,
-        createdAt: existing?.createdAt,
-      });
-      return text(skill);
-    }),
+        metadata,
+      }: {
+        id: string;
+        name: string;
+        description?: string;
+        content: string;
+        metadata?: SkillDocumentMetadata;
+      }) => {
+        const existing = await getSkill(id);
+        const skill = await upsertSkill({
+          id,
+          name,
+          description: description ?? existing?.description ?? "",
+          content,
+          metadata: metadata !== undefined ? metadata : existing?.metadata,
+          createdAt: existing?.createdAt,
+        });
+        return text(skill);
+      },
+    ),
   );
 
   registerAppTool(
@@ -179,6 +210,7 @@ export function registerSkillsTools(server: McpServer): void {
           name: r.name,
           description: r.description,
           content: r.content,
+          metadata: r.metadata,
           score: r.score,
         })),
       });
@@ -204,6 +236,7 @@ export function registerSkillsTools(server: McpServer): void {
           id: s.id,
           name: s.name,
           description: s.description,
+          metadata: s.metadata,
           updatedAt: s.updatedAt,
         })),
       });

@@ -1,403 +1,2542 @@
-<div id="root" class="panel">
-  <div class="loading">Loading configuration…</div>
+<div id="root" class="panel-app">
+  <div class="loading-screen">
+    <div class="spinner"></div>
+    <div class="loading-text">Checking Team Context & Connections…</div>
+  </div>
 </div>
 
 <style>
   :root {
     --bg: #ffffff;
-    --fg: #111827;
-    --muted: #6b7280;
-    --line: #e5e7eb;
+    --fg: #0f172a;
+    --muted: #64748b;
+    --line: #e2e8f0;
     --accent: #2563eb;
     --accent-hover: #1d4ed8;
+    --accent-light: #eff6ff;
     --ok-bg: #ecfdf5;
     --ok-fg: #059669;
     --warn-bg: #fffbeb;
     --warn-fg: #d97706;
     --err-bg: #fef2f2;
     --err-fg: #dc2626;
-    --code-bg: #f9fafb;
+    --code-bg: #f8fafc;
     --card-bg: #ffffff;
-    --border: #e5e7eb;
+    --card-hover: #f1f5f9;
+    --card-selected: #f0fdf4;
+    --card-selected-border: #86efac;
+    --border: #cbd5e1;
+    --purple-bg: #f3e8ff;
+    --purple-fg: #7e22ce;
   }
+
   @media (prefers-color-scheme: dark) {
     :root {
-      --bg: #111827;
-      --fg: #f9fafb;
-      --muted: #9ca3af;
-      --line: #374151;
+      --bg: #0b0f19;
+      --fg: #f8fafc;
+      --muted: #94a3b8;
+      --line: #1e293b;
       --accent: #3b82f6;
       --accent-hover: #60a5fa;
+      --accent-light: #172554;
       --ok-bg: #064e3b;
       --ok-fg: #34d399;
       --warn-bg: #78350f;
       --warn-fg: #fbbf24;
       --err-bg: #7f1d1d;
       --err-fg: #f87171;
-      --code-bg: #1f2937;
-      --card-bg: #1e293b;
+      --code-bg: #111827;
+      --card-bg: #111827;
+      --card-hover: #1e293b;
+      --card-selected: #062e24;
+      --card-selected-border: #059669;
       --border: #334155;
+      --purple-bg: #3b0764;
+      --purple-fg: #d8b4fe;
     }
   }
 
-  * { box-sizing: border-box; }
+  * {
+    box-sizing: border-box;
+  }
 
-  .panel {
+  .panel-app {
     background: var(--bg);
     color: var(--fg);
     font: 13.5px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
     border: 1px solid var(--line);
     border-radius: 12px;
     padding: 20px;
-    max-width: 520px;
+    max-width: 720px;
+    height: 680px;
+    max-height: 680px;
+    margin: 0 auto;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    position: relative;
   }
 
-  h2 { font-size: 16px; font-weight: 600; margin: 0 0 4px; display: flex; align-items: center; gap: 8px; }
-  .sub { color: var(--muted); font-size: 12.5px; margin: 0 0 16px; }
-  .loading { color: var(--muted); padding: 12px 0; }
-
-  .service-card {
-    border: 1px solid var(--border);
-    border-radius: 9px;
-    padding: 12px 14px;
-    margin-bottom: 12px;
-    background: var(--card-bg);
-  }
-
-  .service-header {
+  .header {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 8px;
+    margin-bottom: 14px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--line);
   }
 
-  .service-title {
+  h2 {
+    font-size: 16.5px;
+    font-weight: 700;
+    margin: 0;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .header-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .user-badge {
+    font-size: 12px;
     font-weight: 600;
+    padding: 4px 9px;
+    border-radius: 999px;
+    background: var(--code-bg);
+    border: 1px solid var(--line);
+    color: var(--fg);
+    display: flex;
+    align-items: center;
+    gap: 5px;
+  }
+
+  .user-badge-role {
+    font-size: 10.5px;
+    background: var(--accent-light);
+    color: var(--accent);
+    padding: 1px 6px;
+    border-radius: 4px;
+    font-weight: 600;
+  }
+
+  .btn-signout {
+    font-size: 12px;
+    font-weight: 500;
+    padding: 4px 10px;
+    border-radius: 6px;
+    border: 1px solid var(--line);
+    background: transparent;
+    color: var(--err-fg);
+    cursor: pointer;
+    transition: all 0.15s ease;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+  }
+
+  .btn-signout:hover {
+    background: var(--err-bg);
+    border-color: var(--err-fg);
+  }
+
+  .btn-header-secondary {
+    font-size: 12px;
+    font-weight: 500;
+    padding: 4px 10px;
+    border-radius: 6px;
+    border: 1px solid var(--line);
+    background: var(--code-bg);
+    color: var(--muted);
+    cursor: pointer;
+    transition: all 0.15s ease;
+  }
+
+  .btn-header-secondary:hover {
+    color: var(--fg);
+    border-color: var(--border);
+  }
+
+  /* Two-Tier Navigation */
+  .top-tabs {
+    display: flex;
+    gap: 6px;
+    margin-bottom: 16px;
+    border-bottom: 1px solid var(--line);
+    padding-bottom: 8px;
+  }
+
+  .top-tab {
+    padding: 7px 14px;
     font-size: 13px;
+    font-weight: 600;
+    border-radius: 8px;
+    border: 1px solid transparent;
+    background: transparent;
+    color: var(--muted);
+    cursor: pointer;
+    transition: all 0.15s ease;
     display: flex;
     align-items: center;
     gap: 6px;
   }
 
-  .badge {
-    font-size: 11px;
-    padding: 2px 7px;
-    border-radius: 999px;
-    font-weight: 500;
+  .top-tab:hover {
+    color: var(--fg);
+    background: var(--card-hover);
   }
-  .badge.idle { background: var(--line); color: var(--muted); }
-  .badge.ok { background: var(--ok-bg); color: var(--ok-fg); }
-  .badge.err { background: var(--err-bg); color: var(--err-fg); }
-  .badge.checking { background: var(--warn-bg); color: var(--warn-fg); }
 
-  .field-group { margin-top: 6px; }
-  .field-label { display: block; font-size: 11.5px; color: var(--muted); margin-bottom: 4px; }
+  .top-tab.active {
+    background: var(--accent-light);
+    color: var(--accent);
+    border-color: var(--accent);
+  }
 
-  input[type="password"], input[type="text"] {
+  /* Content area scrollable container */
+  #tabContent {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow-y: auto;
+    padding-right: 4px;
+    min-height: 0;
+  }
+
+  #subSessionContent {
+    flex: 1;
+    overflow-y: auto;
+    padding-right: 2px;
+    min-height: 0;
+  }
+
+  /* Sub-session Pills */
+  .sub-pills {
+    display: flex;
+    gap: 6px;
+    margin-bottom: 14px;
+    flex-wrap: wrap;
+  }
+
+  .sub-pill {
+    padding: 5px 12px;
+    font-size: 12px;
+    font-weight: 600;
+    border-radius: 999px;
+    border: 1px solid var(--border);
+    background: var(--code-bg);
+    color: var(--muted);
+    cursor: pointer;
+    transition: all 0.15s ease;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+  }
+
+  .sub-pill:hover {
+    color: var(--fg);
+    border-color: var(--accent);
+  }
+
+  .sub-pill.active {
+    background: var(--accent);
+    color: #ffffff;
+    border-color: var(--accent);
+  }
+
+  .section-intro {
+    margin-bottom: 14px;
+  }
+
+  .section-intro h3 {
+    margin: 0 0 4px;
+    font-size: 14.5px;
+    font-weight: 600;
+  }
+
+  .section-intro p {
+    margin: 0;
+    font-size: 12.5px;
+    color: var(--muted);
+  }
+
+  /* Form & Cards */
+  .card {
+    border: 1px solid var(--border);
+    border-radius: 9px;
+    padding: 14px;
+    margin-bottom: 12px;
+    background: var(--card-bg);
+  }
+
+  .card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+  }
+
+  .card-title {
+    font-weight: 600;
+    font-size: 13.5px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .field-group {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .field-label {
+    font-size: 11.5px;
+    font-weight: 600;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+  }
+
+  input[type="text"],
+  input[type="password"],
+  select,
+  textarea {
     width: 100%;
-    font: 12.5px/1.4 ui-monospace, SFMono-Regular, "SF Mono", Menlo, monospace;
-    padding: 7px 9px;
+    padding: 8px 10px;
+    font-size: 13px;
+    border: 1px solid var(--border);
     border-radius: 6px;
-    border: 1px solid var(--line);
     background: var(--code-bg);
     color: var(--fg);
+    font-family: inherit;
+    outline: none;
+    transition: border-color 0.15s ease;
   }
-  input:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
+
+  input[type="text"]:focus,
+  input[type="password"]:focus,
+  select:focus,
+  textarea:focus {
+    border-color: var(--accent);
+  }
+
+  textarea {
+    min-height: 140px;
+    resize: vertical;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    font-size: 12.5px;
+    line-height: 1.5;
+  }
+
+  .badge {
+    font-size: 11px;
+    font-weight: 600;
+    padding: 2px 7px;
+    border-radius: 999px;
+  }
+
+  .badge.ok {
+    background: var(--ok-bg);
+    color: var(--ok-fg);
+  }
+
+  .badge.warn {
+    background: var(--warn-bg);
+    color: var(--warn-fg);
+  }
+
+  .badge.err {
+    background: var(--err-bg);
+    color: var(--err-fg);
+  }
+
+  .badge.idle {
+    background: var(--code-bg);
+    color: var(--muted);
+    border: 1px solid var(--line);
+  }
+
+  .badge.purple {
+    background: var(--purple-bg);
+    color: var(--purple-fg);
+  }
 
   .btn-row {
     display: flex;
     gap: 8px;
-    margin-top: 16px;
+    align-items: center;
+    margin-top: 14px;
   }
 
   button {
-    font: inherit;
-    font-size: 13px;
-    font-weight: 500;
-    padding: 9px 14px;
-    border-radius: 7px;
-    border: 1px solid var(--line);
-    background: transparent;
-    color: var(--fg);
+    font-family: inherit;
+    border-radius: 6px;
+    padding: 7px 14px;
+    font-size: 12.5px;
+    font-weight: 600;
     cursor: pointer;
     transition: all 0.15s ease;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
   }
+
+  button:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+
   button.primary {
     background: var(--accent);
-    border-color: var(--accent);
     color: #ffffff;
-    flex: 1;
+    border: 1px solid var(--accent);
   }
-  button:hover:not(:disabled) { filter: brightness(1.08); }
-  button:disabled { opacity: 0.5; cursor: default; }
 
+  button.primary:hover:not(:disabled) {
+    background: var(--accent-hover);
+    border-color: var(--accent-hover);
+  }
+
+  button.secondary {
+    background: var(--code-bg);
+    color: var(--fg);
+    border: 1px solid var(--border);
+  }
+
+  button.secondary:hover:not(:disabled) {
+    background: var(--card-hover);
+    border-color: var(--muted);
+  }
+
+  button.danger {
+    background: var(--err-bg);
+    color: var(--err-fg);
+    border: 1px solid var(--err-fg);
+  }
+
+  button.danger:hover:not(:disabled) {
+    background: var(--err-fg);
+    color: #ffffff;
+  }
+
+  /* Status message box */
   .status-box {
-    margin-top: 12px;
-    padding: 9px 12px;
-    border-radius: 7px;
-    font-size: 12.5px;
+    margin-top: 10px;
+    padding: 8px 12px;
+    border-radius: 6px;
+    font-size: 12px;
+    display: none;
     line-height: 1.4;
   }
-  .status-box.ok { background: var(--ok-bg); color: var(--ok-fg); }
-  .status-box.warn { background: var(--warn-bg); color: var(--warn-fg); }
-  .status-box.err { background: var(--err-bg); color: var(--err-fg); }
 
-  .hint {
-    margin-top: 14px;
-    padding-top: 10px;
-    border-top: 1px solid var(--line);
-    color: var(--muted);
-    font-size: 11.5px;
+  .status-box.ok {
+    display: block;
+    background: var(--ok-bg);
+    color: var(--ok-fg);
+    border: 1px solid var(--ok-fg);
   }
-  .hint code { background: var(--code-bg); padding: 1px 4px; border-radius: 3px; }
+
+  .status-box.err {
+    display: block;
+    background: var(--err-bg);
+    color: var(--err-fg);
+    border: 1px solid var(--err-fg);
+  }
+
+  .status-box.warn {
+    display: block;
+    background: var(--warn-bg);
+    color: var(--warn-fg);
+    border: 1px solid var(--warn-fg);
+  }
+
+  /* Loading Spinner */
+  .loading-screen {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    gap: 12px;
+    color: var(--muted);
+    font-size: 13px;
+  }
+
+  .spinner {
+    width: 28px;
+    height: 28px;
+    border: 3px solid var(--line);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+  }
+
+  .spinner-sm {
+    width: 14px;
+    height: 14px;
+    border: 2px solid rgba(255, 255, 255, 0.4);
+    border-top-color: #ffffff;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+    display: inline-block;
+  }
+
+  .spinner-dark {
+    border: 2px solid var(--line);
+    border-top-color: var(--accent);
+  }
+
+  @keyframes spin {
+    to {
+      transform: rotate(360deg);
+    }
+  }
+
+  /* Step Badges & Onboarding Flow */
+  .setup-container {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    overflow-y: auto;
+    padding: 8px 4px;
+  }
+
+  .setup-step-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--accent);
+    background: var(--accent-light);
+    padding: 3px 8px;
+    border-radius: 999px;
+    margin-bottom: 8px;
+    align-self: flex-start;
+  }
+
+  /* User Selection Cards Grid */
+  .user-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 10px;
+    margin: 12px 0 16px;
+    max-height: 240px;
+    overflow-y: auto;
+    padding-right: 4px;
+  }
+
+  .user-card {
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 10px 12px;
+    background: var(--card-bg);
+    cursor: pointer;
+    transition: all 0.15s ease;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .user-card:hover {
+    border-color: var(--accent);
+    background: var(--card-hover);
+    transform: translateY(-1px);
+  }
+
+  .user-card.selected {
+    border-color: var(--accent);
+    background: var(--card-selected);
+  }
+
+  .user-avatar {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: var(--accent-light);
+    color: var(--accent);
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 13px;
+    flex-shrink: 0;
+  }
+
+  .user-info {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .user-name-title {
+    font-weight: 600;
+    font-size: 13px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .user-role-tag {
+    font-size: 11px;
+    color: var(--muted);
+    display: block;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  /* Role Selection Pills */
+  .role-pills {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 6px;
+    margin-bottom: 10px;
+  }
+
+  .role-pill {
+    font-size: 11.5px;
+    padding: 4px 9px;
+    border-radius: 6px;
+    border: 1px solid var(--border);
+    background: var(--code-bg);
+    color: var(--muted);
+    cursor: pointer;
+    transition: all 0.15s ease;
+    user-select: none;
+  }
+
+  .role-pill:hover {
+    border-color: var(--accent);
+    color: var(--fg);
+    background: var(--card-hover);
+  }
+
+  .role-pill.active {
+    background: var(--accent-light);
+    color: var(--accent);
+    border-color: var(--accent);
+    font-weight: 600;
+  }
+
+  /* Countdown Error Banner */
+  .countdown-box {
+    background: var(--err-bg);
+    border: 1px solid var(--err-fg);
+    border-radius: 9px;
+    padding: 16px;
+    margin-bottom: 16px;
+  }
+
+  .countdown-timer-line {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-size: 12.5px;
+    font-weight: 600;
+    color: var(--err-fg);
+    margin-top: 10px;
+  }
+
+  .progress-bar-bg {
+    height: 4px;
+    background: rgba(220, 38, 38, 0.2);
+    border-radius: 2px;
+    margin-top: 8px;
+    overflow: hidden;
+  }
+
+  .progress-bar-fill {
+    height: 100%;
+    background: var(--err-fg);
+    transition: width 1s linear;
+  }
+
+  /* Repo & Notion list items */
+  .repo-controls {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 10px;
+    align-items: center;
+  }
+
+  .repo-search-input {
+    flex: 1;
+    padding: 6px 10px;
+    font-size: 12.5px;
+  }
+
+  .repo-list {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    max-height: 280px;
+    overflow-y: auto;
+    padding-right: 4px;
+  }
+
+  .repo-item {
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 8px 10px;
+    background: var(--card-bg);
+    transition: all 0.15s ease;
+  }
+
+  .repo-item.selected {
+    border-color: var(--card-selected-border);
+    background: var(--card-selected);
+  }
+
+  .repo-main-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+  }
+
+  .repo-checkbox {
+    margin: 0;
+    cursor: pointer;
+  }
+
+  .repo-name {
+    font-weight: 600;
+    font-size: 13px;
+    flex: 1;
+    word-break: break-all;
+  }
+
+  .repo-desc-box {
+    margin-top: 8px;
+    padding-top: 8px;
+    border-top: 1px dashed var(--line);
+  }
+
+  .repo-desc-box input {
+    font-size: 12px;
+    padding: 5px 8px;
+  }
+
+  /* Modal */
+  .modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.65);
+    backdrop-filter: blur(4px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+    padding: 16px;
+  }
+
+  .modal-dialog {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    width: 100%;
+    max-width: 560px;
+    max-height: 88vh;
+    overflow-y: auto;
+    box-shadow: 0 16px 40px rgba(0, 0, 0, 0.4);
+    display: flex;
+    flex-direction: column;
+    padding: 20px 22px;
+  }
+
+  .modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 12px;
+    margin-bottom: 16px;
+  }
+
+  .modal-title {
+    font-size: 15px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 0;
+  }
+
+  .btn-close {
+    background: transparent;
+    border: none;
+    color: var(--muted);
+    font-size: 20px;
+    cursor: pointer;
+    padding: 2px 6px;
+    border-radius: 4px;
+    line-height: 1;
+  }
+
+  .btn-close:hover {
+    color: var(--fg);
+    background: var(--code-bg);
+  }
+
+  .preview-box {
+    background: var(--code-bg);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 8px 12px;
+    font-family: ui-monospace, monospace;
+    font-size: 11.5px;
+    max-height: 120px;
+    overflow-y: auto;
+    white-space: pre-wrap;
+    word-break: break-all;
+    color: var(--fg);
+    margin-top: 6px;
+  }
 </style>
 
-<script type="module">
+<script>
   /*__EXT_APPS_BUNDLE__*/
-  const { App } = globalThis.ExtApps;
+</script>
+
+<script type="module">
+  /*__SKILLS_COMPONENT__*/
+</script>
+
+<script type="module">
+  const { App } = globalThis.ExtApps || {};
+  const app = new App({ name: "TeamContextApp", version: "0.1.0" }, {}, { autoResize: true });
+
+  const skillsComponent = new globalThis.SkillsComponent({
+    app,
+    showHeader: false,
+    onUpdate: (skills) => {
+      state.skills = skills;
+      const pill = document.getElementById("pillSkills");
+      if (pill) pill.textContent = `🧠 Team Skills (${skills.length})`;
+    },
+  });
+
+  const state = {
+    viewState: "loading", // "loading" | "error_countdown" | "qdrant_config" | "user_selection" | "main"
+    activeTopTab: "credentials", // "credentials" | "config"
+    activeSubSession: "github",  // "github" | "prompt" | "notion" | "database"
+    currentUser: { name: "", role: "" },
+    users: [],
+    skills: [],
+    qdrant: { configured: false, connected: false, endpoint: "", error: null },
+    credentials: {},
+    teamStatus: {},
+    repos: [],
+    reposSearch: "",
+    selectedRepos: new Map(), // name -> description
+    notionPages: [],
+    notionPagesSearch: "",
+    selectedNotionPages: new Map(), // id -> { id, title, description, url, icon, lastEditedTime }
+    isNotionConnected: false,
+    notionBotName: null,
+    systemPrompt: "",
+    defaultSystemPrompt: "",
+    createdAt: "",
+    updatedAt: "",
+    statusType: null,
+    statusMessage: "",
+    // Countdown state
+    countdownSeconds: 10,
+    countdownTimer: null,
+    errorMessage: "",
+    isSaving: false,
+  };
+
   const root = document.getElementById("root");
-  const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
 
-  const app = new App({ name: "TeamContextPanel", version: "1.0.0" }, {}, { autoResize: true });
+  function esc(str) {
+    if (!str) return "";
+    return String(str)
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;");
+  }
 
-  let config = {};
+  function setStatus(type, msg) {
+    state.statusType = type;
+    state.statusMessage = msg;
+    const box = document.getElementById("statusBox");
+    if (box) {
+      box.className = "status-box " + (type || "");
+      box.textContent = msg || "";
+    }
+  }
 
-  app.ontoolresult = async ({ content }) => {
+  function setBadge(id, kind, text) {
+    const el = document.getElementById("badge-" + id);
+    if (el) {
+      el.className = "badge " + kind;
+      el.textContent = text;
+    }
+  }
+
+  /* ------------------- Initial Load & Setup Check ------------------- */
+
+  async function checkSetupAndLoad() {
+    clearCountdown();
+    state.viewState = "loading";
+    render();
+
     try {
-      const data = JSON.parse(content[0].text);
-      config = data.config ?? {};
-      renderForm(data.teamStatus);
-    } catch {
-      renderForm();
+      // 1. Centralized setup verification
+      const setupRes = await app.callServerTool({
+        name: "panel_check_setup",
+        arguments: {},
+      });
+      const setup = JSON.parse(setupRes.content[0].text);
+
+      state.users = setup.users || [];
+      state.qdrant = setup.qdrant || {};
+      state.currentUser = setup.currentUser || { name: "", role: "" };
+
+      // Also load existing env configuration for prefilling
+      try {
+        const configRes = await app.callServerTool({ name: "panel_load_config", arguments: {} });
+        const cfg = JSON.parse(configRes.content[0].text);
+        state.credentials = cfg.config || {};
+      } catch {}
+
+      // Check if there is a connection error with Qdrant when Qdrant is already configured
+      if (!setup.qdrant?.connected && setup.qdrant?.configured) {
+        state.errorMessage = setup.error || setup.qdrant?.error || "Unable to establish connection to Qdrant cluster.";
+        startCountdown();
+        return;
+      }
+
+      // Check setup progression steps
+      if (setup.step === "qdrant_config" || !setup.qdrant?.connected) {
+        state.viewState = "qdrant_config";
+        render();
+        return;
+      }
+
+      if (setup.step === "user_selection" || !setup.currentUser?.name) {
+        state.viewState = "user_selection";
+        render();
+        return;
+      }
+
+      // Setup is completed! Load application configuration state
+      await loadAppConfigData();
+      state.viewState = "main";
+      render();
+    } catch (err) {
+      console.error("Setup check error:", err);
+      state.errorMessage = err.message || "Failed to initialize Team Context.";
+      startCountdown();
+    }
+  }
+
+  function buildDefaultSystemPrompt(context) {
+    const userName = (context && context.userName) || state.currentUser?.name || "Team Member";
+    const userRole = (context && context.userRole) || (state.currentUser?.role ? ` (${state.currentUser.role})` : "");
+    const repos = (context && context.activeRepos) || Array.from(state.selectedRepos.keys());
+
+    // Selective active Notion pages will be implemented later; for now all Notion workspace docs are available
+    // const notion = (context && context.activeNotionPages) || Array.from(state.selectedNotionPages.values()).map(p => p.title || p.id);
+
+    const activeRepoList = Array.isArray(repos) ? repos : [];
+
+    return `You are my Team Assistant and Engineering Co-Pilot helping me understand and navigate the context of our team's work.
+
+Current User: ${userName}${userRole}
+Active Repositories: ${activeRepoList.length > 0 ? activeRepoList.join(", ") : "None configured"}
+Notion Workspace: All workspace documentation accessible (selective active Notion pages will be implemented later)
+
+Please assist me throughout our work by using the \`my-team-context-mcp-server\` tools:
+1. Team Knowledge & Skills: Query our vector knowledge base with \`skills_search\` and \`get_skills\` to retrieve relevant engineering procedures, guidelines, and playbooks.
+2. Codebase Context: Consult our configured GitHub repositories for codebase architecture, style conventions, and implementation patterns.
+3. Project Specifications: Access our Notion workspace documents for product requirements and specifications.
+4. Design & Goals: When creating UI mockups, designing components, or building features, align strictly with our team's branding colors, design system, and project goals.
+5. SQL Database Querying: Use \`sql_get_schema\` and \`sql_execute_query\` to inspect database schemas, write optimized SQL queries, and analyze data for our team.
+
+Safety & Approvals:
+- Always ask for explicit user approval before executing any actions that edit or modify data (including INSERT, UPDATE, DELETE, ALTER, DROP in the database, editing or creating Notion pages, or modifying skills/configurations).
+
+Please confirm you are ready to assist with our team context and give a brief greeting!`;
+  }
+
+  async function loadAppConfigData() {
+    try {
+      const appStateRes = await app.callServerTool({ name: "config_get_app_state", arguments: {} });
+      const appData = JSON.parse(appStateRes.content[0].text);
+
+      state.repos = appData.repos || [];
+      state.isNotionConnected = Boolean(appData.isNotionConnected);
+      state.notionBotName = appData.notionBotName || null;
+      state.notionPages = appData.notionPages || [];
+
+      const appConfig = appData.appConfig || {};
+      state.selectedRepos.clear();
+      (appConfig.activeRepos || []).forEach(r => {
+        if (r && r.name) state.selectedRepos.set(r.name, r.description || "");
+      });
+
+      state.selectedNotionPages.clear();
+      (appConfig.activeNotionPages || []).forEach(n => {
+        if (n && n.id) {
+          state.selectedNotionPages.set(n.id, {
+            id: n.id,
+            title: n.title || "",
+            url: n.url || "",
+            description: n.description || "",
+            lastEditedTime: n.lastEditedTime || "",
+            icon: n.icon || "📄",
+          });
+        }
+      });
+
+      state.defaultSystemPrompt = appData.defaultSystemPrompt || buildDefaultSystemPrompt();
+
+      // If app config has no custom system prompt yet, initialize and store the default prompt
+      if (!appConfig.systemPrompt || !appConfig.systemPrompt.trim()) {
+        state.systemPrompt = state.defaultSystemPrompt;
+        const activeRepos = Array.from(state.selectedRepos.entries()).map(([name, description]) => ({ name, description }));
+        const activeNotionPages = Array.from(state.selectedNotionPages.values());
+        await app.callServerTool({
+          name: "config_save_app_config",
+          arguments: {
+            username: state.currentUser?.name || "admin",
+            activeRepos,
+            activeNotionPages,
+            systemPrompt: state.systemPrompt,
+          },
+        }).catch(err => console.warn("Could not auto-persist default system prompt:", err));
+      } else {
+        state.systemPrompt = appConfig.systemPrompt;
+      }
+
+      state.createdAt = appConfig.createdAt || "";
+      state.updatedAt = appConfig.updatedAt || "";
+    } catch (err) {
+      console.error("Failed to load app config data:", err);
+    }
+  }
+
+  /* ------------------- Countdown Handler ------------------- */
+
+  function startCountdown() {
+    clearCountdown();
+    state.countdownSeconds = 10;
+    state.viewState = "error_countdown";
+    render();
+
+    state.countdownTimer = setInterval(() => {
+      state.countdownSeconds -= 1;
+      const secEl = document.getElementById("countdownSeconds");
+      const fillEl = document.getElementById("countdownProgressFill");
+      if (secEl) secEl.textContent = state.countdownSeconds + "s";
+      if (fillEl) fillEl.style.width = ((state.countdownSeconds / 10) * 100) + "%";
+
+      if (state.countdownSeconds <= 0) {
+        clearCountdown();
+        state.viewState = "qdrant_config";
+        render();
+      }
+    }, 1000);
+  }
+
+  function clearCountdown() {
+    if (state.countdownTimer) {
+      clearInterval(state.countdownTimer);
+      state.countdownTimer = null;
+    }
+  }
+
+  /* ------------------- View Router ------------------- */
+
+  function render() {
+    if (state.viewState === "loading") {
+      renderLoading();
+      return;
+    }
+
+    if (state.viewState === "error_countdown") {
+      renderErrorCountdown();
+      return;
+    }
+
+    if (state.viewState === "qdrant_config") {
+      renderQdrantConfigStep();
+      return;
+    }
+
+    if (state.viewState === "user_selection") {
+      renderUserSelectionStep();
+      return;
+    }
+
+    if (state.viewState === "main") {
+      renderMainDashboard();
+      return;
+    }
+  }
+
+  /* ------------------- View 0: Loading ------------------- */
+
+  function renderLoading() {
+    root.innerHTML = `
+      <div class="loading-screen">
+        <div class="spinner"></div>
+        <div class="loading-text">Connecting to Team Context & Vector Database…</div>
+      </div>
+    `;
+  }
+
+  /* ------------------- View 1: Error & Countdown ------------------- */
+
+  function renderErrorCountdown() {
+    const pct = (state.countdownSeconds / 10) * 100;
+    root.innerHTML = `
+      <div class="header">
+        <h2>⚡ Team Context</h2>
+      </div>
+      <div class="setup-container">
+        <div class="countdown-box">
+          <div style="display:flex;align-items:flex-start;gap:10px;">
+            <span style="font-size:22px;line-height:1;">⚠️</span>
+            <div style="flex:1;">
+              <h3 style="margin:0 0 6px;font-size:14.5px;color:var(--err-fg);">Connection Error</h3>
+              <p style="margin:0;font-size:12.5px;color:var(--fg);word-break:break-word;">
+                ${esc(state.errorMessage || "Could not reach Qdrant vector database.")}
+              </p>
+            </div>
+          </div>
+
+          <div class="countdown-timer-line">
+            <span>Auto-navigating to settings in:</span>
+            <strong id="countdownSeconds">${state.countdownSeconds}s</strong>
+          </div>
+          <div class="progress-bar-bg">
+            <div class="progress-bar-fill" id="countdownProgressFill" style="width:${pct}%"></div>
+          </div>
+        </div>
+
+        <div class="card" style="text-align:center;padding:24px 16px;">
+          <p style="margin:0 0 16px;color:var(--muted);font-size:13px;">
+            You can verify and update your Qdrant cluster endpoint URL and API key to restore service.
+          </p>
+          <div class="btn-row" style="justify-content:center;gap:10px;">
+            <button class="primary" id="btnGoToSettingsNow">⚙️ Configure Settings Now</button>
+            <button class="secondary" id="btnRetryCheck">🔄 Retry Connection</button>
+          </div>
+        </div>
+      </div>
+    `;
+
+    document.getElementById("btnGoToSettingsNow")?.addEventListener("click", () => {
+      clearCountdown();
+      state.viewState = "qdrant_config";
+      render();
+    });
+
+    document.getElementById("btnRetryCheck")?.addEventListener("click", () => {
+      checkSetupAndLoad();
+    });
+  }
+
+  /* ------------------- View 2: Step 1 Qdrant Config ------------------- */
+
+  function renderQdrantConfigStep() {
+    const qdrantUrl = state.credentials.QDRANT_URL || "";
+    const qdrantKey = state.credentials.QDRANT_API_KEY || "";
+
+    root.innerHTML = `
+      <div class="header">
+        <h2>⚡ Team Context Setup</h2>
+      </div>
+
+      <div class="setup-container">
+        <span class="setup-step-pill">Step 1 of 2</span>
+        <div class="section-intro">
+          <h3>🧠 Vector Database Setup</h3>
+          <p>Provide your Qdrant cluster endpoint and API key. Credentials will be securely stored in <code>server/.env</code>.</p>
+        </div>
+
+        <div class="card">
+          <div class="field-group">
+            <label class="field-label" for="setupQdrantUrl">Qdrant Cluster Endpoint URL</label>
+            <input type="text" id="setupQdrantUrl" placeholder="https://xxx.cloud.qdrant.io" value="${esc(qdrantUrl)}" />
+            <span style="font-size:11px;color:var(--muted);margin-top:2px;">
+              e.g. <code>https://xxx.eu-west-2-0.aws.cloud.qdrant.io</code> or <code>http://localhost:6333</code>
+            </span>
+          </div>
+
+          <div class="field-group" style="margin-top:12px;">
+            <label class="field-label" for="setupQdrantKey">Qdrant API Key</label>
+            <input type="password" id="setupQdrantKey" placeholder="Enter API key (optional for local clusters)" value="${esc(qdrantKey)}" />
+          </div>
+
+          <div class="btn-row" style="margin-top:16px;">
+            <button class="primary" id="btnConnectQdrant" ${state.isSaving ? "disabled" : ""}>
+              ${state.isSaving ? '<span class="spinner-sm"></span> Testing & Connecting…' : "⚡ Test Connection & Continue →"}
+            </button>
+          </div>
+
+          <div id="statusBox" class="${state.statusType ? 'status-box ' + state.statusType : 'status-box'}">${esc(state.statusMessage)}</div>
+        </div>
+      </div>
+    `;
+
+    document.getElementById("btnConnectQdrant")?.addEventListener("click", handleSaveQdrantConfig);
+  }
+
+  async function handleSaveQdrantConfig() {
+    const url = document.getElementById("setupQdrantUrl")?.value.trim();
+    const apiKey = document.getElementById("setupQdrantKey")?.value.trim();
+
+    if (!url) {
+      setStatus("err", "Please enter a Qdrant cluster endpoint URL.");
+      return;
+    }
+
+    state.isSaving = true;
+    setStatus(null, "");
+    render();
+
+    try {
+      const res = await app.callServerTool({
+        name: "panel_save_qdrant_config",
+        arguments: { qdrantUrl: url, qdrantApiKey: apiKey || undefined },
+      });
+      const data = JSON.parse(res.content[0].text);
+
+      if (data.success) {
+        state.credentials.QDRANT_URL = data.endpoint || url;
+        state.credentials.QDRANT_API_KEY = apiKey;
+        state.qdrant.connected = true;
+        state.qdrant.endpoint = data.endpoint || url;
+        state.users = data.users || [];
+        state.isSaving = false;
+        state.viewState = "user_selection";
+        render();
+      } else {
+        state.isSaving = false;
+        render();
+        setStatus("err", data.reason || "Failed to connect to Qdrant.");
+      }
+    } catch (err) {
+      state.isSaving = false;
+      render();
+      setStatus("err", "Connection error: " + err.message);
+    }
+  }
+
+  const PREDEFINED_ROLES = [
+    "Full Stack Engineer",
+    "Frontend Developer",
+    "Backend Developer",
+    "Tech Lead / Architect",
+    "DevOps / Platform Engineer",
+    "QA / Test Engineer",
+    "Mobile Developer",
+    "Product Manager",
+    "UI/UX Designer",
+    "Data / AI Engineer",
+  ];
+
+  /* ------------------- View 3: Step 2 User Selection / Creation ------------------- */
+
+  function renderUserSelectionStep() {
+    const hasUsers = state.users && state.users.length > 0;
+    const currentSelectedRole = state.selectedNewUserRole || PREDEFINED_ROLES[0];
+
+    root.innerHTML = `
+      <div class="header">
+        <h2>⚡ Team Context Setup</h2>
+        <div class="header-actions">
+          <button class="btn-header-secondary" id="btnBackToQdrant">⚙️ Change Qdrant</button>
+        </div>
+      </div>
+
+      <div class="setup-container">
+        <span class="setup-step-pill">Step 2 of 2</span>
+        <div class="section-intro">
+          <h3>👤 Select or Create Your Profile</h3>
+          <p>Select who you are from the team database or register a new team profile. Your selection will be stored in <code>server/.env</code>.</p>
+        </div>
+
+        ${hasUsers ? `
+          <div class="card">
+            <div class="card-header">
+              <span class="card-title">👥 Existing Team Members (${state.users.length})</span>
+              <span style="font-size:11.5px;color:var(--muted);">Click card to select</span>
+            </div>
+
+            <div class="user-grid">
+              ${state.users.map(u => {
+                const initial = (u.name || "?").charAt(0).toUpperCase();
+                return `
+                  <div class="user-card" onclick="window._selectExistingUser('${esc(u.name)}', '${esc(u.role || 'Member')}')">
+                    <div class="user-avatar">${esc(initial)}</div>
+                    <div class="user-info">
+                      <div class="user-name-title">${esc(u.name)}</div>
+                      <span class="user-role-tag">${esc(u.role || "Member")}</span>
+                    </div>
+                  </div>
+                `;
+              }).join('')}
+            </div>
+          </div>
+        ` : `
+          <div class="card" style="text-align:center;padding:18px 12px;margin-bottom:12px;">
+            <p style="margin:0;font-size:12.5px;color:var(--muted);">No team members registered yet in Qdrant users collection.</p>
+          </div>
+        `}
+
+        <!-- Create New User Section -->
+        <div class="card">
+          <div class="card-header">
+            <span class="card-title">➕ Create New Team Profile</span>
+          </div>
+
+          <div class="field-group" style="margin-bottom:10px;">
+            <label class="field-label" for="newUserName">Your Name</label>
+            <input type="text" id="newUserName" placeholder="e.g. Huong, Alice, Bob" />
+          </div>
+
+          <div class="field-group">
+            <label class="field-label">Select Role or Type Custom Role</label>
+            
+            <!-- Quick Role Select Pills -->
+            <div class="role-pills" id="rolePillsContainer">
+              ${PREDEFINED_ROLES.map(r => `
+                <span class="role-pill ${r === currentSelectedRole ? 'active' : ''}" onclick="window._selectRolePill('${esc(r)}')">
+                  ${esc(r)}
+                </span>
+              `).join('')}
+            </div>
+
+            <!-- Custom Role Input -->
+            <input type="text" id="newUserRole" placeholder="Custom role (e.g. Lead, Developer, QA)" value="${esc(currentSelectedRole)}" />
+          </div>
+
+          <div class="btn-row" style="margin-top:14px;">
+            <button class="primary" id="btnCreateUser" ${state.isSaving ? "disabled" : ""}>
+              ${state.isSaving ? '<span class="spinner-sm"></span> Creating Profile…' : "✨ Create & Continue →"}
+            </button>
+          </div>
+
+          <div id="statusBox" class="${state.statusType ? 'status-box ' + state.statusType : 'status-box'}">${esc(state.statusMessage)}</div>
+        </div>
+      </div>
+    `;
+
+    document.getElementById("newUserRole")?.addEventListener("input", (e) => {
+      state.selectedNewUserRole = e.target.value;
+      // Update pills active class
+      const pills = document.querySelectorAll(".role-pill");
+      pills.forEach(p => {
+        if (p.textContent.trim() === e.target.value.trim()) p.classList.add("active");
+        else p.classList.remove("active");
+      });
+    });
+
+    document.getElementById("btnBackToQdrant")?.addEventListener("click", () => {
+      state.viewState = "qdrant_config";
+      render();
+    });
+
+    document.getElementById("btnCreateUser")?.addEventListener("click", handleCreateNewUser);
+  }
+
+  window._selectRolePill = function(role) {
+    state.selectedNewUserRole = role;
+    const input = document.getElementById("newUserRole");
+    if (input) input.value = role;
+    const pills = document.querySelectorAll(".role-pill");
+    pills.forEach(p => {
+      if (p.textContent.trim() === role) p.classList.add("active");
+      else p.classList.remove("active");
+    });
+  };
+
+  window._selectExistingUser = async function(name, role) {
+    if (!name) return;
+    state.isSaving = true;
+    render();
+
+    try {
+      const res = await app.callServerTool({
+        name: "panel_select_user",
+        arguments: { name, role },
+      });
+      const data = JSON.parse(res.content[0].text);
+      if (data.success) {
+        state.currentUser = { name, role: role || "Member" };
+        state.isSaving = false;
+        await loadAppConfigData();
+        state.viewState = "main";
+        render();
+      } else {
+        state.isSaving = false;
+        render();
+        setStatus("err", data.reason || "Failed to select user.");
+      }
+    } catch (err) {
+      state.isSaving = false;
+      render();
+      setStatus("err", "Error: " + err.message);
     }
   };
 
-  function renderForm(teamStatus) {
+  async function handleCreateNewUser() {
+    const name = document.getElementById("newUserName")?.value.trim();
+    const roleInput = document.getElementById("newUserRole")?.value.trim();
+    const role = roleInput || state.selectedNewUserRole || "Full Stack Engineer";
+
+    if (!name) {
+      setStatus("err", "Please enter your name.");
+      return;
+    }
+
+    state.isSaving = true;
+    setStatus(null, "");
+    render();
+
+    try {
+      const res = await app.callServerTool({
+        name: "panel_create_user",
+        arguments: { name, role },
+      });
+      const data = JSON.parse(res.content[0].text);
+      if (data.success) {
+        state.currentUser = { name, role };
+        state.isSaving = false;
+        await loadAppConfigData();
+        state.viewState = "main";
+        render();
+      } else {
+        state.isSaving = false;
+        render();
+        setStatus("err", data.reason || "Failed to create user.");
+      }
+    } catch (err) {
+      state.isSaving = false;
+      render();
+      setStatus("err", "Error: " + err.message);
+    }
+  }
+
+  /* ------------------- View 4: Main Dashboard ------------------- */
+
+  function renderMainDashboard() {
+    const userName = state.currentUser?.name || "Member";
+    const userRole = state.currentUser?.role || "Member";
+
     root.innerHTML = `
-      <h2>⚡ Team Context Connections</h2>
-      <p class="sub">Configure credentials to connect GitHub, Notion, Qdrant, and SQL Database.</p>
+      <div class="header">
+        <h2>⚡ Team Context</h2>
+        <div class="header-actions">
+          <span class="user-badge">
+            👤 <strong>${esc(userName)}</strong>
+            <span class="user-badge-role">${esc(userRole)}</span>
+          </span>
+          <button class="btn-header-secondary" id="btnSwitchProfile" title="Switch profile without clearing credentials">
+            🔄 Switch
+          </button>
+          <button class="btn-signout" id="btnLogoutBtn" title="Clear server/.env and reset">
+            🚪 Log out
+          </button>
+        </div>
+      </div>
+
+      <!-- Top-Level Tabs -->
+      <div class="top-tabs">
+        <button class="top-tab ${state.activeTopTab === "credentials" ? "active" : ""}" id="tabBtnCredentials">
+          ⚡ Credentials
+        </button>
+        <button class="top-tab ${state.activeTopTab === "config" ? "active" : ""}" id="tabBtnConfig">
+          ⚙️ App Configuration
+        </button>
+      </div>
+
+      <!-- Tab Content Area -->
+      <div id="tabContent"></div>
+
+      <!-- Modal Container -->
+      <div id="modalContainer"></div>
+    `;
+
+    document.getElementById("btnSwitchProfile")?.addEventListener("click", () => {
+      state.viewState = "user_selection";
+      render();
+    });
+
+    document.getElementById("btnLogoutBtn")?.addEventListener("click", handleLogout);
+
+    document.getElementById("tabBtnCredentials")?.addEventListener("click", () => switchTopTab("credentials"));
+    document.getElementById("tabBtnConfig")?.addEventListener("click", () => switchTopTab("config"));
+
+    const contentArea = document.getElementById("tabContent");
+    if (state.activeTopTab === "credentials") {
+      renderCredentialsTab(contentArea);
+    } else if (state.activeTopTab === "config") {
+      renderAppConfigTab(contentArea);
+    }
+  }
+
+  async function switchTopTab(tab) {
+    state.activeTopTab = tab;
+    state.statusType = null;
+    state.statusMessage = "";
+    if (tab === "config" && (state.repos.length === 0 || state.notionPages.length === 0)) {
+      await loadAppConfigData();
+    }
+    render();
+  }
+
+  async function handleLogout() {
+    state.viewState = "loading";
+    render();
+
+    try {
+      await app.callServerTool({ name: "panel_logout", arguments: {} });
+    } catch (err) {
+      console.error("Logout error:", err);
+    }
+
+    state.currentUser = { name: "", role: "" };
+    state.credentials = {};
+    state.qdrant = { configured: false, connected: false, endpoint: "", error: null };
+    state.selectedRepos.clear();
+    state.selectedNotionPages.clear();
+    state.viewState = "qdrant_config";
+    render();
+  }
+
+  /* ------------------- Tab 1: Credentials ------------------- */
+
+  function renderCredentialsTab(container) {
+    const cfg = state.credentials;
+    container.innerHTML = `
+      <div class="section-intro">
+        <h3>⚡ Service Credentials</h3>
+        <p>Configure API tokens and connection keys for GitHub, Notion, Vector DB, and SQL database.</p>
+      </div>
 
       <!-- GitHub -->
-      <div class="service-card">
-        <div class="service-header">
-          <span class="service-title">🐙 GitHub</span>
-          <span class="badge ${teamStatus?.github?.authenticated ? 'ok' : 'idle'}" id="badge-github">
-            ${teamStatus?.github?.authenticated ? '✓ ' + (teamStatus.github.login || 'Connected') : 'Not tested'}
-          </span>
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title">🐙 GitHub</span>
+          <span class="badge idle" id="badge-github">Not tested</span>
         </div>
         <div class="field-group">
           <label class="field-label" for="githubToken">Personal Access Token (classic or fine-grained)</label>
-          <input type="password" id="githubToken" placeholder="ghp_… or github_pat_…" value="${esc(config.GITHUB_TOKEN || '')}" />
+          <input type="password" id="githubToken" placeholder="ghp_… or github_pat_…" value="${esc(cfg.GITHUB_TOKEN || '')}" />
         </div>
       </div>
 
       <!-- Notion -->
-      <div class="service-card">
-        <div class="service-header">
-          <span class="service-title">📝 Notion</span>
-          <span class="badge ${teamStatus?.notion?.connected ? 'ok' : 'idle'}" id="badge-notion">
-            ${teamStatus?.notion?.connected ? '✓ ' + (teamStatus.notion.botName || 'Connected') : 'Not tested'}
-          </span>
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title">📝 Notion</span>
+          <span class="badge idle" id="badge-notion">Not tested</span>
         </div>
         <div class="field-group">
           <label class="field-label" for="notionKey">Internal Integration Token</label>
-          <input type="password" id="notionKey" placeholder="secret_…" value="${esc(config.NOTION_API_KEY || '')}" />
+          <input type="password" id="notionKey" placeholder="secret_…" value="${esc(cfg.NOTION_API_KEY || '')}" />
         </div>
       </div>
 
       <!-- Qdrant -->
-      <div class="service-card">
-        <div class="service-header">
-          <span class="service-title">🧠 Qdrant Vector DB</span>
-          <span class="badge ${teamStatus?.qdrant?.connected ? 'ok' : 'idle'}" id="badge-qdrant">
-            ${teamStatus?.qdrant?.connected ? '✓ Connected (' + teamStatus.qdrant.collectionsCount + ' col)' : 'Not tested'}
-          </span>
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title">🧠 Qdrant Vector DB</span>
+          <span class="badge ok" id="badge-qdrant">✓ Connected</span>
         </div>
         <div class="field-group">
           <label class="field-label" for="qdrantUrl">Cluster Endpoint URL</label>
-          <input type="text" id="qdrantUrl" placeholder="https://xxx.cloud.qdrant.io" value="${esc(config.QDRANT_URL || '')}" />
+          <input type="text" id="qdrantUrl" placeholder="https://xxx.cloud.qdrant.io" value="${esc(cfg.QDRANT_URL || '')}" />
         </div>
         <div class="field-group" style="margin-top:8px;">
           <label class="field-label" for="qdrantKey">API Key (optional for local clusters)</label>
-          <input type="password" id="qdrantKey" placeholder="Qdrant API Key" value="${esc(config.QDRANT_API_KEY || '')}" />
+          <input type="password" id="qdrantKey" placeholder="Qdrant API Key" value="${esc(cfg.QDRANT_API_KEY || '')}" />
         </div>
       </div>
 
       <!-- Gemini Embeddings -->
-      <div class="service-card">
-        <div class="service-header">
-          <span class="service-title">✨ Google Gemini Embedding</span>
-          <span class="badge ${teamStatus?.gemini?.connected ? 'ok' : 'idle'}" id="badge-gemini">
-            ${teamStatus?.gemini?.connected ? '✓ ' + (teamStatus.gemini.model || 'Connected') : 'Not tested'}
-          </span>
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title">✨ Google Gemini Embedding</span>
+          <span class="badge idle" id="badge-gemini">Not tested</span>
         </div>
         <div class="field-group">
           <label class="field-label" for="geminiKey">Gemini API Key (Google AI Studio)</label>
-          <input type="password" id="geminiKey" placeholder="AIzaSy…" value="${esc(config.GEMINI_API_KEY || '')}" />
+          <input type="password" id="geminiKey" placeholder="AIzaSy…" value="${esc(cfg.GEMINI_API_KEY || '')}" />
         </div>
       </div>
 
       <!-- SQL Database -->
-      <div class="service-card">
-        <div class="service-header">
-          <span class="service-title">🗄️ SQL Database</span>
-          <span class="badge ${teamStatus?.sql?.connected ? 'ok' : 'idle'}" id="badge-sql">
-            ${teamStatus?.sql?.connected ? '✓ ' + (teamStatus.sql.dialect || 'Connected') : 'Not tested'}
-          </span>
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title">🗄️ SQL Database</span>
+          <span class="badge idle" id="badge-sql">Not tested</span>
         </div>
         <div class="field-group">
           <label class="field-label" for="databaseUrl">Connection URI (PostgreSQL, MySQL, SQLite)</label>
-          <input type="text" id="databaseUrl" placeholder="postgresql://user:pass@host:5432/dbname" value="${esc(config.DATABASE_URL || '')}" />
+          <input type="password" id="databaseUrl" placeholder="postgresql://user:pass@host:5432/dbname" value="${esc(cfg.DATABASE_URL || '')}" />
         </div>
       </div>
 
       <div class="btn-row">
-        <button class="primary" id="saveBtn">Save to .env & Connect</button>
-        <button id="testBtn">Test Connections</button>
+        <button class="primary" id="saveCredentialsBtn">💾 Save & Connect</button>
+        <button class="secondary" id="testConnectionsBtn">🧪 Test Connections</button>
       </div>
 
-      <div id="statusBox"></div>
+      <div id="statusBox" class="${state.statusType ? 'status-box ' + state.statusType : 'status-box'}">${esc(state.statusMessage)}</div>
+    `;
 
-      <div class="hint">
-        Credentials are automatically loaded from and saved to <code>server/.env</code> and securely stored in your OS keychain.
-      </div>`;
-
-    const saveBtn = document.getElementById("saveBtn");
-    const testBtn = document.getElementById("testBtn");
-
-    testBtn.onclick = () => runTests();
-    saveBtn.onclick = () => saveAll();
+    document.getElementById("testConnectionsBtn")?.addEventListener("click", runConnectionTests);
+    document.getElementById("saveCredentialsBtn")?.addEventListener("click", saveAllCredentials);
   }
 
-  function getFormValues() {
+  function getCredentialsFormValues() {
     return {
-      GITHUB_TOKEN: document.getElementById("githubToken")?.value?.trim() || "",
-      NOTION_API_KEY: document.getElementById("notionKey")?.value?.trim() || "",
-      QDRANT_URL: document.getElementById("qdrantUrl")?.value?.trim() || "",
-      QDRANT_API_KEY: document.getElementById("qdrantKey")?.value?.trim() || "",
-      DATABASE_URL: document.getElementById("databaseUrl")?.value?.trim() || "",
-      GEMINI_API_KEY: document.getElementById("geminiKey")?.value?.trim() || "",
+      GITHUB_TOKEN: document.getElementById("githubToken")?.value.trim() || "",
+      NOTION_API_KEY: document.getElementById("notionKey")?.value.trim() || "",
+      QDRANT_URL: document.getElementById("qdrantUrl")?.value.trim() || "",
+      QDRANT_API_KEY: document.getElementById("qdrantKey")?.value.trim() || "",
+      GEMINI_API_KEY: document.getElementById("geminiKey")?.value.trim() || "",
+      DATABASE_URL: document.getElementById("databaseUrl")?.value.trim() || "",
     };
   }
 
-  function setBadge(service, status, text) {
-    const el = document.getElementById(`badge-${service}`);
-    if (!el) return;
-    el.className = `badge ${status}`;
-    el.textContent = text;
-  }
-
-  function setStatus(kind, msg) {
-    const box = document.getElementById("statusBox");
-    if (!box) return;
-    box.innerHTML = kind ? `<div class="status-box ${kind}">${esc(msg)}</div>` : "";
-  }
-
-  async function testService(service, data) {
-    setBadge(service, "checking", "Testing…");
-    try {
-      const res = await app.callServerTool({
-        name: "panel_test_connection",
-        arguments: { service, ...data },
-      });
-      const result = JSON.parse(res.content[0].text);
-      if (result.valid) {
-        let label = "✓ Connected";
-        if (result.login) label = `✓ @${result.login}`;
-        if (result.botName) label = `✓ ${result.botName}`;
-        if (result.collectionsCount !== undefined) label = `✓ ${result.collectionsCount} col`;
-        if (result.dialect) label = `✓ ${result.dialect}`;
-        setBadge(service, "ok", label);
-        return { ok: true, detail: result };
-      } else {
-        setBadge(service, "err", "✕ Failed");
-        return { ok: false, reason: result.reason };
-      }
-    } catch (err) {
-      setBadge(service, "err", "✕ Error");
-      return { ok: false, reason: err.message };
-    }
-  }
-
-  async function runTests() {
-    const vals = getFormValues();
-    const testBtn = document.getElementById("testBtn");
-    testBtn.disabled = true;
+  async function runConnectionTests() {
+    const vals = getCredentialsFormValues();
     setStatus(null, "");
+    setBadge("github", "idle", "Testing…");
+    setBadge("notion", "idle", "Testing…");
+    setBadge("qdrant", "idle", "Testing…");
+    setBadge("gemini", "idle", "Testing…");
+    setBadge("sql", "idle", "Testing…");
 
-    const errors = [];
+    let errors = [];
 
     if (vals.GITHUB_TOKEN) {
-      const res = await testService("github", { githubToken: vals.GITHUB_TOKEN });
-      if (!res.ok) errors.push(`GitHub: ${res.reason}`);
-    } else {
-      setBadge("github", "idle", "Empty");
-    }
+      try {
+        const res = await app.callServerTool({ name: "panel_test_connection", arguments: { service: "github", githubToken: vals.GITHUB_TOKEN } });
+        const d = JSON.parse(res.content[0].text);
+        if (d.ok) setBadge("github", "ok", "✓ " + (d.login || "Connected"));
+        else { setBadge("github", "err", "Failed"); errors.push("GitHub: " + d.reason); }
+      } catch (e) { setBadge("github", "err", "Error"); }
+    } else setBadge("github", "idle", "Empty");
 
     if (vals.NOTION_API_KEY) {
-      const res = await testService("notion", { notionApiKey: vals.NOTION_API_KEY });
-      if (!res.ok) errors.push(`Notion: ${res.reason}`);
-    } else {
-      setBadge("notion", "idle", "Empty");
-    }
+      try {
+        const res = await app.callServerTool({ name: "panel_test_connection", arguments: { service: "notion", notionApiKey: vals.NOTION_API_KEY } });
+        const d = JSON.parse(res.content[0].text);
+        if (d.ok) setBadge("notion", "ok", "✓ " + (d.botName || "Connected"));
+        else { setBadge("notion", "err", "Failed"); errors.push("Notion: " + d.reason); }
+      } catch (e) { setBadge("notion", "err", "Error"); }
+    } else setBadge("notion", "idle", "Empty");
 
     if (vals.QDRANT_URL) {
-      const res = await testService("qdrant", { qdrantUrl: vals.QDRANT_URL, qdrantApiKey: vals.QDRANT_API_KEY });
-      if (!res.ok) errors.push(`Qdrant: ${res.reason}`);
-    } else {
-      setBadge("qdrant", "idle", "Empty");
-    }
+      try {
+        const res = await app.callServerTool({ name: "panel_test_connection", arguments: { service: "qdrant", qdrantUrl: vals.QDRANT_URL, qdrantApiKey: vals.QDRANT_API_KEY } });
+        const d = JSON.parse(res.content[0].text);
+        if (d.ok) setBadge("qdrant", "ok", "✓ Connected (" + (d.collectionsCount || 0) + " col)");
+        else { setBadge("qdrant", "err", "Failed"); errors.push("Qdrant: " + d.reason); }
+      } catch (e) { setBadge("qdrant", "err", "Error"); }
+    } else setBadge("qdrant", "idle", "Empty");
 
     if (vals.GEMINI_API_KEY) {
-      const res = await testService("gemini", { geminiApiKey: vals.GEMINI_API_KEY });
-      if (!res.ok) errors.push(`Gemini: ${res.reason}`);
-    } else {
-      setBadge("gemini", "idle", "Empty");
-    }
+      try {
+        const res = await app.callServerTool({ name: "panel_test_connection", arguments: { service: "gemini", geminiApiKey: vals.GEMINI_API_KEY } });
+        const d = JSON.parse(res.content[0].text);
+        if (d.ok) setBadge("gemini", "ok", "✓ " + (d.model || "Connected"));
+        else { setBadge("gemini", "err", "Failed"); errors.push("Gemini: " + d.reason); }
+      } catch (e) { setBadge("gemini", "err", "Error"); }
+    } else setBadge("gemini", "idle", "Empty");
 
     if (vals.DATABASE_URL) {
-      const res = await testService("sql", { databaseUrl: vals.DATABASE_URL });
-      if (!res.ok) errors.push(`SQL: ${res.reason}`);
-    } else {
-      setBadge("sql", "idle", "Empty");
-    }
+      try {
+        const res = await app.callServerTool({ name: "panel_test_connection", arguments: { service: "sql", databaseUrl: vals.DATABASE_URL } });
+        const d = JSON.parse(res.content[0].text);
+        if (d.ok) setBadge("sql", "ok", "✓ " + (d.dialect || "Connected"));
+        else { setBadge("sql", "err", "Failed"); errors.push("SQL: " + d.reason); }
+      } catch (e) { setBadge("sql", "err", "Error"); }
+    } else setBadge("sql", "idle", "Empty");
 
-    testBtn.disabled = false;
-    if (errors.length > 0) {
-      setStatus("err", errors.join(" | "));
-    } else {
-      setStatus("ok", "All active connections tested successfully!");
-    }
+    if (errors.length > 0) setStatus("err", errors.join(" | "));
+    else setStatus("ok", "✓ All active connections tested successfully!");
   }
 
-  async function saveAll() {
-    const vals = getFormValues();
-    const saveBtn = document.getElementById("saveBtn");
-    saveBtn.disabled = true;
-    saveBtn.textContent = "Saving…";
+  async function saveAllCredentials() {
+    const vals = getCredentialsFormValues();
+    const btn = document.getElementById("saveCredentialsBtn");
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner-sm"></span> Saving & Connecting…';
     setStatus(null, "");
 
-    // 1. Run tests first
-    await runTests();
+    await runConnectionTests();
 
     try {
-      const res = await app.callServerTool({
-        name: "panel_save_all_credentials",
-        arguments: vals,
-      });
+      const res = await app.callServerTool({ name: "panel_save_all_credentials", arguments: vals });
       const data = JSON.parse(res.content[0].text);
       if (data.status === "ok") {
-        setStatus("ok", "✓ Configuration saved to server/.env and keychain successfully!");
+        state.credentials = vals;
+        // Pull down GitHub repositories & Notion workspace pages
+        await loadAppConfigData();
+        await switchTopTab("config");
+        return;
       } else {
         setStatus("err", data.message || "Failed to save credentials.");
       }
     } catch (err) {
-      setStatus("err", `Error saving configuration: ${err.message}`);
+      setStatus("err", "Error: " + err.message);
     }
-
-    saveBtn.disabled = false;
-    saveBtn.textContent = "Save to .env & Connect";
+    btn.disabled = false;
+    btn.innerHTML = "💾 Save & Connect";
   }
 
+  /* ------------------- Tab 2: App Configuration ------------------- */
+
+  function renderAppConfigTab(container) {
+    const sub = state.activeSubSession;
+    const selectedRepoCount = Array.from(state.selectedRepos.values()).length;
+    const selectedNotionCount = Array.from(state.selectedNotionPages.values()).length;
+
+    container.innerHTML = `
+      <div class="section-intro">
+        <h3>⚙️ Application Configuration</h3>
+        <p>Manage multi-source context sessions, active repositories, Notion pages, and AI system prompt.</p>
+      </div>
+
+      <!-- Sub-Session Pills -->
+      <div class="sub-pills">
+        <button class="sub-pill ${sub === "github" ? "active" : ""}" id="pillGithub">
+          🐙 GitHub (${selectedRepoCount})
+        </button>
+        <button class="sub-pill ${sub === "notion" ? "active" : ""}" id="pillNotion">
+          📝 Notion (${selectedNotionCount})
+        </button>
+        <button class="sub-pill ${sub === "skills" ? "active" : ""}" id="pillSkills">
+          🧠 Team Skills (${(state.skills || []).length})
+        </button>
+        <button class="sub-pill ${sub === "prompt" ? "active" : ""}" id="pillPrompt">
+          🧠 System Prompt
+        </button>
+        <button class="sub-pill ${sub === "database" ? "active" : ""}" id="pillDatabase">
+          🗄️ Database
+        </button>
+      </div>
+
+      <div id="subSessionContent"></div>
+
+      <div class="btn-row" style="justify-content:space-between; align-items:center; margin-top:20px; flex-wrap:wrap; gap:10px;">
+        <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
+          <button class="primary" id="saveAppConfigBtn">💾 Save Application Configuration</button>
+          <button class="primary" id="startAssistantBtn" style="background:linear-gradient(135deg, #2563eb, #7c3aed); border:none; color:#ffffff; font-weight:700; box-shadow:0 2px 8px rgba(124, 58, 237, 0.35);">
+            🚀 Start Team Assistant
+          </button>
+        </div>
+        <span style="font-size:12px;color:var(--muted);" id="saveTimestamp">
+          ${state.updatedAt ? "Updated: " + new Date(state.updatedAt).toLocaleTimeString() : ""}
+        </span>
+      </div>
+
+      <div id="statusBox" class="${state.statusType ? 'status-box ' + state.statusType : 'status-box'}">${esc(state.statusMessage)}</div>
+    `;
+
+    document.getElementById("pillGithub")?.addEventListener("click", () => switchSubSession("github"));
+    document.getElementById("pillNotion")?.addEventListener("click", () => switchSubSession("notion"));
+    document.getElementById("pillSkills")?.addEventListener("click", () => switchSubSession("skills"));
+    document.getElementById("pillPrompt")?.addEventListener("click", () => switchSubSession("prompt"));
+    document.getElementById("pillDatabase")?.addEventListener("click", () => switchSubSession("database"));
+    document.getElementById("saveAppConfigBtn")?.addEventListener("click", saveAppConfig);
+    document.getElementById("startAssistantBtn")?.addEventListener("click", startAssistantSession);
+
+    const subContent = document.getElementById("subSessionContent");
+    if (sub === "github") renderGitHubSession(subContent);
+    else if (sub === "notion") renderNotionSession(subContent);
+    else if (sub === "skills") renderSkillsSession(subContent);
+    else if (sub === "prompt") renderPromptSession(subContent);
+    else if (sub === "database") renderDatabaseSession(subContent);
+  }
+
+  function switchSubSession(sub) {
+    state.activeSubSession = sub;
+    const subContent = document.getElementById("subSessionContent");
+    if (subContent) {
+      if (sub === "github") renderGitHubSession(subContent);
+      else if (sub === "notion") renderNotionSession(subContent);
+      else if (sub === "skills") renderSkillsSession(subContent);
+      else if (sub === "prompt") renderPromptSession(subContent);
+      else if (sub === "database") renderDatabaseSession(subContent);
+    }
+    ["github", "notion", "skills", "prompt", "database"].forEach(s => {
+      const el = document.getElementById("pill" + s.charAt(0).toUpperCase() + s.slice(1));
+      if (el) el.className = "sub-pill " + (s === sub ? "active" : "");
+    });
+  }
+
+  /* Sub-session: Skills & Knowledge Base (Component Mounted) */
+  function renderSkillsSession(container) {
+    skillsComponent.mount(container);
+  }
+
+  /* Sub-session: GitHub */
+  function renderGitHubSession(container) {
+    const filterText = (state.reposSearch || "").toLowerCase();
+    const filteredRepos = state.repos.filter(r => {
+      const name = (typeof r === "string" ? r : (r.fullName || r.full_name || r.name || "")).toLowerCase();
+      const desc = (typeof r === "object" && r.description ? r.description : "").toLowerCase();
+      return name.includes(filterText) || desc.includes(filterText);
+    });
+
+    container.innerHTML = `
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title">🐙 Select Active GitHub Repositories</span>
+          <span style="font-size:12px;color:var(--muted);">
+            ${state.selectedRepos.size} of ${state.repos.length} selected
+          </span>
+        </div>
+
+        <div class="repo-controls">
+          <input type="text" class="repo-search-input" id="repoSearchInput" placeholder="🔍 Search repositories…" value="${esc(state.reposSearch)}" />
+          <button class="secondary" id="selectAllReposBtn" style="font-size:12px;padding:6px 10px;">Select All</button>
+          <button class="secondary" id="clearAllReposBtn" style="font-size:12px;padding:6px 10px;">Clear</button>
+          <button class="secondary" id="refreshReposBtn" style="font-size:12px;padding:6px 10px;">🔄 Refresh</button>
+        </div>
+
+        <div class="repo-list" id="repoListContainer">
+          ${filteredRepos.length === 0 ? '<div class="loading-screen" style="padding:20px 0;"><p>No repositories found. Ensure GitHub token is configured and click Refresh.</p></div>' : ''}
+          ${filteredRepos.map(r => {
+            const name = typeof r === "string" ? r : (r.fullName || r.full_name || r.name || "");
+            if (!name) return "";
+            const isSelected = state.selectedRepos.has(name);
+            const desc = state.selectedRepos.get(name) || "";
+            const safeId = name.replace(/[^a-zA-Z0-9_-]/g, '_');
+            return `
+              <div class="repo-item ${isSelected ? 'selected' : ''}" data-name="${esc(name)}">
+                <div class="repo-main-row" onclick="window._toggleRepo('${esc(name)}')">
+                  <input type="checkbox" class="repo-checkbox" ${isSelected ? 'checked' : ''} />
+                  <span class="repo-name">${esc(name)}</span>
+                  ${typeof r === "object" && r.private ? '<span class="badge idle" style="font-size:10.5px;padding:1px 6px;">Private</span>' : ''}
+                  ${typeof r === "object" && r.language ? `<span class="badge idle" style="font-size:10.5px;padding:1px 6px;">${esc(r.language)}</span>` : ''}
+                </div>
+                ${isSelected ? `
+                  <div class="repo-desc-box">
+                    <input type="text" placeholder="Custom context description for this repo (e.g. Next.js web client)" value="${esc(desc)}" oninput="window._updateRepoDesc('${esc(name)}', this.value)" />
+                    
+                    <div class="md-sync-section" style="margin-top:10px;padding:10px 12px;background:var(--code-bg);border:1px solid var(--border);border-radius:8px;">
+                      <div style="display:flex;justify-content:space-between;align-items:center;">
+                        <span style="font-size:12px;font-weight:600;display:flex;align-items:center;gap:5px;">📄 Markdown Skills Sync</span>
+                        <button class="secondary" style="font-size:11.5px;padding:3px 9px;" onclick="window._scanMdFiles('${esc(name)}')">
+                          🔍 Find .md Files
+                        </button>
+                      </div>
+                      <div id="md-list-${safeId}" style="margin-top:4px;"></div>
+                    </div>
+                  </div>
+                ` : ''}
+              </div>
+            `;
+          }).join('')}
+        </div>
+      </div>
+    `;
+
+    document.getElementById("repoSearchInput")?.addEventListener("input", (e) => {
+      state.reposSearch = e.target.value;
+      renderGitHubSession(container);
+    });
+
+    document.getElementById("selectAllReposBtn")?.addEventListener("click", () => {
+      state.repos.forEach(r => {
+        const name = typeof r === "string" ? r : (r.fullName || r.full_name || r.name || "");
+        if (name && !state.selectedRepos.has(name)) state.selectedRepos.set(name, "");
+      });
+      renderGitHubSession(container);
+    });
+
+    document.getElementById("clearAllReposBtn")?.addEventListener("click", () => {
+      state.selectedRepos.clear();
+      renderGitHubSession(container);
+    });
+
+    document.getElementById("refreshReposBtn")?.addEventListener("click", () => {
+      window._refreshGitHubRepos();
+    });
+  }
+
+  window._refreshGitHubRepos = async function() {
+    const refreshBtn = document.getElementById("refreshReposBtn");
+    if (refreshBtn) {
+      refreshBtn.disabled = true;
+      refreshBtn.innerHTML = '<span class="spinner-sm spinner-dark"></span> Refreshing…';
+    }
+    try {
+      const res = await app.callServerTool({ name: "config_list_repos", arguments: { limit: 200 } });
+      const data = JSON.parse(res.content[0].text);
+      state.repos = data.repos || [];
+    } catch (err) {
+      console.error("Failed to refresh GitHub repos:", err);
+    }
+    const subContent = document.getElementById("subSessionContent");
+    if (subContent) renderGitHubSession(subContent);
+  };
+
+  /* ------------------- Centralized Skill Name & Modal Flow ------------------- */
+
+  function formatSkillName(repo, filePath, title) {
+    const cleanRepo = (repo || "").trim();
+    const cleanPath = (filePath || "").trim().replace(/^\/+/, "");
+    const baseName = title && title.trim()
+      ? title.trim()
+      : (cleanPath.split("/").pop().replace(/\.[^/.]+$/, ""));
+    return `[github-repo: ${cleanRepo}, path: ${cleanPath}] ${baseName}`;
+  }
+
+  window._mdFilesCache = window._mdFilesCache || {};
+  window._mdSelectedCache = window._mdSelectedCache || {};
+
+  window._scanMdFiles = async function(repo) {
+    const safeId = repo.replace(/[^a-zA-Z0-9_-]/g, '_');
+    const cont = document.getElementById("md-list-" + safeId);
+    if (!cont) return;
+    cont.innerHTML = '<div style="font-size:12px;color:var(--muted);padding:6px 0;display:flex;align-items:center;gap:6px;"><span class="spinner-sm spinner-dark"></span> Scanning repository for .md files…</div>';
+
+    try {
+      const res = await app.callServerTool({ name: "config_list_repo_md_files", arguments: { repo } });
+      const data = JSON.parse(res.content[0].text);
+      const files = data.mdFiles || [];
+      window._mdFilesCache[repo] = files;
+      window._mdSelectedCache[repo] = new Set(files.map(f => f.path));
+
+      renderMdFileList(repo, safeId);
+    } catch (err) {
+      cont.innerHTML = `<div style="font-size:12px;color:var(--err-fg);padding:4px 0;">Failed to scan: ${esc(err.message)}</div>`;
+    }
+  };
+
+  function renderMdFileList(repo, safeId) {
+    const cont = document.getElementById("md-list-" + safeId);
+    if (!cont) return;
+    const files = window._mdFilesCache[repo] || [];
+    const selected = window._mdSelectedCache[repo] || new Set();
+
+    if (files.length === 0) {
+      cont.innerHTML = '<div style="font-size:12px;color:var(--muted);padding:4px 0;">No .md files found in this repository.</div>';
+      return;
+    }
+
+    cont.innerHTML = `
+      <div style="margin-top:6px;border-top:1px dashed var(--line);padding-top:8px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+          <span style="font-size:11.5px;color:var(--muted);font-weight:600;">Found ${files.length} .md files (${selected.size} selected)</span>
+          <div style="display:flex;gap:4px;">
+            <button class="secondary" style="font-size:10.5px;padding:2px 6px;" onclick="window._toggleAllMd('${esc(repo)}', true)">All</button>
+            <button class="secondary" style="font-size:10.5px;padding:2px 6px;" onclick="window._toggleAllMd('${esc(repo)}', false)">None</button>
+          </div>
+        </div>
+        <div style="max-height:180px;overflow-y:auto;display:flex;flex-direction:column;gap:5px;margin-bottom:8px;padding-right:4px;">
+          ${files.map(f => {
+            const isChecked = selected.has(f.path);
+            return `
+              <div style="display:flex;align-items:center;justify-content:space-between;gap:6px;padding:5px 8px;border-radius:6px;background:var(--card-bg);border:1px solid var(--border);">
+                <label style="display:flex;align-items:center;gap:6px;font-size:12px;cursor:pointer;flex:1;min-width:0;">
+                  <input type="checkbox" ${isChecked ? 'checked' : ''} onchange="window._toggleMdItem('${esc(repo)}', '${esc(f.path)}', this.checked)" />
+                  <span style="font-family:ui-monospace,monospace;font-size:11.5px;word-break:break-all;">${esc(f.path)}</span>
+                  ${f.size ? `<span style="font-size:10px;color:var(--muted);">(${Math.round(f.size / 1024)} KB)</span>` : ''}
+                </label>
+                <div style="display:flex;align-items:center;gap:6px;">
+                  ${f.isSynced ? '<span class="badge ok" style="font-size:10px;padding:1px 6px;">✓ Synced</span>' : '<span class="badge idle" style="font-size:10px;padding:1px 6px;">New</span>'}
+                  <button class="secondary" style="font-size:11px;padding:2px 7px;" onclick="window._openMdModal('${esc(repo)}', '${esc(f.path)}')">
+                    ⚡ Sync / Name
+                  </button>
+                </div>
+              </div>
+            `;
+          }).join('')}
+        </div>
+        <div style="display:flex;gap:8px;align-items:center;">
+          <button class="primary" style="font-size:11.5px;padding:4px 10px;" onclick="window._syncMdFiles('${esc(repo)}')">
+            ⚡ Sync (${selected.size}) Selected Skills
+          </button>
+          <span id="md-sync-status-${safeId}" style="font-size:11.5px;"></span>
+        </div>
+      </div>
+    `;
+  }
+
+  window._toggleAllMd = function(repo, selectAll) {
+    const files = window._mdFilesCache[repo] || [];
+    if (selectAll) {
+      window._mdSelectedCache[repo] = new Set(files.map(f => f.path));
+    } else {
+      window._mdSelectedCache[repo] = new Set();
+    }
+    const safeId = repo.replace(/[^a-zA-Z0-9_-]/g, '_');
+    renderMdFileList(repo, safeId);
+  };
+
+  window._toggleMdItem = function(repo, filePath, isChecked) {
+    const selected = window._mdSelectedCache[repo] || new Set();
+    if (isChecked) selected.add(filePath);
+    else selected.delete(filePath);
+    window._mdSelectedCache[repo] = selected;
+    const safeId = repo.replace(/[^a-zA-Z0-9_-]/g, '_');
+    renderMdFileList(repo, safeId);
+  };
+
+  /* ------------------- Interactive Sync Modal ------------------- */
+
+  window._currentModalFileContent = "";
+
+  window._openMdModal = async function(repo, filePath) {
+    const modalContainer = document.getElementById("modalContainer");
+    if (!modalContainer) return;
+
+    modalContainer.innerHTML = `
+      <div class="modal-overlay" id="mdModalOverlay" onclick="if(event.target === this) window._closeMdModal()">
+        <div class="modal-dialog">
+          <div class="modal-header">
+            <h3 class="modal-title">📄 Configure & Sync Skill</h3>
+            <button class="btn-close" onclick="window._closeMdModal()">✕</button>
+          </div>
+          <div class="loading-screen" style="padding:20px 0;">
+            <div class="spinner"></div>
+            <p>Loading file preview and name suggestion…</p>
+          </div>
+        </div>
+      </div>
+    `;
+
+    try {
+      const res = await app.callServerTool({
+        name: "config_preview_repo_md_file",
+        arguments: { repo, filePath },
+      });
+      const data = JSON.parse(res.content[0].text);
+
+      const modalDialog = document.querySelector(".modal-dialog");
+      if (!modalDialog) return;
+
+      window._currentModalFileContent = data.content || "";
+      const prefix = data.prefix || `[${repo}:${filePath}]`;
+      const suggestedName = data.suggestedName || formatSkillName(repo, filePath, data.defaultTitle);
+      const suggestedDesc = data.suggestedDescription || `Imported from ${repo}/${filePath}`;
+      const isExisting = Boolean(data.exists);
+      const linesCount = (data.content || "").split("\n").length;
+      const charCount = (data.content || "").length;
+
+      modalDialog.innerHTML = `
+        <div class="modal-header">
+          <div>
+            <h3 class="modal-title">📄 Import Skill from Markdown</h3>
+            <div style="font-size:11.5px;color:var(--muted);margin-top:2px;">
+              📍 Location: <strong style="color:var(--fg);">${esc(repo)}</strong> → <span style="font-family:ui-monospace,monospace;">${esc(filePath)}</span>
+            </div>
+          </div>
+          <button class="btn-close" onclick="window._closeMdModal()">✕</button>
+        </div>
+
+        ${isExisting ? `
+          <div style="padding:8px 12px;background:var(--card-selected);border:1px solid var(--accent);border-radius:6px;font-size:12px;margin-bottom:12px;color:var(--fg);">
+            ℹ️ <strong>Already imported in Qdrant</strong>. Syncing will update this skill in-place with your new name, description, and fresh vector embedding.
+          </div>
+        ` : ''}
+
+        <div class="field-group" style="margin-bottom:12px;">
+          <label style="font-size:12px;font-weight:600;display:flex;justify-content:space-between;">
+            <span>Skill Name:</span>
+            <span style="font-size:11px;color:var(--muted);font-weight:normal;">Suggested with origin prefix</span>
+          </label>
+          <input type="text" id="modalSkillName" value="${esc(suggestedName)}" placeholder="e.g. ${esc(prefix)} Overview" />
+          <div style="font-size:11px;color:var(--muted);margin-top:3px;">
+            Prefix <code style="background:var(--code-bg);padding:1px 4px;border-radius:3px;">${esc(prefix)}</code> identifies origin repo & file path.
+          </div>
+        </div>
+
+        <div class="field-group" style="margin-bottom:12px;">
+          <label style="font-size:12px;font-weight:600;">Skill Description / Summary:</label>
+          <input type="text" id="modalSkillDesc" value="${esc(suggestedDesc)}" placeholder="Brief summary of this skill…" />
+        </div>
+
+        <div class="field-group" style="margin-bottom:14px;">
+          <label style="font-size:12px;font-weight:600;display:flex;justify-content:space-between;">
+            <span>Markdown Content Preview:</span>
+            <span style="font-size:11px;color:var(--muted);">${linesCount} lines · ${charCount} chars</span>
+          </label>
+          <div class="preview-box" style="max-height:160px;">${esc(data.content || "(Empty file)")}</div>
+        </div>
+
+        <div id="modalStatusBox" style="font-size:12px;margin-bottom:12px;display:none;"></div>
+
+        <div class="btn-row" style="justify-content:flex-end;gap:8px;">
+          <button class="secondary" onclick="window._closeMdModal()">Cancel</button>
+          <button class="primary" id="modalSyncBtn" onclick="window._saveSingleMdSkill('${esc(repo)}', '${esc(filePath)}')">
+            ⚡ Sync Skill
+          </button>
+        </div>
+      `;
+    } catch (err) {
+      const modalDialog = document.querySelector(".modal-dialog");
+      if (modalDialog) {
+        modalDialog.innerHTML = `
+          <div class="modal-header">
+            <h3 class="modal-title">Error</h3>
+            <button class="btn-close" onclick="window._closeMdModal()">✕</button>
+          </div>
+          <div style="color:var(--err-fg);padding:10px 0;font-size:12.5px;">Failed to load preview: ${esc(err.message)}</div>
+        `;
+      }
+    }
+  };
+
+  window._closeMdModal = function() {
+    const modalContainer = document.getElementById("modalContainer");
+    if (modalContainer) modalContainer.innerHTML = "";
+    window._currentModalFileContent = "";
+  };
+
+  window._saveSingleMdSkill = async function(repo, filePath) {
+    const nameInput = document.getElementById("modalSkillName");
+    const descInput = document.getElementById("modalSkillDesc");
+    const syncBtn = document.getElementById("modalSyncBtn");
+    const statusBox = document.getElementById("modalStatusBox");
+
+    const customName = nameInput ? nameInput.value.trim() : "";
+    const customDesc = descInput ? descInput.value.trim() : "";
+
+    if (!customName) {
+      if (statusBox) {
+        statusBox.style.display = "block";
+        statusBox.style.color = "var(--err-fg)";
+        statusBox.textContent = "Skill name cannot be empty.";
+      }
+      return;
+    }
+
+    if (syncBtn) {
+      syncBtn.disabled = true;
+      syncBtn.innerHTML = '<span class="spinner-sm"></span> Syncing & Embedding…';
+    }
+
+    try {
+      const res = await app.callServerTool({
+        name: "config_sync_repo_md_files",
+        arguments: {
+          repo,
+          items: [
+            {
+              filePath,
+              name: customName,
+              description: customDesc,
+              content: window._currentModalFileContent || undefined,
+            },
+          ],
+        },
+      });
+
+      const data = JSON.parse(res.content[0].text);
+      if (data.status === "ok" && data.synced > 0) {
+        const files = window._mdFilesCache[repo] || [];
+        const fileObj = files.find(f => f.path === filePath);
+        if (fileObj) fileObj.isSynced = true;
+
+        const safeId = repo.replace(/[^a-zA-Z0-9_-]/g, '_');
+        renderMdFileList(repo, safeId);
+
+        if (statusBox) {
+          statusBox.style.display = "block";
+          statusBox.style.color = "var(--ok-fg)";
+          statusBox.textContent = "✓ Skill successfully synced to Qdrant!";
+        }
+
+        setTimeout(() => {
+          window._closeMdModal();
+        }, 700);
+      } else {
+        throw new Error(data.message || "Failed to sync skill.");
+      }
+    } catch (err) {
+      if (statusBox) {
+        statusBox.style.display = "block";
+        statusBox.style.color = "var(--err-fg)";
+        statusBox.textContent = "Error: " + err.message;
+      }
+      if (syncBtn) {
+        syncBtn.disabled = false;
+        syncBtn.textContent = "⚡ Sync Skill";
+      }
+    }
+  };
+
+  window._syncMdFiles = async function(repo) {
+    const safeId = repo.replace(/[^a-zA-Z0-9_-]/g, '_');
+    const statusEl = document.getElementById("md-sync-status-" + safeId);
+    const selected = Array.from(window._mdSelectedCache[repo] || []);
+
+    if (selected.length === 0) {
+      if (statusEl) {
+        statusEl.style.color = "var(--err-fg)";
+        statusEl.textContent = "Please select at least 1 .md file.";
+      }
+      return;
+    }
+
+    if (statusEl) {
+      statusEl.style.color = "var(--muted)";
+      statusEl.innerHTML = `<span class="spinner-sm spinner-dark"></span> Syncing ${selected.length} skills to Qdrant…`;
+    }
+
+    try {
+      const res = await app.callServerTool({
+        name: "config_sync_repo_md_files",
+        arguments: { repo, filePaths: selected },
+      });
+      const data = JSON.parse(res.content[0].text);
+      if (data.status === "ok") {
+        const files = window._mdFilesCache[repo] || [];
+        files.forEach(f => {
+          if (selected.includes(f.path)) f.isSynced = true;
+        });
+        renderMdFileList(repo, safeId);
+
+        const statusElAfter = document.getElementById("md-sync-status-" + safeId);
+        if (statusElAfter) {
+          statusElAfter.style.color = "var(--ok-fg)";
+          statusElAfter.textContent = `✓ ${data.synced} of ${data.total} skills synced to Qdrant!`;
+        }
+      } else {
+        if (statusEl) {
+          statusEl.style.color = "var(--err-fg)";
+          statusEl.textContent = data.message || "Sync failed.";
+        }
+      }
+    } catch (err) {
+      if (statusEl) {
+        statusEl.style.color = "var(--err-fg)";
+        statusEl.textContent = "Error: " + err.message;
+      }
+    }
+  };
+
+  window._toggleRepo = function (name) {
+    if (state.selectedRepos.has(name)) {
+      state.selectedRepos.delete(name);
+    } else {
+      state.selectedRepos.set(name, "");
+    }
+    const subContent = document.getElementById("subSessionContent");
+    if (subContent) renderGitHubSession(subContent);
+  };
+
+  window._updateRepoDesc = function (name, desc) {
+    state.selectedRepos.set(name, desc);
+  };
+
+  /* Sub-session: System Prompt */
+  function renderPromptSession(container) {
+    if (!state.systemPrompt || !state.systemPrompt.trim()) {
+      state.systemPrompt = buildDefaultSystemPrompt();
+    }
+
+    container.innerHTML = `
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title">🧠 AI System Prompt (Markdown)</span>
+          <button class="secondary" id="resetPromptBtn" style="font-size:12px;padding:4px 8px;">Reset to Default</button>
+        </div>
+        <p style="color:var(--muted);font-size:12.5px;margin:0 0 10px;">
+          Define persistent AI behavioral guidelines, response styling, and domain rules.
+        </p>
+        <textarea id="systemPromptArea" style="min-height:220px;" placeholder="Enter Markdown system prompt…">${esc(state.systemPrompt)}</textarea>
+      </div>
+    `;
+
+    document.getElementById("systemPromptArea")?.addEventListener("input", (e) => {
+      state.systemPrompt = e.target.value;
+    });
+
+    document.getElementById("resetPromptBtn")?.addEventListener("click", () => {
+      state.systemPrompt = buildDefaultSystemPrompt();
+      state.defaultSystemPrompt = state.systemPrompt;
+      const area = document.getElementById("systemPromptArea");
+      if (area) area.value = state.systemPrompt;
+    });
+  }
+
+  /* Sub-session: Notion */
+  function renderNotionSession(container) {
+    if (!state.isNotionConnected && state.notionPages.length === 0) {
+      container.innerHTML = `
+        <div class="card" style="text-align:center;padding:32px 16px;">
+          <span style="font-size:32px;">📝</span>
+          <h4 style="margin:8px 0 4px;font-size:15px;">Notion Workspace Not Connected</h4>
+          <p style="color:var(--muted);font-size:12.5px;max-width:440px;margin:0 auto 16px;">
+            Configure your Notion Internal Integration Token in the Credentials tab to load and select active Notion pages.
+          </p>
+          <button class="primary" onclick="window._goToCredentialsTab()">⚡ Go to Credentials Tab</button>
+        </div>
+      `;
+      return;
+    }
+
+    const filterText = (state.notionPagesSearch || "").toLowerCase();
+    const filteredPages = state.notionPages.filter(p => {
+      const title = (p.title || "").toLowerCase();
+      const sel = state.selectedNotionPages.get(p.id);
+      const desc = sel ? (sel.description || "").toLowerCase() : "";
+      return title.includes(filterText) || desc.includes(filterText);
+    });
+
+    container.innerHTML = `
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title">📝 Select Active Notion Pages</span>
+          <span style="font-size:12px;color:var(--muted);">
+            ${state.selectedNotionPages.size} of ${state.notionPages.length} selected
+          </span>
+        </div>
+
+        <div class="repo-controls">
+          <input type="text" class="repo-search-input" id="notionSearchInput" placeholder="🔍 Search Notion pages…" value="${esc(state.notionPagesSearch)}" />
+          <button class="secondary" id="selectAllNotionBtn" style="font-size:12px;padding:6px 10px;">Select All</button>
+          <button class="secondary" id="clearAllNotionBtn" style="font-size:12px;padding:6px 10px;">Clear</button>
+          <button class="secondary" id="refreshNotionBtn" style="font-size:12px;padding:6px 10px;">🔄 Refresh</button>
+        </div>
+
+        <div class="repo-list" id="notionListContainer">
+          ${filteredPages.length === 0 ? '<div class="loading-screen" style="padding:20px 0;"><p>No Notion pages found. Ensure Notion integration token is configured in Credentials tab.</p></div>' : ''}
+          ${filteredPages.map(p => {
+            const isSelected = state.selectedNotionPages.has(p.id);
+            const selItem = state.selectedNotionPages.get(p.id);
+            const desc = selItem ? (selItem.description || "") : "";
+            const lastEdited = p.lastEditedTime ? new Date(p.lastEditedTime).toLocaleDateString() : "";
+            return `
+              <div class="repo-item ${isSelected ? 'selected' : ''}" data-id="${esc(p.id)}">
+                <div class="repo-main-row" onclick="window._toggleNotionPage('${esc(p.id)}')">
+                  <input type="checkbox" class="repo-checkbox" ${isSelected ? 'checked' : ''} />
+                  <span style="font-size:15px;line-height:1;">${esc(p.icon || '📄')}</span>
+                  <span class="repo-name">${esc(p.title || 'Untitled Page')}</span>
+                  ${lastEdited ? `<span class="badge idle" style="font-size:10.5px;padding:1px 6px;">${esc(lastEdited)}</span>` : ''}
+                  ${p.url ? `<a href="${esc(p.url)}" target="_blank" onclick="event.stopPropagation()" style="font-size:12px;color:var(--accent);text-decoration:none;margin-left:4px;" title="Open in Notion">↗</a>` : ''}
+                </div>
+                ${isSelected ? `
+                  <div class="repo-desc-box">
+                    <input type="text" placeholder="Custom context description for this page (e.g. Product Requirements Document)" value="${esc(desc)}" oninput="window._updateNotionDesc('${esc(p.id)}', this.value)" />
+                  </div>
+                ` : ''}
+              </div>
+            `;
+          }).join('')}
+        </div>
+      </div>
+    `;
+
+    document.getElementById("notionSearchInput")?.addEventListener("input", (e) => {
+      state.notionPagesSearch = e.target.value;
+      renderNotionSession(container);
+    });
+
+    document.getElementById("selectAllNotionBtn")?.addEventListener("click", () => {
+      state.notionPages.forEach(p => {
+        if (p && p.id && !state.selectedNotionPages.has(p.id)) {
+          state.selectedNotionPages.set(p.id, {
+            id: p.id,
+            title: p.title || "",
+            url: p.url || "",
+            description: "",
+            lastEditedTime: p.lastEditedTime || "",
+            icon: p.icon || "📄",
+          });
+        }
+      });
+      renderNotionSession(container);
+    });
+
+    document.getElementById("clearAllNotionBtn")?.addEventListener("click", () => {
+      state.selectedNotionPages.clear();
+      renderNotionSession(container);
+    });
+
+    document.getElementById("refreshNotionBtn")?.addEventListener("click", () => {
+      window._refreshNotionPages();
+    });
+  }
+
+  window._goToCredentialsTab = function() {
+    switchTopTab("credentials");
+  };
+
+  window._toggleNotionPage = function(pageId) {
+    if (state.selectedNotionPages.has(pageId)) {
+      state.selectedNotionPages.delete(pageId);
+    } else {
+      const pageObj = state.notionPages.find(p => p.id === pageId);
+      if (pageObj) {
+        state.selectedNotionPages.set(pageId, {
+          id: pageObj.id,
+          title: pageObj.title || "",
+          url: pageObj.url || "",
+          description: "",
+          lastEditedTime: pageObj.lastEditedTime || "",
+          icon: pageObj.icon || "📄",
+        });
+      }
+    }
+    const subContent = document.getElementById("subSessionContent");
+    if (subContent) renderNotionSession(subContent);
+  };
+
+  window._updateNotionDesc = function(pageId, desc) {
+    const item = state.selectedNotionPages.get(pageId);
+    if (item) {
+      item.description = desc;
+      state.selectedNotionPages.set(pageId, item);
+    }
+  };
+
+  window._refreshNotionPages = async function() {
+    const refreshBtn = document.getElementById("refreshNotionBtn");
+    if (refreshBtn) {
+      refreshBtn.disabled = true;
+      refreshBtn.innerHTML = '<span class="spinner-sm"></span> Refreshing…';
+    }
+    try {
+      const res = await app.callServerTool({ name: "config_list_notion_pages", arguments: {} });
+      const data = JSON.parse(res.content[0].text);
+      state.notionPages = data.pages || [];
+      state.isNotionConnected = true;
+    } catch (err) {
+      console.error("Failed to refresh Notion pages:", err);
+    }
+    const subContent = document.getElementById("subSessionContent");
+    if (subContent) renderNotionSession(subContent);
+  };
+
+  /* Sub-session: Database */
+  function renderDatabaseSession(container) {
+    container.innerHTML = `
+      <div class="card" style="text-align:center;padding:32px 16px;">
+        <span style="font-size:32px;">🗄️</span>
+        <h4 style="margin:8px 0 4px;font-size:15px;">SQL Database Context</h4>
+        <p style="color:var(--muted);font-size:12.5px;max-width:440px;margin:0 auto 16px;">
+          Select active SQL schemas, tables, and views queryable by Claude.
+        </p>
+        <span class="badge ok">Ready for queries</span>
+      </div>
+    `;
+  }
+
+  async function saveAppConfig() {
+    const btn = document.getElementById("saveAppConfigBtn");
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner-sm"></span> Saving…';
+    setStatus(null, "");
+
+    const activeRepos = Array.from(state.selectedRepos.entries()).map(([name, description]) => ({
+      name,
+      description: description || "",
+    }));
+
+    const activeNotionPages = Array.from(state.selectedNotionPages.values()).map(n => ({
+      id: n.id,
+      title: n.title || "",
+      url: n.url || "",
+      description: n.description || "",
+      lastEditedTime: n.lastEditedTime || "",
+      icon: n.icon || "📄",
+    }));
+
+    try {
+      const res = await app.callServerTool({
+        name: "config_save_app_config",
+        arguments: {
+          username: state.currentUser?.name || "admin",
+          activeRepos,
+          activeNotionPages,
+          systemPrompt: state.systemPrompt,
+        },
+      });
+      const data = JSON.parse(res.content[0].text);
+      if (data.status === "ok") {
+        state.updatedAt = data.updatedAt || new Date().toISOString();
+        setStatus("ok", "✓ Application configuration saved to Qdrant app-config collection!");
+        const ts = document.getElementById("saveTimestamp");
+        if (ts) ts.textContent = "Updated: " + new Date().toLocaleTimeString();
+      } else {
+        setStatus("err", data.message || "Failed to save configuration.");
+      }
+    } catch (err) {
+      setStatus("err", "Error: " + err.message);
+    }
+    btn.disabled = false;
+    btn.innerHTML = "💾 Save Application Configuration";
+  }
+
+  async function startAssistantSession() {
+    const startBtn = document.getElementById("startAssistantBtn");
+    if (startBtn) {
+      startBtn.disabled = true;
+      startBtn.innerHTML = '<span class="spinner-sm"></span> Starting Assistant…';
+    }
+
+    // Save app configuration first
+    await saveAppConfig();
+
+    const messageText = (state.systemPrompt && state.systemPrompt.trim())
+      ? state.systemPrompt
+      : buildDefaultSystemPrompt();
+
+    try {
+      if (typeof app.sendMessage === "function") {
+        await app.sendMessage({
+          role: "user",
+          content: [{ type: "text", text: messageText }],
+        });
+      } else if (typeof app.updateModelContext === "function") {
+        await app.updateModelContext({
+          content: [{ type: "text", text: messageText }],
+        });
+      }
+      setStatus("ok", "🚀 Team Assistant started! Context message sent to conversation.");
+    } catch (err) {
+      console.warn("app.sendMessage failed, trying updateModelContext:", err);
+      try {
+        if (typeof app.updateModelContext === "function") {
+          await app.updateModelContext({
+            content: [{ type: "text", text: messageText }],
+          });
+        }
+        setStatus("ok", "🚀 Team Assistant context updated! You can now start chatting.");
+      } catch (e2) {
+        console.error("Failed to notify host:", e2);
+        setStatus("ok", "🚀 Assistant started! Prompt copied to clipboard or ready for conversation.");
+        if (navigator.clipboard) {
+          navigator.clipboard.writeText(messageText).catch(() => {});
+        }
+      }
+    }
+
+    if (startBtn) {
+      startBtn.disabled = false;
+      startBtn.innerHTML = "🚀 Start Team Assistant";
+    }
+  }
+
+  /* ------------------- Boot ------------------- */
   await app.connect();
+  await checkSetupAndLoad();
 </script>
