@@ -809,8 +809,22 @@
 </script>
 
 <script type="module">
+  /*__SKILLS_COMPONENT__*/
+</script>
+
+<script type="module">
   const { App } = globalThis.ExtApps || {};
   const app = new App({ name: "TeamContextApp", version: "0.1.0" }, {}, { autoResize: true });
+
+  const skillsComponent = new globalThis.SkillsComponent({
+    app,
+    showHeader: false,
+    onUpdate: (skills) => {
+      state.skills = skills;
+      const pill = document.getElementById("pillSkills");
+      if (pill) pill.textContent = `🧠 Team Skills (${skills.length})`;
+    },
+  });
 
   const state = {
     viewState: "loading", // "loading" | "error_countdown" | "qdrant_config" | "user_selection" | "main"
@@ -818,6 +832,7 @@
     activeSubSession: "github",  // "github" | "prompt" | "notion" | "database"
     currentUser: { name: "", role: "" },
     users: [],
+    skills: [],
     qdrant: { configured: false, connected: false, endpoint: "", error: null },
     credentials: {},
     teamStatus: {},
@@ -1665,6 +1680,9 @@
         <button class="sub-pill ${sub === "notion" ? "active" : ""}" id="pillNotion">
           📝 Notion (${selectedNotionCount})
         </button>
+        <button class="sub-pill ${sub === "skills" ? "active" : ""}" id="pillSkills">
+          🧠 Team Skills (${(state.skills || []).length})
+        </button>
         <button class="sub-pill ${sub === "prompt" ? "active" : ""}" id="pillPrompt">
           🧠 System Prompt
         </button>
@@ -1687,6 +1705,7 @@
 
     document.getElementById("pillGithub")?.addEventListener("click", () => switchSubSession("github"));
     document.getElementById("pillNotion")?.addEventListener("click", () => switchSubSession("notion"));
+    document.getElementById("pillSkills")?.addEventListener("click", () => switchSubSession("skills"));
     document.getElementById("pillPrompt")?.addEventListener("click", () => switchSubSession("prompt"));
     document.getElementById("pillDatabase")?.addEventListener("click", () => switchSubSession("database"));
     document.getElementById("saveAppConfigBtn")?.addEventListener("click", saveAppConfig);
@@ -1694,6 +1713,7 @@
     const subContent = document.getElementById("subSessionContent");
     if (sub === "github") renderGitHubSession(subContent);
     else if (sub === "notion") renderNotionSession(subContent);
+    else if (sub === "skills") renderSkillsSession(subContent);
     else if (sub === "prompt") renderPromptSession(subContent);
     else if (sub === "database") renderDatabaseSession(subContent);
   }
@@ -1704,13 +1724,19 @@
     if (subContent) {
       if (sub === "github") renderGitHubSession(subContent);
       else if (sub === "notion") renderNotionSession(subContent);
+      else if (sub === "skills") renderSkillsSession(subContent);
       else if (sub === "prompt") renderPromptSession(subContent);
       else if (sub === "database") renderDatabaseSession(subContent);
     }
-    ["github", "notion", "prompt", "database"].forEach(s => {
+    ["github", "notion", "skills", "prompt", "database"].forEach(s => {
       const el = document.getElementById("pill" + s.charAt(0).toUpperCase() + s.slice(1));
       if (el) el.className = "sub-pill " + (s === sub ? "active" : "");
     });
+  }
+
+  /* Sub-session: Skills & Knowledge Base (Component Mounted) */
+  function renderSkillsSession(container) {
+    skillsComponent.mount(container);
   }
 
   /* Sub-session: GitHub */

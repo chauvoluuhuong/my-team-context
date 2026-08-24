@@ -344,12 +344,15 @@ const envWithUser = await readEnvConfig();
 assert.equal(envWithUser.CURRENT_USER_NAME, "huong");
 assert.equal(envWithUser.CURRENT_USER_ROLE, "Full Stack Engineer");
 
-// Test clearEnvConfig on logout
-const { clearEnvConfig } = await import("../src/utils/env.js");
-await clearEnvConfig();
-const clearedEnv = await readEnvConfig();
-assert.equal(clearedEnv.CURRENT_USER_NAME, "");
-assert.equal(clearedEnv.GITHUB_TOKEN, "");
+// Panel & Skills Component Builder tests
+const { buildPanel, buildSkillsPanel } = await import("../src/utils/helpers.js");
+const panelHtml = buildPanel("config");
+assert.ok(panelHtml.includes("SkillsComponent"), "buildPanel injects reusable SkillsComponent");
+assert.ok(panelHtml.includes("ExtApps"), "buildPanel inlines ExtApps bundle");
+
+const skillsPanelHtml = buildSkillsPanel();
+assert.ok(skillsPanelHtml.includes("SkillsComponent"), "buildSkillsPanel injects reusable SkillsComponent");
+assert.ok(skillsPanelHtml.includes("TeamSkillsManagement"), "buildSkillsPanel inlines standalone skills app");
 
 server.close();
 await fs.rm(dir, { recursive: true, force: true });

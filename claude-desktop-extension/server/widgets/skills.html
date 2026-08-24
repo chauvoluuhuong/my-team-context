@@ -61,17 +61,6 @@
     margin: 0 auto;
   }
 
-  .header {
-    display: flex;
-    justify-content: space-between;
-    align-items: flex-start;
-    margin-bottom: 16px;
-    padding-bottom: 14px;
-    border-bottom: 1px solid var(--line);
-  }
-
-  h2 { font-size: 17px; font-weight: 700; margin: 0 0 4px; display: flex; align-items: center; gap: 8px; }
-  .sub { color: var(--muted); font-size: 12.5px; margin: 0; }
   .loading { color: var(--muted); padding: 24px 0; text-align: center; }
 
   .badge {
@@ -87,20 +76,6 @@
   .badge.ok { background: var(--ok-bg); color: var(--ok-fg); }
   .badge.err { background: var(--err-bg); color: var(--err-fg); }
   .badge.score { background: var(--purple-bg); color: var(--purple-fg); }
-
-  .toolbar {
-    display: flex;
-    gap: 8px;
-    margin-bottom: 16px;
-    flex-wrap: wrap;
-  }
-
-  .search-box {
-    flex: 1;
-    min-width: 240px;
-    position: relative;
-    display: flex;
-  }
 
   input[type="text"], input[type="password"], textarea {
     width: 100%;
@@ -151,131 +126,6 @@
   button:hover:not(:disabled) { filter: brightness(1.08); }
   button:disabled { opacity: 0.5; cursor: default; }
 
-  .editor-card {
-    background: var(--card-bg);
-    border: 2px solid var(--accent);
-    border-radius: 10px;
-    padding: 16px;
-    margin-bottom: 18px;
-    animation: fadeIn 0.2s ease-in-out;
-  }
-  @keyframes fadeIn { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: translateY(0); } }
-
-  .form-group {
-    margin-bottom: 12px;
-  }
-  .form-label {
-    display: block;
-    font-size: 12px;
-    font-weight: 600;
-    margin-bottom: 4px;
-    color: var(--fg);
-  }
-  .form-hint {
-    font-size: 11px;
-    color: var(--muted);
-    margin-top: 3px;
-  }
-
-  .preview-box {
-    margin-top: 10px;
-    background: var(--code-bg);
-    border: 1px dashed var(--line);
-    border-radius: 6px;
-    padding: 10px;
-    font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, monospace;
-    font-size: 11.5px;
-    white-space: pre-wrap;
-    word-break: break-word;
-    color: var(--muted);
-    max-height: 140px;
-    overflow-y: auto;
-  }
-
-  .skills-list {
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-  }
-
-  .skill-card {
-    background: var(--card-bg);
-    border: 1px solid var(--border);
-    border-radius: 9px;
-    padding: 14px 16px;
-    transition: border-color 0.15s ease, box-shadow 0.15s ease;
-  }
-  .skill-card:hover {
-    border-color: var(--accent);
-  }
-
-  .skill-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: flex-start;
-    margin-bottom: 6px;
-  }
-  .skill-name {
-    font-size: 14px;
-    font-weight: 700;
-    color: var(--fg);
-    display: flex;
-    align-items: center;
-    gap: 6px;
-  }
-  .skill-desc {
-    color: var(--muted);
-    font-size: 12.5px;
-    margin-bottom: 10px;
-    line-height: 1.4;
-  }
-
-  .skill-content-preview {
-    background: var(--code-bg);
-    border: 1px solid var(--line);
-    border-radius: 6px;
-    padding: 8px 10px;
-    font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, monospace;
-    font-size: 12px;
-    white-space: pre-wrap;
-    max-height: 100px;
-    overflow: hidden;
-    position: relative;
-    cursor: pointer;
-  }
-  .skill-content-preview.expanded {
-    max-height: none;
-  }
-
-  .skill-footer {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-top: 10px;
-    padding-top: 8px;
-    border-top: 1px solid var(--line);
-    font-size: 11.5px;
-    color: var(--muted);
-  }
-  .skill-actions {
-    display: flex;
-    gap: 6px;
-  }
-
-  .empty-state {
-    text-align: center;
-    padding: 36px 16px;
-    color: var(--muted);
-    border: 2px dashed var(--line);
-    border-radius: 10px;
-    background: var(--code-bg);
-  }
-  .empty-state h3 {
-    margin: 0 0 6px;
-    color: var(--fg);
-    font-size: 15px;
-  }
-
   .status-box {
     margin: 12px 0;
     padding: 10px 14px;
@@ -289,447 +139,51 @@
   .status-box.ok { background: var(--ok-bg); color: var(--ok-fg); }
   .status-box.err { background: var(--err-bg); color: var(--err-fg); }
   .status-box.warn { background: var(--warn-bg); color: var(--warn-fg); }
+
+  .spinner-sm {
+    display: inline-block;
+    width: 12px;
+    height: 12px;
+    border: 2px solid currentColor;
+    border-right-color: transparent;
+    border-radius: 50%;
+    animation: spin 0.75s linear infinite;
+    vertical-align: middle;
+  }
+  @keyframes spin {
+    to { transform: rotate(360deg); }
+  }
 </style>
 
-<script type="module">
+<script>
   /*__EXT_APPS_BUNDLE__*/
-  const { App } = globalThis.ExtApps;
-  const root = document.getElementById("root");
-  const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+</script>
 
+<script type="module">
+  /*__SKILLS_COMPONENT__*/
+
+  const { App } = globalThis.ExtApps || {};
   const app = new App({ name: "TeamSkillsManagement", version: "1.0.0" }, {}, { autoResize: true });
 
-  let skills = [];
-  let isEditing = false;
-  let currentEditSkill = null;
-  let isSearching = false;
-  let searchQuery = "";
-  let statusMessage = null;
+  const root = document.getElementById("root");
+  const component = new globalThis.SkillsComponent({
+    app,
+    container: root,
+    showHeader: true,
+  });
 
   app.ontoolresult = async ({ content }) => {
     try {
       const data = JSON.parse(content[0].text);
       if (Array.isArray(data.skills)) {
-        skills = data.skills;
+        component.skills = data.skills;
+        component.render();
       }
-      renderUI();
     } catch {
-      await loadSkills();
+      await component.loadSkills();
     }
   };
 
-  async function loadSkills() {
-    try {
-      const res = await app.callServerTool({
-        name: "skills_list",
-        arguments: {},
-      });
-      const data = JSON.parse(res.content[0].text);
-      skills = data.skills || [];
-      renderUI();
-    } catch (err) {
-      showStatus("err", `Failed to load skills: ${err.message}`);
-      renderUI();
-    }
-  }
-
-  function showStatus(kind, text) {
-    statusMessage = { kind, text };
-    renderUI();
-    if (kind === "ok") {
-      setTimeout(() => {
-        if (statusMessage?.text === text) {
-          statusMessage = null;
-          renderUI();
-        }
-      }, 4000);
-    }
-  }
-
-  function getSerializedPreview(name, description, content) {
-    return `#name: ${(name || "").trim()}\n\n#description: ${(description || "").trim()}\n\n#content: ${(content || "").trim()}`;
-  }
-
-  function renderUI() {
-    root.innerHTML = `
-      <div class="header">
-        <div>
-          <h2>🧠 Team Skills & Knowledge Base</h2>
-          <p class="sub">Store, manage, and semantically search skills embedded in Qdrant (<code>knowledge-base</code> collection).</p>
-        </div>
-        <span class="badge ok">
-          ✓ ${skills.length} ${skills.length === 1 ? 'skill' : 'skills'} stored
-        </span>
-      </div>
-
-      ${statusMessage ? `<div class="status-box ${statusMessage.kind}">${esc(statusMessage.text)}</div>` : ''}
-
-      ${isEditing ? renderEditor() : renderMainView()}
-    `;
-
-    bindEvents();
-  }
-
-  function renderEditor() {
-    const isNew = !currentEditSkill?.id;
-    const nameVal = currentEditSkill?.name || "";
-    const descVal = currentEditSkill?.description || "";
-    const contentVal = currentEditSkill?.content || "";
-    const importFromFileVal = currentEditSkill?.metadata?.importFromFile || "";
-    let customMetaVal = "";
-    if (currentEditSkill?.metadata) {
-      const { importFromFile: _, ...rest } = currentEditSkill.metadata;
-      if (Object.keys(rest).length > 0) {
-        customMetaVal = JSON.stringify(rest, null, 2);
-      }
-    }
-
-    return `
-      <div class="editor-card">
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px;">
-          <h3 style="margin:0; font-size:15px; font-weight:700;">
-            ${isNew ? '✨ Create New Team Skill' : '✏️ Edit Skill'}
-          </h3>
-          <button class="sm" id="cancelEditBtn">✕ Close</button>
-        </div>
-
-        <div class="form-group">
-          <label class="form-label" for="skillName">Skill Name *</label>
-          <input type="text" id="skillName" placeholder="e.g. database-migration-guide" value="${esc(nameVal)}" />
-        </div>
-
-        <div class="form-group">
-          <label class="form-label" for="skillDesc">Short Description</label>
-          <input type="text" id="skillDesc" placeholder="Brief summary of what this skill does or solves" value="${esc(descVal)}" />
-        </div>
-
-        <div class="form-group">
-          <label class="form-label" for="skillImportFromFile">Source File (Optional)</label>
-          <input type="text" id="skillImportFromFile" placeholder="e.g. docs/skills/database-guide.md or .agents/skills/deploy/SKILL.md" value="${esc(importFromFileVal)}" />
-          <div class="form-hint">File path or reference if this skill was imported from a file.</div>
-        </div>
-
-        <div class="form-group">
-          <label class="form-label" for="skillMetadata">Custom Metadata (JSON Object, Optional)</label>
-          <textarea id="skillMetadata" style="min-height: 70px; font-size: 12px;" placeholder='{\n  "version": "1.0",\n  "author": "team-lead",\n  "tags": ["database", "postgres"]\n}'>${esc(customMetaVal)}</textarea>
-          <div class="form-hint">Arbitrary key-value metadata object for custom properties.</div>
-        </div>
-
-        <div class="form-group">
-          <label class="form-label" for="skillContent">Skill Content (Markdown) *</label>
-          <textarea id="skillContent" placeholder="Enter detailed guidelines, instructions, procedures, or code snippets…">${esc(contentVal)}</textarea>
-          <div class="form-hint">Formatted as markdown guidelines for team agent contexts.</div>
-        </div>
-
-        <div class="form-group">
-          <label class="form-label">Embedding Document Serialization Preview</label>
-          <div class="preview-box" id="serialPreview">${esc(getSerializedPreview(nameVal, descVal, contentVal))}</div>
-          <div class="form-hint">Serialized into vector DB using <code>#{fieldName}: {fieldValue}</code> with Gemini embedding 2.</div>
-        </div>
-
-        <div style="display:flex; gap:8px; margin-top:16px;">
-          <button class="primary" id="saveSkillBtn" style="flex:1;">
-            ${isNew ? '🚀 Embed & Store Skill' : '💾 Update & Re-embed Skill'}
-          </button>
-          <button id="cancelSkillBtn">Cancel</button>
-        </div>
-      </div>
-    `;
-  }
-
-  function renderMainView() {
-    return `
-      <div class="toolbar">
-        <div class="search-box">
-          <input type="text" id="searchInput" placeholder="🔍 Semantic search skills with Gemini vector query…" value="${esc(searchQuery)}" />
-        </div>
-        <button id="searchBtn" ${searchQuery ? '' : 'disabled'}>Search</button>
-        ${searchQuery ? '<button class="sm" id="clearSearchBtn">Clear</button>' : ''}
-        <button class="primary" id="newSkillBtn">+ Add Skill</button>
-      </div>
-
-      <div class="skills-list">
-        ${skills.length === 0 ? `
-          <div class="empty-state">
-            <h3>No skills found in knowledge base</h3>
-            <p style="font-size:12.5px; margin:0 0 14px;">Create your first team skill or playbook to index it in Qdrant.</p>
-            <button class="primary" id="emptyNewBtn">+ Create Skill</button>
-          </div>
-        ` : skills.map(skill => renderSkillCard(skill)).join('')}
-      </div>
-    `;
-  }
-
-  function renderSkillCard(skill) {
-    const updated = skill.updatedAt ? new Date(skill.updatedAt).toLocaleDateString() : '';
-    const scoreBadge = skill.score !== undefined
-      ? `<span class="badge score">★ ${(Math.min(100, Math.max(0, skill.score * 100))).toFixed(1)}% match</span>`
-      : '';
-
-    const hasImport = skill.metadata?.importFromFile;
-    let extraMetaBadges = '';
-    if (skill.metadata) {
-      const { importFromFile: _, ...rest } = skill.metadata;
-      const keys = Object.keys(rest);
-      if (keys.length > 0) {
-        extraMetaBadges = keys
-          .map((k) => {
-            const v = typeof rest[k] === 'object' ? JSON.stringify(rest[k]) : String(rest[k]);
-            return `<span class="badge idle" style="font-size:10.5px;" title="${esc(k)}: ${esc(v)}">🏷️ ${esc(k)}: ${esc(v)}</span>`;
-          })
-          .join(' ');
-      }
-    }
-
-    return `
-      <div class="skill-card" data-id="${esc(skill.id)}">
-        <div class="skill-header">
-          <div class="skill-name">
-            📌 ${esc(skill.name)}
-            ${scoreBadge}
-          </div>
-          <div class="skill-actions">
-            <button class="sm edit-btn" data-id="${esc(skill.id)}">Edit</button>
-            <button class="sm danger delete-btn" data-id="${esc(skill.id)}">Delete</button>
-          </div>
-        </div>
-
-        ${skill.description ? `<div class="skill-desc">${esc(skill.description)}</div>` : ''}
-
-        ${hasImport ? `
-          <div style="margin-bottom: 8px; font-size: 11.5px; color: var(--accent);">
-            📁 <strong>Source:</strong> <code>${esc(skill.metadata.importFromFile)}</code>
-          </div>
-        ` : ''}
-
-        ${extraMetaBadges ? `
-          <div style="display:flex; flex-wrap:wrap; gap:4px; margin-bottom:8px;">
-            ${extraMetaBadges}
-          </div>
-        ` : ''}
-
-        <div class="skill-content-preview" title="Click to expand/collapse" id="preview-${esc(skill.id)}">${esc(skill.content)}</div>
-
-        <div class="skill-footer">
-          <span>ID: <code>${esc(skill.id.slice(0, 8))}…</code></span>
-          <span>${updated ? `Updated: ${esc(updated)}` : ''}</span>
-        </div>
-      </div>
-    `;
-  }
-
-  function bindEvents() {
-    if (isEditing) {
-      const nameInput = document.getElementById("skillName");
-      const descInput = document.getElementById("skillDesc");
-      const contentInput = document.getElementById("skillContent");
-      const previewBox = document.getElementById("serialPreview");
-
-      const updatePreview = () => {
-        if (previewBox) {
-          previewBox.textContent = getSerializedPreview(nameInput.value, descInput.value, contentInput.value);
-        }
-      };
-
-      nameInput?.addEventListener("input", updatePreview);
-      descInput?.addEventListener("input", updatePreview);
-      contentInput?.addEventListener("input", updatePreview);
-
-      document.getElementById("cancelEditBtn")?.addEventListener("click", () => {
-        isEditing = false;
-        currentEditSkill = null;
-        renderUI();
-      });
-
-      document.getElementById("cancelSkillBtn")?.addEventListener("click", () => {
-        isEditing = false;
-        currentEditSkill = null;
-        renderUI();
-      });
-
-      document.getElementById("saveSkillBtn")?.addEventListener("click", () => handleSaveSkill());
-    } else {
-      document.getElementById("newSkillBtn")?.addEventListener("click", () => {
-        isEditing = true;
-        currentEditSkill = null;
-        renderUI();
-      });
-
-      document.getElementById("emptyNewBtn")?.addEventListener("click", () => {
-        isEditing = true;
-        currentEditSkill = null;
-        renderUI();
-      });
-
-      const searchInput = document.getElementById("searchInput");
-      searchInput?.addEventListener("input", (e) => {
-        searchQuery = e.target.value;
-        const searchBtn = document.getElementById("searchBtn");
-        if (searchBtn) searchBtn.disabled = !searchQuery.trim();
-      });
-
-      searchInput?.addEventListener("keydown", (e) => {
-        if (e.key === "Enter" && searchQuery.trim()) {
-          handleSearch();
-        }
-      });
-
-      document.getElementById("searchBtn")?.addEventListener("click", () => handleSearch());
-
-      document.getElementById("clearSearchBtn")?.addEventListener("click", () => {
-        searchQuery = "";
-        loadSkills();
-      });
-
-      // Expand/collapse previews
-      document.querySelectorAll(".skill-content-preview").forEach((el) => {
-        el.addEventListener("click", () => {
-          el.classList.toggle("expanded");
-        });
-      });
-
-      // Edit buttons
-      document.querySelectorAll(".edit-btn").forEach((btn) => {
-        btn.addEventListener("click", () => {
-          const id = btn.dataset.id;
-          const found = skills.find((s) => s.id === id);
-          if (found) {
-            isEditing = true;
-            currentEditSkill = { ...found };
-            renderUI();
-          }
-        });
-      });
-
-      // Delete buttons
-      document.querySelectorAll(".delete-btn").forEach((btn) => {
-        btn.addEventListener("click", async () => {
-          const id = btn.dataset.id;
-          const skill = skills.find((s) => s.id === id);
-          if (confirm(`Are you sure you want to delete "${skill?.name || 'this skill'}" from Qdrant vector database?`)) {
-            await handleDeleteSkill(id);
-          }
-        });
-      });
-    }
-  }
-
-  async function handleSaveSkill() {
-    const isNew = !currentEditSkill?.id;
-    const name = document.getElementById("skillName")?.value?.trim();
-    const description = document.getElementById("skillDesc")?.value?.trim() || "";
-    const content = document.getElementById("skillContent")?.value?.trim();
-    const importFromFile = document.getElementById("skillImportFromFile")?.value?.trim();
-    const metaText = document.getElementById("skillMetadata")?.value?.trim();
-    const saveBtn = document.getElementById("saveSkillBtn");
-
-    if (!name) {
-      showStatus("err", "Skill name is required.");
-      return;
-    }
-    if (!content) {
-      showStatus("err", "Skill content is required.");
-      return;
-    }
-
-    let metaObj = {};
-    if (metaText) {
-      try {
-        const parsed = JSON.parse(metaText);
-        if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed)) {
-          showStatus("err", 'Metadata must be a valid JSON object (e.g. {"key": "value"}).');
-          return;
-        }
-        metaObj = { ...parsed };
-      } catch (err) {
-        showStatus("err", `Invalid JSON in metadata: ${err.message}`);
-        return;
-      }
-    }
-
-    if (importFromFile) {
-      metaObj.importFromFile = importFromFile;
-    }
-
-    const metadata = Object.keys(metaObj).length > 0 ? metaObj : undefined;
-
-    saveBtn.disabled = true;
-    saveBtn.textContent = "Embedding with Gemini & saving…";
-
-    try {
-      if (currentEditSkill?.id) {
-        // Update
-        const res = await app.callServerTool({
-          name: "skills_update",
-          arguments: {
-            id: currentEditSkill.id,
-            name,
-            description,
-            content,
-            metadata,
-          },
-        });
-        const data = JSON.parse(res.content[0].text);
-        showStatus("ok", `✓ Skill "${data.name || name}" updated and re-indexed in Qdrant!`);
-      } else {
-        // Create
-        const res = await app.callServerTool({
-          name: "skills_create",
-          arguments: {
-            name,
-            description,
-            content,
-            metadata,
-          },
-        });
-        const data = JSON.parse(res.content[0].text);
-        showStatus("ok", `✓ Skill "${data.name || name}" embedded and stored in Qdrant!`);
-      }
-      isEditing = false;
-      currentEditSkill = null;
-      await loadSkills();
-    } catch (err) {
-      showStatus("err", `Failed to save skill: ${err.message}`);
-      saveBtn.disabled = false;
-      saveBtn.textContent = isNew ? "🚀 Embed & Store Skill" : "💾 Update & Re-embed Skill";
-    }
-  }
-
-  async function handleDeleteSkill(id) {
-    try {
-      await app.callServerTool({
-        name: "skills_delete",
-        arguments: { id },
-      });
-      showStatus("ok", "✓ Skill removed from Qdrant knowledge-base.");
-      await loadSkills();
-    } catch (err) {
-      showStatus("err", `Failed to delete skill: ${err.message}`);
-    }
-  }
-
-  async function handleSearch() {
-    if (!searchQuery.trim()) return;
-    const searchBtn = document.getElementById("searchBtn");
-    if (searchBtn) {
-      searchBtn.disabled = true;
-      searchBtn.textContent = "Searching…";
-    }
-
-    try {
-      const res = await app.callServerTool({
-        name: "skills_search",
-        arguments: { query: searchQuery.trim(), limit: 15 },
-      });
-      const data = JSON.parse(res.content[0].text);
-      skills = data.results || [];
-      showStatus("ok", `Found ${skills.length} matching skills for "${searchQuery}"`);
-      renderUI();
-    } catch (err) {
-      showStatus("err", `Search failed: ${err.message}`);
-      renderUI();
-    }
-  }
-
   await app.connect();
+  await component.loadSkills();
 </script>
