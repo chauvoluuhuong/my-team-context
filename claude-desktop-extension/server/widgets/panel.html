@@ -1430,10 +1430,13 @@
     }
   }
 
-  function switchTopTab(tab) {
+  async function switchTopTab(tab) {
     state.activeTopTab = tab;
     state.statusType = null;
     state.statusMessage = "";
+    if (tab === "config" && (state.repos.length === 0 || state.notionPages.length === 0)) {
+      await loadAppConfigData();
+    }
     render();
   }
 
@@ -1617,7 +1620,7 @@
     const vals = getCredentialsFormValues();
     const btn = document.getElementById("saveCredentialsBtn");
     btn.disabled = true;
-    btn.innerHTML = '<span class="spinner-sm"></span> Saving…';
+    btn.innerHTML = '<span class="spinner-sm"></span> Saving & Connecting…';
     setStatus(null, "");
 
     await runConnectionTests();
@@ -1627,7 +1630,9 @@
       const data = JSON.parse(res.content[0].text);
       if (data.status === "ok") {
         state.credentials = vals;
-        switchTopTab("config");
+        // Pull down GitHub repositories & Notion workspace pages
+        await loadAppConfigData();
+        await switchTopTab("config");
         return;
       } else {
         setStatus("err", data.message || "Failed to save credentials.");
@@ -1730,10 +1735,11 @@
           <input type="text" class="repo-search-input" id="repoSearchInput" placeholder="🔍 Search repositories…" value="${esc(state.reposSearch)}" />
           <button class="secondary" id="selectAllReposBtn" style="font-size:12px;padding:6px 10px;">Select All</button>
           <button class="secondary" id="clearAllReposBtn" style="font-size:12px;padding:6px 10px;">Clear</button>
+          <button class="secondary" id="refreshReposBtn" style="font-size:12px;padding:6px 10px;">🔄 Refresh</button>
         </div>
 
         <div class="repo-list" id="repoListContainer">
-          ${filteredRepos.length === 0 ? '<div class="loading-screen" style="padding:20px 0;"><p>No repositories found. Ensure GitHub token is configured in Credentials tab.</p></div>' : ''}
+          ${filteredRepos.length === 0 ? '<div class="loading-screen" style="padding:20px 0;"><p>No repositories found. Ensure GitHub token is configured and click Refresh.</p></div>' : ''}
           ${filteredRepos.map(r => {
             const name = typeof r === "string" ? r : (r.fullName || r.full_name || r.name || "");
             if (!name) return "";
@@ -1787,7 +1793,28 @@
       state.selectedRepos.clear();
       renderGitHubSession(container);
     });
+
+    document.getElementById("refreshReposBtn")?.addEventListener("click", () => {
+      window._refreshGitHubRepos();
+    });
   }
+
+  window._refreshGitHubRepos = async function() {
+    const refreshBtn = document.getElementById("refreshReposBtn");
+    if (refreshBtn) {
+      refreshBtn.disabled = true;
+      refreshBtn.innerHTML = '<span class="spinner-sm spinner-dark"></span> Refreshing…';
+    }
+    try {
+      const res = await app.callServerTool({ name: "config_list_repos", arguments: { limit: 200 } });
+      const data = JSON.parse(res.content[0].text);
+      state.repos = data.repos || [];
+    } catch (err) {
+      console.error("Failed to refresh GitHub repos:", err);
+    }
+    const subContent = document.getElementById("subSessionContent");
+    if (subContent) renderGitHubSession(subContent);
+  };
 
   /* ------------------- Centralized Skill Name & Modal Flow ------------------- */
 
