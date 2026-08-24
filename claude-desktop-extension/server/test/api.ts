@@ -345,14 +345,28 @@ assert.equal(envWithUser.CURRENT_USER_NAME, "huong");
 assert.equal(envWithUser.CURRENT_USER_ROLE, "Full Stack Engineer");
 
 // Panel & Skills Component Builder tests
-const { buildPanel, buildSkillsPanel } = await import("../src/utils/helpers.js");
+const { buildPanel, buildSkillsPanel, buildTeamContextSystemPrompt, getDefaultSystemPrompt } = await import("../src/utils/helpers.js");
 const panelHtml = buildPanel("config");
 assert.ok(panelHtml.includes("SkillsComponent"), "buildPanel injects reusable SkillsComponent");
 assert.ok(panelHtml.includes("ExtApps"), "buildPanel inlines ExtApps bundle");
+assert.ok(panelHtml.includes("buildTeamContextSystemPrompt"), "buildPanel includes buildTeamContextSystemPrompt");
 
 const skillsPanelHtml = buildSkillsPanel();
 assert.ok(skillsPanelHtml.includes("SkillsComponent"), "buildSkillsPanel injects reusable SkillsComponent");
 assert.ok(skillsPanelHtml.includes("TeamSkillsManagement"), "buildSkillsPanel inlines standalone skills app");
+
+// Test buildTeamContextSystemPrompt
+const generatedPrompt = buildTeamContextSystemPrompt({
+  userName: "Alice",
+  userRole: "Staff Engineer",
+  activeRepos: [{ name: "my-org/core-api", description: "Core backend" }],
+  activeNotionPages: [{ id: "p-1", title: "Architecture RFC" }],
+});
+assert.ok(generatedPrompt.includes("Current User: Alice (Staff Engineer)"));
+assert.ok(generatedPrompt.includes("Active Repositories: my-org/core-api"));
+assert.ok(generatedPrompt.includes("Active Notion Docs: Architecture RFC"));
+assert.ok(generatedPrompt.includes("my-team-context-mcp-server"));
+assert.equal(getDefaultSystemPrompt({ userName: "Alice" }), buildTeamContextSystemPrompt({ userName: "Alice" }));
 
 server.close();
 await fs.rm(dir, { recursive: true, force: true });

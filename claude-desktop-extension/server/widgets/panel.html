@@ -943,22 +943,38 @@
     }
   }
 
+  function buildTeamContextSystemPrompt() {
+    const userName = state.currentUser?.name || "Team Member";
+    const userRole = state.currentUser?.role ? ` (${state.currentUser.role})` : "";
+    const activeRepoList = Array.from(state.selectedRepos.keys());
+    const activeNotionList = Array.from(state.selectedNotionPages.values()).map(p => p.title || p.id);
+
+    return `You are my Team Assistant and Engineering Co-Pilot helping me understand and navigate the context of our team's work.
+
+Current User: ${userName}${userRole}
+Active Repositories: ${activeRepoList.length > 0 ? activeRepoList.join(", ") : "None configured"}
+Active Notion Docs: ${activeNotionList.length > 0 ? activeNotionList.join(", ") : "None configured"}
+
+Please assist me throughout our work by using the \`my-team-context-mcp-server\` tools:
+1. Team Knowledge & Skills: Query our vector knowledge base with \`skills_search\` and \`get_skills\` to retrieve relevant engineering procedures, guidelines, and playbooks.
+2. Codebase Context: Consult our configured GitHub repositories for codebase architecture, style conventions, and implementation patterns.
+3. Project Specifications: Access our Notion workspace documents for product requirements and specifications.
+4. Design & Goals: When creating UI mockups, designing components, or building features, align strictly with our team's branding colors, design system, database schemas, and project goals.
+
+Please confirm you are ready to assist with our team context and give a brief greeting!`;
+  }
+
   async function loadAppConfigData() {
     try {
       const appStateRes = await app.callServerTool({ name: "config_get_app_state", arguments: {} });
       const appData = JSON.parse(appStateRes.content[0].text);
 
       state.repos = appData.repos || [];
-      state.defaultSystemPrompt = appData.defaultSystemPrompt || "";
       state.isNotionConnected = Boolean(appData.isNotionConnected);
       state.notionBotName = appData.notionBotName || null;
       state.notionPages = appData.notionPages || [];
 
       const appConfig = appData.appConfig || {};
-      state.systemPrompt = appConfig.systemPrompt || appData.defaultSystemPrompt || "";
-      state.createdAt = appConfig.createdAt || "";
-      state.updatedAt = appConfig.updatedAt || "";
-
       state.selectedRepos.clear();
       (appConfig.activeRepos || []).forEach(r => {
         if (r && r.name) state.selectedRepos.set(r.name, r.description || "");
@@ -977,6 +993,11 @@
           });
         }
       });
+
+      state.defaultSystemPrompt = appData.defaultSystemPrompt || buildTeamContextSystemPrompt();
+      state.systemPrompt = appConfig.systemPrompt || state.defaultSystemPrompt;
+      state.createdAt = appConfig.createdAt || "";
+      state.updatedAt = appConfig.updatedAt || "";
     } catch (err) {
       console.error("Failed to load app config data:", err);
     }
@@ -1693,8 +1714,13 @@
 
       <div id="subSessionContent"></div>
 
-      <div class="btn-row" style="justify-content:space-between; margin-top:20px;">
-        <button class="primary" id="saveAppConfigBtn">💾 Save Application Configuration</button>
+      <div class="btn-row" style="justify-content:space-between; align-items:center; margin-top:20px; flex-wrap:wrap; gap:10px;">
+        <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
+          <button class="primary" id="saveAppConfigBtn">💾 Save Application Configuration</button>
+          <button class="primary" id="startAssistantBtn" style="background:linear-gradient(135deg, #2563eb, #7c3aed); border:none; color:#ffffff; font-weight:700; box-shadow:0 2px 8px rgba(124, 58, 237, 0.35);">
+            🚀 Start Team Assistant
+          </button>
+        </div>
         <span style="font-size:12px;color:var(--muted);" id="saveTimestamp">
           ${state.updatedAt ? "Updated: " + new Date(state.updatedAt).toLocaleTimeString() : ""}
         </span>
@@ -1709,6 +1735,7 @@
     document.getElementById("pillPrompt")?.addEventListener("click", () => switchSubSession("prompt"));
     document.getElementById("pillDatabase")?.addEventListener("click", () => switchSubSession("database"));
     document.getElementById("saveAppConfigBtn")?.addEventListener("click", saveAppConfig);
+    document.getElementById("startAssistantBtn")?.addEventListener("click", startAssistantSession);
 
     const subContent = document.getElementById("subSessionContent");
     if (sub === "github") renderGitHubSession(subContent);
@@ -2195,6 +2222,10 @@
 
   /* Sub-session: System Prompt */
   function renderPromptSession(container) {
+    if (!state.systemPrompt || !state.systemPrompt.trim()) {
+      state.systemPrompt = buildTeamContextSystemPrompt();
+    }
+
     container.innerHTML = `
       <div class="card">
         <div class="card-header">
@@ -2204,7 +2235,7 @@
         <p style="color:var(--muted);font-size:12.5px;margin:0 0 10px;">
           Define persistent AI behavioral guidelines, response styling, and domain rules.
         </p>
-        <textarea id="systemPromptArea" placeholder="Enter Markdown system prompt…">${esc(state.systemPrompt)}</textarea>
+        <textarea id="systemPromptArea" style="min-height:220px;" placeholder="Enter Markdown system prompt…">${esc(state.systemPrompt)}</textarea>
       </div>
     `;
 
@@ -2213,7 +2244,8 @@
     });
 
     document.getElementById("resetPromptBtn")?.addEventListener("click", () => {
-      state.systemPrompt = state.defaultSystemPrompt;
+      state.systemPrompt = buildTeamContextSystemPrompt();
+      state.defaultSystemPrompt = state.systemPrompt;
       const area = document.getElementById("systemPromptArea");
       if (area) area.value = state.systemPrompt;
     });
@@ -2426,6 +2458,56 @@
     }
     btn.disabled = false;
     btn.innerHTML = "💾 Save Application Configuration";
+  }
+
+  async function startAssistantSession() {
+    const startBtn = document.getElementById("startAssistantBtn");
+    if (startBtn) {
+      startBtn.disabled = true;
+      startBtn.innerHTML = '<span class="spinner-sm"></span> Starting Assistant…';
+    }
+
+    // Save app configuration first
+    await saveAppConfig();
+
+    const messageText = (state.systemPrompt && state.systemPrompt.trim())
+      ? state.systemPrompt
+      : buildTeamContextSystemPrompt();
+
+    try {
+      if (typeof app.sendMessage === "function") {
+        await app.sendMessage({
+          role: "user",
+          content: [{ type: "text", text: messageText }],
+        });
+      } else if (typeof app.updateModelContext === "function") {
+        await app.updateModelContext({
+          content: [{ type: "text", text: messageText }],
+        });
+      }
+      setStatus("ok", "🚀 Team Assistant started! Context message sent to conversation.");
+    } catch (err) {
+      console.warn("app.sendMessage failed, trying updateModelContext:", err);
+      try {
+        if (typeof app.updateModelContext === "function") {
+          await app.updateModelContext({
+            content: [{ type: "text", text: messageText }],
+          });
+        }
+        setStatus("ok", "🚀 Team Assistant context updated! You can now start chatting.");
+      } catch (e2) {
+        console.error("Failed to notify host:", e2);
+        setStatus("ok", "🚀 Assistant started! Prompt copied to clipboard or ready for conversation.");
+        if (navigator.clipboard) {
+          navigator.clipboard.writeText(messageText).catch(() => {});
+        }
+      }
+    }
+
+    if (startBtn) {
+      startBtn.disabled = false;
+      startBtn.innerHTML = "🚀 Start Team Assistant";
+    }
   }
 
   /* ------------------- Boot ------------------- */

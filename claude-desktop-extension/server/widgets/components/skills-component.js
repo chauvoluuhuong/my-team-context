@@ -23,6 +23,27 @@ export class SkillsComponent {
     return String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
   }
 
+  syncEditorStateFromInputs() {
+    if (!this.isEditing) return;
+    const name = document.getElementById("compSkillName")?.value;
+    const description = document.getElementById("compSkillDesc")?.value;
+    const content = document.getElementById("compSkillContent")?.value;
+    const importFromFile = document.getElementById("compSkillImportFromFile")?.value;
+    const metaText = document.getElementById("compSkillMetadata")?.value;
+
+    this.currentEditSkill = {
+      ...(this.currentEditSkill || {}),
+      name: name !== undefined ? name : (this.currentEditSkill?.name || ""),
+      description: description !== undefined ? description : (this.currentEditSkill?.description || ""),
+      content: content !== undefined ? content : (this.currentEditSkill?.content || ""),
+      _customMetaText: metaText !== undefined ? metaText : (this.currentEditSkill?._customMetaText || ""),
+      metadata: {
+        ...(this.currentEditSkill?.metadata || {}),
+        ...(importFromFile !== undefined ? { importFromFile } : {}),
+      },
+    };
+  }
+
   async mount(container) {
     this.container = container;
     if (!this.skills || this.skills.length === 0) {
@@ -54,6 +75,9 @@ export class SkillsComponent {
   }
 
   showStatus(kind, text) {
+    if (this.isEditing) {
+      this.syncEditorStateFromInputs();
+    }
     this.statusMessage = { kind, text };
     this.render();
     if (kind === "ok") {
@@ -99,12 +123,17 @@ export class SkillsComponent {
     const descVal = this.currentEditSkill?.description || "";
     const contentVal = this.currentEditSkill?.content || "";
     const importFromFileVal = this.currentEditSkill?.metadata?.importFromFile || "";
-    let customMetaVal = "";
-    if (this.currentEditSkill?.metadata) {
+
+    let customMetaVal = this.currentEditSkill?._customMetaText;
+    if (customMetaVal === undefined && this.currentEditSkill?.metadata) {
       const { importFromFile: _, ...rest } = this.currentEditSkill.metadata;
       if (Object.keys(rest).length > 0) {
         customMetaVal = JSON.stringify(rest, null, 2);
+      } else {
+        customMetaVal = "";
       }
+    } else if (customMetaVal === undefined) {
+      customMetaVal = "";
     }
 
     return `
@@ -179,7 +208,7 @@ export class SkillsComponent {
         <button class="secondary" id="compSearchBtn" ${(!this.searchQuery || this.isSearching) ? 'disabled' : ''}>
           ${this.isSearching ? '<span class="spinner-sm"></span> Searching…' : 'Search'}
         </button>
-        ${this.searchQuery ? '<button class="secondary sm" id="compClearSearchBtn" ${this.isLoading ? "disabled" : ""}>Clear</button>' : ''}
+        ${this.searchQuery ? `<button class="secondary sm" id="compClearSearchBtn" ${this.isLoading ? "disabled" : ""}>Clear</button>` : ''}
         <button class="primary" id="compNewSkillBtn" ${this.isLoading ? "disabled" : ""}>+ Add Skill</button>
       </div>
 
@@ -268,9 +297,12 @@ export class SkillsComponent {
       const nameInput = document.getElementById("compSkillName");
       const descInput = document.getElementById("compSkillDesc");
       const contentInput = document.getElementById("compSkillContent");
+      const importInput = document.getElementById("compSkillImportFromFile");
+      const metaInput = document.getElementById("compSkillMetadata");
       const previewBox = document.getElementById("compSerialPreview");
 
       const updatePreview = () => {
+        this.syncEditorStateFromInputs();
         if (previewBox) {
           previewBox.textContent = this.getSerializedPreview(nameInput?.value, descInput?.value, contentInput?.value);
         }
@@ -279,6 +311,8 @@ export class SkillsComponent {
       nameInput?.addEventListener("input", updatePreview);
       descInput?.addEventListener("input", updatePreview);
       contentInput?.addEventListener("input", updatePreview);
+      importInput?.addEventListener("input", updatePreview);
+      metaInput?.addEventListener("input", updatePreview);
 
       document.getElementById("cancelEditSkillBtn")?.addEventListener("click", () => {
         this.isEditing = false;
@@ -296,13 +330,13 @@ export class SkillsComponent {
     } else {
       document.getElementById("compNewSkillBtn")?.addEventListener("click", () => {
         this.isEditing = true;
-        this.currentEditSkill = null;
+        this.currentEditSkill = { name: "", description: "", content: "", metadata: {}, _customMetaText: "" };
         this.render();
       });
 
       document.getElementById("compEmptyNewBtn")?.addEventListener("click", () => {
         this.isEditing = true;
-        this.currentEditSkill = null;
+        this.currentEditSkill = { name: "", description: "", content: "", metadata: {}, _customMetaText: "" };
         this.render();
       });
 
@@ -362,12 +396,13 @@ export class SkillsComponent {
   }
 
   async handleSaveSkill() {
+    this.syncEditorStateFromInputs();
     const isNew = !this.currentEditSkill?.id;
-    const name = document.getElementById("compSkillName")?.value?.trim();
-    const description = document.getElementById("compSkillDesc")?.value?.trim();
-    const content = document.getElementById("compSkillContent")?.value?.trim();
-    const importFromFile = document.getElementById("compSkillImportFromFile")?.value?.trim();
-    const metaText = document.getElementById("compSkillMetadata")?.value?.trim();
+    const name = this.currentEditSkill?.name?.trim();
+    const description = this.currentEditSkill?.description?.trim();
+    const content = this.currentEditSkill?.content?.trim();
+    const importFromFile = this.currentEditSkill?.metadata?.importFromFile?.trim();
+    const metaText = this.currentEditSkill?._customMetaText?.trim();
 
     // Mandatory fields validation
     if (!name) {

@@ -108,20 +108,53 @@ export function buildConfigPanel(): string {
 }
 
 
-export function getDefaultSystemPrompt(): string {
-  const here = path.dirname(fileURLToPath(import.meta.url));
-  const candidatePaths = [
-    path.resolve(here, "..", "DEFAULT_SYSTEM_PROMPT"),
-    path.resolve(here, "..", "..", "DEFAULT_SYSTEM_PROMPT"),
-    path.resolve(process.cwd(), "DEFAULT_SYSTEM_PROMPT"),
-    path.resolve(process.cwd(), "claude-desktop-extension", "server", "DEFAULT_SYSTEM_PROMPT"),
-  ];
+export interface SystemPromptContextOptions {
+  userName?: string;
+  userRole?: string;
+  activeRepos?: (string | { name: string; description?: string })[];
+  activeNotionPages?: (string | { title?: string; id?: string })[];
+}
 
-  const found = candidatePaths.find((p) => existsSync(p));
-  if (found) {
-    return readFileSync(found, "utf8");
+export function buildTeamContextSystemPrompt(options?: SystemPromptContextOptions): string {
+  const userName = options?.userName || "Team Member";
+  const userRole = options?.userRole ? ` (${options.userRole})` : "";
+
+  let activeReposStr = "None configured";
+  if (options?.activeRepos && options.activeRepos.length > 0) {
+    const names = options.activeRepos
+      .map((r) => (typeof r === "string" ? r : r.name))
+      .filter(Boolean);
+    if (names.length > 0) {
+      activeReposStr = names.join(", ");
+    }
   }
 
-  return `# Role & Purpose\n\nYou are an intelligent Team Assistant and Context-Aware Engineering Co-Pilot.`;
+  let activeNotionStr = "None configured";
+  if (options?.activeNotionPages && options.activeNotionPages.length > 0) {
+    const titles = options.activeNotionPages
+      .map((p) => (typeof p === "string" ? p : p.title || p.id))
+      .filter(Boolean);
+    if (titles.length > 0) {
+      activeNotionStr = titles.join(", ");
+    }
+  }
+
+  return `You are my Team Assistant and Engineering Co-Pilot helping me understand and navigate the context of our team's work.
+
+Current User: ${userName}${userRole}
+Active Repositories: ${activeReposStr}
+Active Notion Docs: ${activeNotionStr}
+
+Please assist me throughout our work by using the \`my-team-context-mcp-server\` tools:
+1. Team Knowledge & Skills: Query our vector knowledge base with \`skills_search\` and \`get_skills\` to retrieve relevant engineering procedures, guidelines, and playbooks.
+2. Codebase Context: Consult our configured GitHub repositories for codebase architecture, style conventions, and implementation patterns.
+3. Project Specifications: Access our Notion workspace documents for product requirements and specifications.
+4. Design & Goals: When creating UI mockups, designing components, or building features, align strictly with our team's branding colors, design system, database schemas, and project goals.
+
+Please confirm you are ready to assist with our team context and give a brief greeting!`;
+}
+
+export function getDefaultSystemPrompt(options?: SystemPromptContextOptions): string {
+  return buildTeamContextSystemPrompt(options);
 }
 
