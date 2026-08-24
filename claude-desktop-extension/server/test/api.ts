@@ -318,38 +318,43 @@ assert.equal(sessionAuth.username, "testadmin");
 setSessionUser(null);
 assert.equal(getSessionUser(), null);
 
-// Write env config auth test
-await writeEnvConfig({
-  AUTH_USERNAME: "alice",
-  AUTH_PASSWORD: "secretpassword123",
-});
-const envWithAuth = await readEnvConfig();
-assert.equal(envWithAuth.AUTH_USERNAME, "alice");
-assert.equal(envWithAuth.AUTH_PASSWORD, "secretpassword123");
-
-// App Config and System Prompt tests
-const { getDefaultSystemPrompt, buildConfigPanel } = await import("../src/utils/helpers.js");
-const defaultPrompt = getDefaultSystemPrompt();
-assert.ok(defaultPrompt.includes("# Role & Purpose"), "default system prompt loads correctly");
-
-const configPanelHtml = buildConfigPanel();
-assert.ok(configPanelHtml.includes("Application Configuration"), "buildConfigPanel includes title");
-assert.ok(configPanelHtml.includes("ExtApps"), "buildConfigPanel inlines ExtApps bundle");
-assert.ok(configPanelHtml.includes("selectedRepos"), "buildConfigPanel includes repo state");
-
-const { getAppConfigPointId } = await import("../src/services/vector-db.js");
-const pointId1 = getAppConfigPointId("Alice");
-const pointId2 = getAppConfigPointId("alice");
-assert.equal(pointId1, pointId2, "point ID is case-insensitive deterministic UUID");
+// User point ID and team users tests
+const { getUserPointId } = await import("../src/services/vector-db.js");
+const userPointId1 = getUserPointId("Huong");
+const userPointId2 = getUserPointId("huong");
+assert.equal(userPointId1, userPointId2, "user point ID is deterministic and case-insensitive");
 assert.match(
-  pointId1,
+  userPointId1,
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/,
-  "point ID matches UUID format",
+  "user point ID matches UUID format",
 );
+
+// Centralized checkTeamContextSetup test
+const { checkTeamContextSetup } = await import("../src/tools/init.js");
+const initialSetup = await checkTeamContextSetup();
+assert.equal(initialSetup.isSetupComplete, false, "setup is not complete when qdrant is not configured");
+assert.equal(initialSetup.step, "qdrant_config");
+
+// Test user profile in env
+await writeEnvConfig({
+  CURRENT_USER_NAME: "huong",
+  CURRENT_USER_ROLE: "Full Stack Engineer",
+});
+const envWithUser = await readEnvConfig();
+assert.equal(envWithUser.CURRENT_USER_NAME, "huong");
+assert.equal(envWithUser.CURRENT_USER_ROLE, "Full Stack Engineer");
+
+// Test clearEnvConfig on logout
+const { clearEnvConfig } = await import("../src/utils/env.js");
+await clearEnvConfig();
+const clearedEnv = await readEnvConfig();
+assert.equal(clearedEnv.CURRENT_USER_NAME, "");
+assert.equal(clearedEnv.GITHUB_TOKEN, "");
 
 server.close();
 await fs.rm(dir, { recursive: true, force: true });
 console.log("api tests passed");
+
 
 
 

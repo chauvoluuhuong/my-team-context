@@ -179,6 +179,31 @@ export interface ListSkillsResult {
   collection: string;
 }
 
+export interface TeamUserItem {
+  id: string;
+  name: string;
+  role: string;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface SetupStatusResult {
+  isSetupComplete: boolean;
+  step: "qdrant_config" | "user_selection" | "completed";
+  qdrant: {
+    configured: boolean;
+    connected: boolean;
+    endpoint?: string | null;
+    error?: string | null;
+  };
+  currentUser: {
+    name: string | null;
+    role: string | null;
+  };
+  users: TeamUserItem[];
+  error?: string | null;
+}
+
 /* ------------------------------------------------------------------ *
  * Team Context Init & Aggregate Status Types
  * ------------------------------------------------------------------ */

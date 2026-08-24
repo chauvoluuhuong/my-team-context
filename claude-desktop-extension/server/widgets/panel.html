@@ -1,5 +1,8 @@
 <div id="root" class="panel-app">
-  <div class="loading">Loading Team Context…</div>
+  <div class="loading-screen">
+    <div class="spinner"></div>
+    <div class="loading-text">Checking Team Context & Connections…</div>
+  </div>
 </div>
 
 <style>
@@ -71,8 +74,8 @@
     display: flex;
     flex-direction: column;
     overflow: hidden;
+    position: relative;
   }
-
 
   .header {
     display: flex;
@@ -111,6 +114,15 @@
     gap: 5px;
   }
 
+  .user-badge-role {
+    font-size: 10.5px;
+    background: var(--accent-light);
+    color: var(--accent);
+    padding: 1px 6px;
+    border-radius: 4px;
+    font-weight: 600;
+  }
+
   .btn-signout {
     font-size: 12px;
     font-weight: 500;
@@ -121,11 +133,31 @@
     color: var(--err-fg);
     cursor: pointer;
     transition: all 0.15s ease;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
   }
 
   .btn-signout:hover {
     background: var(--err-bg);
     border-color: var(--err-fg);
+  }
+
+  .btn-header-secondary {
+    font-size: 12px;
+    font-weight: 500;
+    padding: 4px 10px;
+    border-radius: 6px;
+    border: 1px solid var(--line);
+    background: var(--code-bg);
+    color: var(--muted);
+    cursor: pointer;
+    transition: all 0.15s ease;
+  }
+
+  .btn-header-secondary:hover {
+    color: var(--fg);
+    border-color: var(--border);
   }
 
   /* Two-Tier Navigation */
@@ -187,7 +219,6 @@
     margin-bottom: 14px;
     flex-wrap: wrap;
   }
-
 
   .sub-pill {
     padding: 5px 12px;
@@ -259,11 +290,6 @@
     display: flex;
     flex-direction: column;
     gap: 4px;
-    margin-bottom: 10px;
-  }
-
-  .field-group:last-child {
-    margin-bottom: 0;
   }
 
   .field-label {
@@ -276,96 +302,40 @@
 
   input[type="text"],
   input[type="password"],
+  select,
   textarea {
     width: 100%;
     padding: 8px 10px;
+    font-size: 13px;
     border: 1px solid var(--border);
     border-radius: 6px;
     background: var(--code-bg);
     color: var(--fg);
-    font: inherit;
-    font-size: 13px;
+    font-family: inherit;
     outline: none;
     transition: border-color 0.15s ease;
   }
 
   input[type="text"]:focus,
   input[type="password"]:focus,
+  select:focus,
   textarea:focus {
     border-color: var(--accent);
   }
 
   textarea {
-    min-height: 180px;
-    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-    font-size: 12px;
-    line-height: 1.45;
+    min-height: 140px;
     resize: vertical;
-  }
-
-  /* Buttons */
-  button {
-    font: inherit;
-  }
-
-  .btn-row {
-    display: flex;
-    gap: 8px;
-    margin-top: 16px;
-    align-items: center;
-    flex-wrap: wrap;
-  }
-
-  button.primary {
-    background: var(--accent);
-    color: #ffffff;
-    border: none;
-    padding: 8px 16px;
-    border-radius: 7px;
-    font-size: 13px;
-    font-weight: 600;
-    cursor: pointer;
-    transition: background 0.15s ease;
-  }
-
-  button.primary:hover {
-    background: var(--accent-hover);
-  }
-
-  button.primary:disabled {
-    opacity: 0.6;
-    cursor: not-allowed;
-  }
-
-  button.secondary {
-    background: var(--code-bg);
-    color: var(--fg);
-    border: 1px solid var(--border);
-    padding: 8px 14px;
-    border-radius: 7px;
-    font-size: 13px;
-    font-weight: 500;
-    cursor: pointer;
-    transition: all 0.15s ease;
-  }
-
-  button.secondary:hover {
-    background: var(--card-hover);
-  }
-
-  button.secondary:disabled {
-    opacity: 0.6;
-    cursor: not-allowed;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    font-size: 12.5px;
+    line-height: 1.5;
   }
 
   .badge {
     font-size: 11px;
     font-weight: 600;
-    padding: 2px 8px;
+    padding: 2px 7px;
     border-radius: 999px;
-    display: inline-flex;
-    align-items: center;
-    gap: 4px;
   }
 
   .badge.ok {
@@ -386,26 +356,327 @@
   .badge.idle {
     background: var(--code-bg);
     color: var(--muted);
+    border: 1px solid var(--line);
+  }
+
+  .badge.purple {
+    background: var(--purple-bg);
+    color: var(--purple-fg);
+  }
+
+  .btn-row {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    margin-top: 14px;
+  }
+
+  button {
+    font-family: inherit;
+    border-radius: 6px;
+    padding: 7px 14px;
+    font-size: 12.5px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+  }
+
+  button:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+
+  button.primary {
+    background: var(--accent);
+    color: #ffffff;
+    border: 1px solid var(--accent);
+  }
+
+  button.primary:hover:not(:disabled) {
+    background: var(--accent-hover);
+    border-color: var(--accent-hover);
+  }
+
+  button.secondary {
+    background: var(--code-bg);
+    color: var(--fg);
     border: 1px solid var(--border);
   }
 
-  /* Repo List */
+  button.secondary:hover:not(:disabled) {
+    background: var(--card-hover);
+    border-color: var(--muted);
+  }
+
+  button.danger {
+    background: var(--err-bg);
+    color: var(--err-fg);
+    border: 1px solid var(--err-fg);
+  }
+
+  button.danger:hover:not(:disabled) {
+    background: var(--err-fg);
+    color: #ffffff;
+  }
+
+  /* Status message box */
+  .status-box {
+    margin-top: 10px;
+    padding: 8px 12px;
+    border-radius: 6px;
+    font-size: 12px;
+    display: none;
+    line-height: 1.4;
+  }
+
+  .status-box.ok {
+    display: block;
+    background: var(--ok-bg);
+    color: var(--ok-fg);
+    border: 1px solid var(--ok-fg);
+  }
+
+  .status-box.err {
+    display: block;
+    background: var(--err-bg);
+    color: var(--err-fg);
+    border: 1px solid var(--err-fg);
+  }
+
+  .status-box.warn {
+    display: block;
+    background: var(--warn-bg);
+    color: var(--warn-fg);
+    border: 1px solid var(--warn-fg);
+  }
+
+  /* Loading Spinner */
+  .loading-screen {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    gap: 12px;
+    color: var(--muted);
+    font-size: 13px;
+  }
+
+  .spinner {
+    width: 28px;
+    height: 28px;
+    border: 3px solid var(--line);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+  }
+
+  .spinner-sm {
+    width: 14px;
+    height: 14px;
+    border: 2px solid rgba(255, 255, 255, 0.4);
+    border-top-color: #ffffff;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+    display: inline-block;
+  }
+
+  .spinner-dark {
+    border: 2px solid var(--line);
+    border-top-color: var(--accent);
+  }
+
+  @keyframes spin {
+    to {
+      transform: rotate(360deg);
+    }
+  }
+
+  /* Step Badges & Onboarding Flow */
+  .setup-container {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    overflow-y: auto;
+    padding: 8px 4px;
+  }
+
+  .setup-step-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--accent);
+    background: var(--accent-light);
+    padding: 3px 8px;
+    border-radius: 999px;
+    margin-bottom: 8px;
+    align-self: flex-start;
+  }
+
+  /* User Selection Cards Grid */
+  .user-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 10px;
+    margin: 12px 0 16px;
+    max-height: 240px;
+    overflow-y: auto;
+    padding-right: 4px;
+  }
+
+  .user-card {
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 10px 12px;
+    background: var(--card-bg);
+    cursor: pointer;
+    transition: all 0.15s ease;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .user-card:hover {
+    border-color: var(--accent);
+    background: var(--card-hover);
+    transform: translateY(-1px);
+  }
+
+  .user-card.selected {
+    border-color: var(--accent);
+    background: var(--card-selected);
+  }
+
+  .user-avatar {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: var(--accent-light);
+    color: var(--accent);
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 13px;
+    flex-shrink: 0;
+  }
+
+  .user-info {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .user-name-title {
+    font-weight: 600;
+    font-size: 13px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .user-role-tag {
+    font-size: 11px;
+    color: var(--muted);
+    display: block;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  /* Role Selection Pills */
+  .role-pills {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 6px;
+    margin-bottom: 10px;
+  }
+
+  .role-pill {
+    font-size: 11.5px;
+    padding: 4px 9px;
+    border-radius: 6px;
+    border: 1px solid var(--border);
+    background: var(--code-bg);
+    color: var(--muted);
+    cursor: pointer;
+    transition: all 0.15s ease;
+    user-select: none;
+  }
+
+  .role-pill:hover {
+    border-color: var(--accent);
+    color: var(--fg);
+    background: var(--card-hover);
+  }
+
+  .role-pill.active {
+    background: var(--accent-light);
+    color: var(--accent);
+    border-color: var(--accent);
+    font-weight: 600;
+  }
+
+  /* Countdown Error Banner */
+  .countdown-box {
+    background: var(--err-bg);
+    border: 1px solid var(--err-fg);
+    border-radius: 9px;
+    padding: 16px;
+    margin-bottom: 16px;
+  }
+
+  .countdown-timer-line {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-size: 12.5px;
+    font-weight: 600;
+    color: var(--err-fg);
+    margin-top: 10px;
+  }
+
+  .progress-bar-bg {
+    height: 4px;
+    background: rgba(220, 38, 38, 0.2);
+    border-radius: 2px;
+    margin-top: 8px;
+    overflow: hidden;
+  }
+
+  .progress-bar-fill {
+    height: 100%;
+    background: var(--err-fg);
+    transition: width 1s linear;
+  }
+
+  /* Repo & Notion list items */
   .repo-controls {
     display: flex;
     gap: 8px;
-    margin-bottom: 12px;
+    margin-bottom: 10px;
     align-items: center;
   }
 
   .repo-search-input {
     flex: 1;
+    padding: 6px 10px;
+    font-size: 12.5px;
   }
 
   .repo-list {
     display: flex;
     flex-direction: column;
-    gap: 8px;
-    max-height: 380px;
+    gap: 6px;
+    max-height: 280px;
     overflow-y: auto;
     padding-right: 4px;
   }
@@ -413,13 +684,9 @@
   .repo-item {
     border: 1px solid var(--border);
     border-radius: 8px;
-    padding: 10px 12px;
+    padding: 8px 10px;
     background: var(--card-bg);
     transition: all 0.15s ease;
-  }
-
-  .repo-item:hover {
-    border-color: var(--accent);
   }
 
   .repo-item.selected {
@@ -430,73 +697,34 @@
   .repo-main-row {
     display: flex;
     align-items: center;
-    gap: 10px;
+    gap: 8px;
     cursor: pointer;
   }
 
   .repo-checkbox {
-    width: 16px;
-    height: 16px;
+    margin: 0;
     cursor: pointer;
-    accent-color: var(--accent);
   }
 
   .repo-name {
     font-weight: 600;
-    font-size: 13.5px;
+    font-size: 13px;
     flex: 1;
     word-break: break-all;
   }
 
   .repo-desc-box {
     margin-top: 8px;
-    padding-left: 26px;
+    padding-top: 8px;
+    border-top: 1px dashed var(--line);
   }
 
-  .status-box {
-    margin-top: 14px;
-    padding: 9px 12px;
-    border-radius: 7px;
-    font-size: 12.5px;
-    display: none;
+  .repo-desc-box input {
+    font-size: 12px;
+    padding: 5px 8px;
   }
 
-  .status-box.ok {
-    display: block;
-    background: var(--ok-bg);
-    color: var(--ok-fg);
-  }
-
-  .status-box.err {
-    display: block;
-    background: var(--err-bg);
-    color: var(--err-fg);
-  }
-
-  .loading {
-    color: var(--muted);
-    padding: 16px 0;
-    text-align: center;
-  }
-
-  .alert-banner {
-    padding: 10px 14px;
-    border-radius: 8px;
-    margin-bottom: 14px;
-    font-size: 12.5px;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 8px;
-  }
-
-  .alert-banner.err {
-    background: var(--err-bg);
-    color: var(--err-fg);
-    border: 1px solid var(--err-fg);
-  }
-
-  /* Modal Popup Styles */
+  /* Modal */
   .modal-overlay {
     position: fixed;
     top: 0;
@@ -576,7 +804,6 @@
   }
 </style>
 
-
 <script>
   /*__EXT_APPS_BUNDLE__*/
 </script>
@@ -586,10 +813,12 @@
   const app = new App({ name: "TeamContextApp", version: "0.1.0" }, {}, { autoResize: true });
 
   const state = {
-    activeTopTab: "credentials", // "credentials" | "config" | "skills"
+    viewState: "loading", // "loading" | "error_countdown" | "qdrant_config" | "user_selection" | "main"
+    activeTopTab: "credentials", // "credentials" | "config"
     activeSubSession: "github",  // "github" | "prompt" | "notion" | "database"
-    auth: { hasAccount: false, isAuthenticated: false, username: null },
-    authMode: "login",
+    currentUser: { name: "", role: "" },
+    users: [],
+    qdrant: { configured: false, connected: false, endpoint: "", error: null },
     credentials: {},
     teamStatus: {},
     repos: [],
@@ -606,6 +835,11 @@
     updatedAt: "",
     statusType: null,
     statusMessage: "",
+    // Countdown state
+    countdownSeconds: 10,
+    countdownTimer: null,
+    errorMessage: "",
+    isSaving: false,
   };
 
   const root = document.getElementById("root");
@@ -637,97 +871,527 @@
     }
   }
 
-  /* ------------------- Initial Load ------------------- */
+  /* ------------------- Initial Load & Setup Check ------------------- */
 
-  async function loadInitialData() {
+  async function checkSetupAndLoad() {
+    clearCountdown();
+    state.viewState = "loading";
+    render();
+
     try {
-      const [authRes, configRes, appStateRes] = await Promise.all([
-        app.callServerTool({ name: "panel_get_auth_state", arguments: {} }).catch(() => null),
-        app.callServerTool({ name: "panel_load_config", arguments: {} }).catch(() => null),
-        app.callServerTool({ name: "config_get_app_state", arguments: {} }).catch(() => null),
-      ]);
+      // 1. Centralized setup verification
+      const setupRes = await app.callServerTool({
+        name: "panel_check_setup",
+        arguments: {},
+      });
+      const setup = JSON.parse(setupRes.content[0].text);
 
-      if (authRes) {
-        state.auth = JSON.parse(authRes.content[0].text);
-      }
+      state.users = setup.users || [];
+      state.qdrant = setup.qdrant || {};
+      state.currentUser = setup.currentUser || { name: "", role: "" };
 
-      if (configRes) {
+      // Also load existing env configuration for prefilling
+      try {
+        const configRes = await app.callServerTool({ name: "panel_load_config", arguments: {} });
         const cfg = JSON.parse(configRes.content[0].text);
         state.credentials = cfg.config || {};
-        if (cfg.auth && cfg.auth.isAuthenticated) {
-          state.auth = cfg.auth;
-        }
+      } catch {}
+
+      // Check if there is a connection error with Qdrant when Qdrant is already configured
+      if (!setup.qdrant?.connected && setup.qdrant?.configured) {
+        state.errorMessage = setup.error || setup.qdrant?.error || "Unable to establish connection to Qdrant cluster.";
+        startCountdown();
+        return;
       }
 
-      if (appStateRes) {
-        const appData = JSON.parse(appStateRes.content[0].text);
-        state.repos = appData.repos || [];
-        state.defaultSystemPrompt = appData.defaultSystemPrompt || "";
-        state.isNotionConnected = Boolean(appData.isNotionConnected);
-        state.notionBotName = appData.notionBotName || null;
-        state.notionPages = appData.notionPages || [];
-
-        const appConfig = appData.appConfig || {};
-        state.systemPrompt = appConfig.systemPrompt || appData.defaultSystemPrompt || "";
-        state.createdAt = appConfig.createdAt || "";
-        state.updatedAt = appConfig.updatedAt || "";
-
-        state.selectedRepos.clear();
-        (appConfig.activeRepos || []).forEach(r => {
-          if (r && r.name) state.selectedRepos.set(r.name, r.description || "");
-        });
-
-        state.selectedNotionPages.clear();
-        (appConfig.activeNotionPages || []).forEach(n => {
-          if (n && n.id) {
-            state.selectedNotionPages.set(n.id, {
-              id: n.id,
-              title: n.title || "",
-              url: n.url || "",
-              description: n.description || "",
-              lastEditedTime: n.lastEditedTime || "",
-              icon: n.icon || "📄",
-            });
-          }
-        });
+      // Check setup progression steps
+      if (setup.step === "qdrant_config" || !setup.qdrant?.connected) {
+        state.viewState = "qdrant_config";
+        render();
+        return;
       }
 
-      // Auto-authenticate if credentials are configured in server/.env
-      if (!state.auth.isAuthenticated && state.credentials.AUTH_USERNAME) {
-        try {
-          const loginRes = await app.callServerTool({
-            name: "panel_login",
-            arguments: {
-              username: state.credentials.AUTH_USERNAME,
-              password: state.credentials.AUTH_PASSWORD || "",
-            },
-          });
-          const loginData = JSON.parse(loginRes.content[0].text);
-          if (loginData.success) {
-            state.auth = { hasAccount: true, isAuthenticated: true, username: loginData.username };
-          }
-        } catch { }
+      if (setup.step === "user_selection" || !setup.currentUser?.name) {
+        state.viewState = "user_selection";
+        render();
+        return;
       }
+
+      // Setup is completed! Load application configuration state
+      await loadAppConfigData();
+      state.viewState = "main";
+      render();
     } catch (err) {
-      console.error("Initial load error:", err);
+      console.error("Setup check error:", err);
+      state.errorMessage = err.message || "Failed to initialize Team Context.";
+      startCountdown();
     }
-    render();
   }
 
-  /* ------------------- Render Router ------------------- */
+  async function loadAppConfigData() {
+    try {
+      const appStateRes = await app.callServerTool({ name: "config_get_app_state", arguments: {} });
+      const appData = JSON.parse(appStateRes.content[0].text);
+
+      state.repos = appData.repos || [];
+      state.defaultSystemPrompt = appData.defaultSystemPrompt || "";
+      state.isNotionConnected = Boolean(appData.isNotionConnected);
+      state.notionBotName = appData.notionBotName || null;
+      state.notionPages = appData.notionPages || [];
+
+      const appConfig = appData.appConfig || {};
+      state.systemPrompt = appConfig.systemPrompt || appData.defaultSystemPrompt || "";
+      state.createdAt = appConfig.createdAt || "";
+      state.updatedAt = appConfig.updatedAt || "";
+
+      state.selectedRepos.clear();
+      (appConfig.activeRepos || []).forEach(r => {
+        if (r && r.name) state.selectedRepos.set(r.name, r.description || "");
+      });
+
+      state.selectedNotionPages.clear();
+      (appConfig.activeNotionPages || []).forEach(n => {
+        if (n && n.id) {
+          state.selectedNotionPages.set(n.id, {
+            id: n.id,
+            title: n.title || "",
+            url: n.url || "",
+            description: n.description || "",
+            lastEditedTime: n.lastEditedTime || "",
+            icon: n.icon || "📄",
+          });
+        }
+      });
+    } catch (err) {
+      console.error("Failed to load app config data:", err);
+    }
+  }
+
+  /* ------------------- Countdown Handler ------------------- */
+
+  function startCountdown() {
+    clearCountdown();
+    state.countdownSeconds = 10;
+    state.viewState = "error_countdown";
+    render();
+
+    state.countdownTimer = setInterval(() => {
+      state.countdownSeconds -= 1;
+      const secEl = document.getElementById("countdownSeconds");
+      const fillEl = document.getElementById("countdownProgressFill");
+      if (secEl) secEl.textContent = state.countdownSeconds + "s";
+      if (fillEl) fillEl.style.width = ((state.countdownSeconds / 10) * 100) + "%";
+
+      if (state.countdownSeconds <= 0) {
+        clearCountdown();
+        state.viewState = "qdrant_config";
+        render();
+      }
+    }, 1000);
+  }
+
+  function clearCountdown() {
+    if (state.countdownTimer) {
+      clearInterval(state.countdownTimer);
+      state.countdownTimer = null;
+    }
+  }
+
+  /* ------------------- View Router ------------------- */
 
   function render() {
-    if (!state.auth.isAuthenticated) {
-      renderAuth();
+    if (state.viewState === "loading") {
+      renderLoading();
       return;
     }
+
+    if (state.viewState === "error_countdown") {
+      renderErrorCountdown();
+      return;
+    }
+
+    if (state.viewState === "qdrant_config") {
+      renderQdrantConfigStep();
+      return;
+    }
+
+    if (state.viewState === "user_selection") {
+      renderUserSelectionStep();
+      return;
+    }
+
+    if (state.viewState === "main") {
+      renderMainDashboard();
+      return;
+    }
+  }
+
+  /* ------------------- View 0: Loading ------------------- */
+
+  function renderLoading() {
+    root.innerHTML = `
+      <div class="loading-screen">
+        <div class="spinner"></div>
+        <div class="loading-text">Connecting to Team Context & Vector Database…</div>
+      </div>
+    `;
+  }
+
+  /* ------------------- View 1: Error & Countdown ------------------- */
+
+  function renderErrorCountdown() {
+    const pct = (state.countdownSeconds / 10) * 100;
+    root.innerHTML = `
+      <div class="header">
+        <h2>⚡ Team Context</h2>
+      </div>
+      <div class="setup-container">
+        <div class="countdown-box">
+          <div style="display:flex;align-items:flex-start;gap:10px;">
+            <span style="font-size:22px;line-height:1;">⚠️</span>
+            <div style="flex:1;">
+              <h3 style="margin:0 0 6px;font-size:14.5px;color:var(--err-fg);">Connection Error</h3>
+              <p style="margin:0;font-size:12.5px;color:var(--fg);word-break:break-word;">
+                ${esc(state.errorMessage || "Could not reach Qdrant vector database.")}
+              </p>
+            </div>
+          </div>
+
+          <div class="countdown-timer-line">
+            <span>Auto-navigating to settings in:</span>
+            <strong id="countdownSeconds">${state.countdownSeconds}s</strong>
+          </div>
+          <div class="progress-bar-bg">
+            <div class="progress-bar-fill" id="countdownProgressFill" style="width:${pct}%"></div>
+          </div>
+        </div>
+
+        <div class="card" style="text-align:center;padding:24px 16px;">
+          <p style="margin:0 0 16px;color:var(--muted);font-size:13px;">
+            You can verify and update your Qdrant cluster endpoint URL and API key to restore service.
+          </p>
+          <div class="btn-row" style="justify-content:center;gap:10px;">
+            <button class="primary" id="btnGoToSettingsNow">⚙️ Configure Settings Now</button>
+            <button class="secondary" id="btnRetryCheck">🔄 Retry Connection</button>
+          </div>
+        </div>
+      </div>
+    `;
+
+    document.getElementById("btnGoToSettingsNow")?.addEventListener("click", () => {
+      clearCountdown();
+      state.viewState = "qdrant_config";
+      render();
+    });
+
+    document.getElementById("btnRetryCheck")?.addEventListener("click", () => {
+      checkSetupAndLoad();
+    });
+  }
+
+  /* ------------------- View 2: Step 1 Qdrant Config ------------------- */
+
+  function renderQdrantConfigStep() {
+    const qdrantUrl = state.credentials.QDRANT_URL || "";
+    const qdrantKey = state.credentials.QDRANT_API_KEY || "";
+
+    root.innerHTML = `
+      <div class="header">
+        <h2>⚡ Team Context Setup</h2>
+      </div>
+
+      <div class="setup-container">
+        <span class="setup-step-pill">Step 1 of 2</span>
+        <div class="section-intro">
+          <h3>🧠 Vector Database Setup</h3>
+          <p>Provide your Qdrant cluster endpoint and API key. Credentials will be securely stored in <code>server/.env</code>.</p>
+        </div>
+
+        <div class="card">
+          <div class="field-group">
+            <label class="field-label" for="setupQdrantUrl">Qdrant Cluster Endpoint URL</label>
+            <input type="text" id="setupQdrantUrl" placeholder="https://xxx.cloud.qdrant.io" value="${esc(qdrantUrl)}" />
+            <span style="font-size:11px;color:var(--muted);margin-top:2px;">
+              e.g. <code>https://xxx.eu-west-2-0.aws.cloud.qdrant.io</code> or <code>http://localhost:6333</code>
+            </span>
+          </div>
+
+          <div class="field-group" style="margin-top:12px;">
+            <label class="field-label" for="setupQdrantKey">Qdrant API Key</label>
+            <input type="password" id="setupQdrantKey" placeholder="Enter API key (optional for local clusters)" value="${esc(qdrantKey)}" />
+          </div>
+
+          <div class="btn-row" style="margin-top:16px;">
+            <button class="primary" id="btnConnectQdrant" ${state.isSaving ? "disabled" : ""}>
+              ${state.isSaving ? '<span class="spinner-sm"></span> Testing & Connecting…' : "⚡ Test Connection & Continue →"}
+            </button>
+          </div>
+
+          <div id="statusBox" class="${state.statusType ? 'status-box ' + state.statusType : 'status-box'}">${esc(state.statusMessage)}</div>
+        </div>
+      </div>
+    `;
+
+    document.getElementById("btnConnectQdrant")?.addEventListener("click", handleSaveQdrantConfig);
+  }
+
+  async function handleSaveQdrantConfig() {
+    const url = document.getElementById("setupQdrantUrl")?.value.trim();
+    const apiKey = document.getElementById("setupQdrantKey")?.value.trim();
+
+    if (!url) {
+      setStatus("err", "Please enter a Qdrant cluster endpoint URL.");
+      return;
+    }
+
+    state.isSaving = true;
+    setStatus(null, "");
+    render();
+
+    try {
+      const res = await app.callServerTool({
+        name: "panel_save_qdrant_config",
+        arguments: { qdrantUrl: url, qdrantApiKey: apiKey || undefined },
+      });
+      const data = JSON.parse(res.content[0].text);
+
+      if (data.success) {
+        state.credentials.QDRANT_URL = data.endpoint || url;
+        state.credentials.QDRANT_API_KEY = apiKey;
+        state.qdrant.connected = true;
+        state.qdrant.endpoint = data.endpoint || url;
+        state.users = data.users || [];
+        state.isSaving = false;
+        state.viewState = "user_selection";
+        render();
+      } else {
+        state.isSaving = false;
+        render();
+        setStatus("err", data.reason || "Failed to connect to Qdrant.");
+      }
+    } catch (err) {
+      state.isSaving = false;
+      render();
+      setStatus("err", "Connection error: " + err.message);
+    }
+  }
+
+  const PREDEFINED_ROLES = [
+    "Full Stack Engineer",
+    "Frontend Developer",
+    "Backend Developer",
+    "Tech Lead / Architect",
+    "DevOps / Platform Engineer",
+    "QA / Test Engineer",
+    "Mobile Developer",
+    "Product Manager",
+    "UI/UX Designer",
+    "Data / AI Engineer",
+  ];
+
+  /* ------------------- View 3: Step 2 User Selection / Creation ------------------- */
+
+  function renderUserSelectionStep() {
+    const hasUsers = state.users && state.users.length > 0;
+    const currentSelectedRole = state.selectedNewUserRole || PREDEFINED_ROLES[0];
+
+    root.innerHTML = `
+      <div class="header">
+        <h2>⚡ Team Context Setup</h2>
+        <div class="header-actions">
+          <button class="btn-header-secondary" id="btnBackToQdrant">⚙️ Change Qdrant</button>
+        </div>
+      </div>
+
+      <div class="setup-container">
+        <span class="setup-step-pill">Step 2 of 2</span>
+        <div class="section-intro">
+          <h3>👤 Select or Create Your Profile</h3>
+          <p>Select who you are from the team database or register a new team profile. Your selection will be stored in <code>server/.env</code>.</p>
+        </div>
+
+        ${hasUsers ? `
+          <div class="card">
+            <div class="card-header">
+              <span class="card-title">👥 Existing Team Members (${state.users.length})</span>
+              <span style="font-size:11.5px;color:var(--muted);">Click card to select</span>
+            </div>
+
+            <div class="user-grid">
+              ${state.users.map(u => {
+                const initial = (u.name || "?").charAt(0).toUpperCase();
+                return `
+                  <div class="user-card" onclick="window._selectExistingUser('${esc(u.name)}', '${esc(u.role || 'Member')}')">
+                    <div class="user-avatar">${esc(initial)}</div>
+                    <div class="user-info">
+                      <div class="user-name-title">${esc(u.name)}</div>
+                      <span class="user-role-tag">${esc(u.role || "Member")}</span>
+                    </div>
+                  </div>
+                `;
+              }).join('')}
+            </div>
+          </div>
+        ` : `
+          <div class="card" style="text-align:center;padding:18px 12px;margin-bottom:12px;">
+            <p style="margin:0;font-size:12.5px;color:var(--muted);">No team members registered yet in Qdrant users collection.</p>
+          </div>
+        `}
+
+        <!-- Create New User Section -->
+        <div class="card">
+          <div class="card-header">
+            <span class="card-title">➕ Create New Team Profile</span>
+          </div>
+
+          <div class="field-group" style="margin-bottom:10px;">
+            <label class="field-label" for="newUserName">Your Name</label>
+            <input type="text" id="newUserName" placeholder="e.g. Huong, Alice, Bob" />
+          </div>
+
+          <div class="field-group">
+            <label class="field-label">Select Role or Type Custom Role</label>
+            
+            <!-- Quick Role Select Pills -->
+            <div class="role-pills" id="rolePillsContainer">
+              ${PREDEFINED_ROLES.map(r => `
+                <span class="role-pill ${r === currentSelectedRole ? 'active' : ''}" onclick="window._selectRolePill('${esc(r)}')">
+                  ${esc(r)}
+                </span>
+              `).join('')}
+            </div>
+
+            <!-- Custom Role Input -->
+            <input type="text" id="newUserRole" placeholder="Custom role (e.g. Lead, Developer, QA)" value="${esc(currentSelectedRole)}" />
+          </div>
+
+          <div class="btn-row" style="margin-top:14px;">
+            <button class="primary" id="btnCreateUser" ${state.isSaving ? "disabled" : ""}>
+              ${state.isSaving ? '<span class="spinner-sm"></span> Creating Profile…' : "✨ Create & Continue →"}
+            </button>
+          </div>
+
+          <div id="statusBox" class="${state.statusType ? 'status-box ' + state.statusType : 'status-box'}">${esc(state.statusMessage)}</div>
+        </div>
+      </div>
+    `;
+
+    document.getElementById("newUserRole")?.addEventListener("input", (e) => {
+      state.selectedNewUserRole = e.target.value;
+      // Update pills active class
+      const pills = document.querySelectorAll(".role-pill");
+      pills.forEach(p => {
+        if (p.textContent.trim() === e.target.value.trim()) p.classList.add("active");
+        else p.classList.remove("active");
+      });
+    });
+
+    document.getElementById("btnBackToQdrant")?.addEventListener("click", () => {
+      state.viewState = "qdrant_config";
+      render();
+    });
+
+    document.getElementById("btnCreateUser")?.addEventListener("click", handleCreateNewUser);
+  }
+
+  window._selectRolePill = function(role) {
+    state.selectedNewUserRole = role;
+    const input = document.getElementById("newUserRole");
+    if (input) input.value = role;
+    const pills = document.querySelectorAll(".role-pill");
+    pills.forEach(p => {
+      if (p.textContent.trim() === role) p.classList.add("active");
+      else p.classList.remove("active");
+    });
+  };
+
+  window._selectExistingUser = async function(name, role) {
+    if (!name) return;
+    state.isSaving = true;
+    render();
+
+    try {
+      const res = await app.callServerTool({
+        name: "panel_select_user",
+        arguments: { name, role },
+      });
+      const data = JSON.parse(res.content[0].text);
+      if (data.success) {
+        state.currentUser = { name, role: role || "Member" };
+        state.isSaving = false;
+        await loadAppConfigData();
+        state.viewState = "main";
+        render();
+      } else {
+        state.isSaving = false;
+        render();
+        setStatus("err", data.reason || "Failed to select user.");
+      }
+    } catch (err) {
+      state.isSaving = false;
+      render();
+      setStatus("err", "Error: " + err.message);
+    }
+  };
+
+  async function handleCreateNewUser() {
+    const name = document.getElementById("newUserName")?.value.trim();
+    const roleInput = document.getElementById("newUserRole")?.value.trim();
+    const role = roleInput || state.selectedNewUserRole || "Full Stack Engineer";
+
+    if (!name) {
+      setStatus("err", "Please enter your name.");
+      return;
+    }
+
+    state.isSaving = true;
+    setStatus(null, "");
+    render();
+
+    try {
+      const res = await app.callServerTool({
+        name: "panel_create_user",
+        arguments: { name, role },
+      });
+      const data = JSON.parse(res.content[0].text);
+      if (data.success) {
+        state.currentUser = { name, role };
+        state.isSaving = false;
+        await loadAppConfigData();
+        state.viewState = "main";
+        render();
+      } else {
+        state.isSaving = false;
+        render();
+        setStatus("err", data.reason || "Failed to create user.");
+      }
+    } catch (err) {
+      state.isSaving = false;
+      render();
+      setStatus("err", "Error: " + err.message);
+    }
+  }
+
+  /* ------------------- View 4: Main Dashboard ------------------- */
+
+  function renderMainDashboard() {
+    const userName = state.currentUser?.name || "Member";
+    const userRole = state.currentUser?.role || "Member";
 
     root.innerHTML = `
       <div class="header">
         <h2>⚡ Team Context</h2>
         <div class="header-actions">
-          <span class="user-badge">👤 ${esc(state.auth.username || "admin")}</span>
-          <button class="btn-signout" id="signoutBtn">Sign out</button>
+          <span class="user-badge">
+            👤 <strong>${esc(userName)}</strong>
+            <span class="user-badge-role">${esc(userRole)}</span>
+          </span>
+          <button class="btn-header-secondary" id="btnSwitchProfile" title="Switch profile without clearing credentials">
+            🔄 Switch
+          </button>
+          <button class="btn-signout" id="btnLogoutBtn" title="Clear server/.env and reset">
+            🚪 Log out
+          </button>
         </div>
       </div>
 
@@ -748,7 +1412,12 @@
       <div id="modalContainer"></div>
     `;
 
-    document.getElementById("signoutBtn")?.addEventListener("click", handleSignout);
+    document.getElementById("btnSwitchProfile")?.addEventListener("click", () => {
+      state.viewState = "user_selection";
+      render();
+    });
+
+    document.getElementById("btnLogoutBtn")?.addEventListener("click", handleLogout);
 
     document.getElementById("tabBtnCredentials")?.addEventListener("click", () => switchTopTab("credentials"));
     document.getElementById("tabBtnConfig")?.addEventListener("click", () => switchTopTab("config"));
@@ -768,74 +1437,22 @@
     render();
   }
 
+  async function handleLogout() {
+    state.viewState = "loading";
+    render();
 
-  /* ------------------- Auth View ------------------- */
-
-  function renderAuth() {
-    const isLogin = state.authMode === "login";
-    root.innerHTML = `
-      <div class="header">
-        <h2>⚡ Team Context</h2>
-      </div>
-      <div class="card">
-        <div class="card-header">
-          <span class="card-title">🔐 ${isLogin ? "Sign In" : "Create Account"}</span>
-        </div>
-        <p class="section-intro" style="color:var(--muted);font-size:12.5px;margin-bottom:12px;">
-          ${isLogin ? "Enter credentials to access your team configuration." : "Create account credentials stored in server/.env."}
-        </p>
-        <div class="field-group">
-          <label class="field-label" for="authUsername">Username</label>
-          <input type="text" id="authUsername" placeholder="username" value="${esc(state.credentials.AUTH_USERNAME || '')}" />
-        </div>
-        <div class="field-group" style="margin-top:8px;">
-          <label class="field-label" for="authPassword">Password</label>
-          <input type="password" id="authPassword" placeholder="••••••••" value="${esc(state.credentials.AUTH_PASSWORD || '')}" />
-        </div>
-        <div class="btn-row">
-          <button class="primary" id="authSubmitBtn">${isLogin ? "Sign In" : "Create Account"}</button>
-          <button class="secondary" id="authToggleBtn">Switch to ${isLogin ? "Create Account" : "Sign In"}</button>
-        </div>
-        <div id="statusBox"></div>
-      </div>
-    `;
-
-
-    document.getElementById("authToggleBtn")?.addEventListener("click", () => {
-      state.authMode = state.authMode === "login" ? "register" : "login";
-      render();
-    });
-
-    document.getElementById("authSubmitBtn")?.addEventListener("click", handleAuthSubmit);
-  }
-
-  async function handleAuthSubmit() {
-    const username = document.getElementById("authUsername")?.value.trim();
-    const password = document.getElementById("authPassword")?.value.trim();
-    if (!username || !password) {
-      setStatus("err", "Username and password are required.");
-      return;
-    }
-    const toolName = state.authMode === "login" ? "panel_login" : "panel_create_account";
     try {
-      const res = await app.callServerTool({ name: toolName, arguments: { username, password } });
-      const data = JSON.parse(res.content[0].text);
-      if (data.success) {
-        state.auth = { hasAccount: true, isAuthenticated: true, username };
-        await loadInitialData();
-      } else {
-        setStatus("err", data.reason || "Authentication failed.");
-      }
+      await app.callServerTool({ name: "panel_logout", arguments: {} });
     } catch (err) {
-      setStatus("err", err.message);
+      console.error("Logout error:", err);
     }
-  }
 
-  async function handleSignout() {
-    try {
-      await app.callServerTool({ name: "panel_signout", arguments: {} });
-    } catch { }
-    state.auth = { hasAccount: true, isAuthenticated: false, username: null };
+    state.currentUser = { name: "", role: "" };
+    state.credentials = {};
+    state.qdrant = { configured: false, connected: false, endpoint: "", error: null };
+    state.selectedRepos.clear();
+    state.selectedNotionPages.clear();
+    state.viewState = "qdrant_config";
     render();
   }
 
@@ -877,7 +1494,7 @@
       <div class="card">
         <div class="card-header">
           <span class="card-title">🧠 Qdrant Vector DB</span>
-          <span class="badge idle" id="badge-qdrant">Not tested</span>
+          <span class="badge ok" id="badge-qdrant">✓ Connected</span>
         </div>
         <div class="field-group">
           <label class="field-label" for="qdrantUrl">Cluster Endpoint URL</label>
@@ -914,8 +1531,8 @@
       </div>
 
       <div class="btn-row">
-        <button class="primary" id="saveCredentialsBtn">Save & Connect</button>
-        <button class="secondary" id="testConnectionsBtn">Test Connections</button>
+        <button class="primary" id="saveCredentialsBtn">💾 Save & Connect</button>
+        <button class="secondary" id="testConnectionsBtn">🧪 Test Connections</button>
       </div>
 
       <div id="statusBox" class="${state.statusType ? 'status-box ' + state.statusType : 'status-box'}">${esc(state.statusMessage)}</div>
@@ -1000,7 +1617,7 @@
     const vals = getCredentialsFormValues();
     const btn = document.getElementById("saveCredentialsBtn");
     btn.disabled = true;
-    btn.textContent = "Saving…";
+    btn.innerHTML = '<span class="spinner-sm"></span> Saving…';
     setStatus(null, "");
 
     await runConnectionTests();
@@ -1010,7 +1627,6 @@
       const data = JSON.parse(res.content[0].text);
       if (data.status === "ok") {
         state.credentials = vals;
-        // Automatically transition to App Configuration tab!
         switchTopTab("config");
         return;
       } else {
@@ -1020,7 +1636,7 @@
       setStatus("err", "Error: " + err.message);
     }
     btn.disabled = false;
-    btn.textContent = "Save & Connect";
+    btn.innerHTML = "💾 Save & Connect";
   }
 
   /* ------------------- Tab 2: App Configuration ------------------- */
@@ -1086,7 +1702,6 @@
       else if (sub === "prompt") renderPromptSession(subContent);
       else if (sub === "database") renderDatabaseSession(subContent);
     }
-    // Update active pill UI
     ["github", "notion", "prompt", "database"].forEach(s => {
       const el = document.getElementById("pill" + s.charAt(0).toUpperCase() + s.slice(1));
       if (el) el.className = "sub-pill " + (s === sub ? "active" : "");
@@ -1118,14 +1733,14 @@
         </div>
 
         <div class="repo-list" id="repoListContainer">
-          ${filteredRepos.length === 0 ? '<div class="loading">No repositories found. Ensure GitHub token is configured in Credentials tab.</div>' : ''}
+          ${filteredRepos.length === 0 ? '<div class="loading-screen" style="padding:20px 0;"><p>No repositories found. Ensure GitHub token is configured in Credentials tab.</p></div>' : ''}
           ${filteredRepos.map(r => {
-      const name = typeof r === "string" ? r : (r.fullName || r.full_name || r.name || "");
-      if (!name) return "";
-      const isSelected = state.selectedRepos.has(name);
-      const desc = state.selectedRepos.get(name) || "";
-      const safeId = name.replace(/[^a-zA-Z0-9_-]/g, '_');
-      return `
+            const name = typeof r === "string" ? r : (r.fullName || r.full_name || r.name || "");
+            if (!name) return "";
+            const isSelected = state.selectedRepos.has(name);
+            const desc = state.selectedRepos.get(name) || "";
+            const safeId = name.replace(/[^a-zA-Z0-9_-]/g, '_');
+            return `
               <div class="repo-item ${isSelected ? 'selected' : ''}" data-name="${esc(name)}">
                 <div class="repo-main-row" onclick="window._toggleRepo('${esc(name)}')">
                   <input type="checkbox" class="repo-checkbox" ${isSelected ? 'checked' : ''} />
@@ -1150,7 +1765,7 @@
                 ` : ''}
               </div>
             `;
-    }).join('')}
+          }).join('')}
         </div>
       </div>
     `;
@@ -1188,12 +1803,11 @@
   window._mdFilesCache = window._mdFilesCache || {};
   window._mdSelectedCache = window._mdSelectedCache || {};
 
-
   window._scanMdFiles = async function(repo) {
     const safeId = repo.replace(/[^a-zA-Z0-9_-]/g, '_');
     const cont = document.getElementById("md-list-" + safeId);
     if (!cont) return;
-    cont.innerHTML = '<div style="font-size:12px;color:var(--muted);padding:6px 0;">🔍 Recursively scanning repository for .md and .mdx files…</div>';
+    cont.innerHTML = '<div style="font-size:12px;color:var(--muted);padding:6px 0;display:flex;align-items:center;gap:6px;"><span class="spinner-sm spinner-dark"></span> Scanning repository for .md files…</div>';
 
     try {
       const res = await app.callServerTool({ name: "config_list_repo_md_files", arguments: { repo } });
@@ -1293,7 +1907,10 @@
             <h3 class="modal-title">📄 Configure & Sync Skill</h3>
             <button class="btn-close" onclick="window._closeMdModal()">✕</button>
           </div>
-          <div class="loading">Loading file preview and name suggestion…</div>
+          <div class="loading-screen" style="padding:20px 0;">
+            <div class="spinner"></div>
+            <p>Loading file preview and name suggestion…</p>
+          </div>
         </div>
       </div>
     `;
@@ -1333,7 +1950,6 @@
           </div>
         ` : ''}
 
-
         <div class="field-group" style="margin-bottom:12px;">
           <label style="font-size:12px;font-weight:600;display:flex;justify-content:space-between;">
             <span>Skill Name:</span>
@@ -1341,7 +1957,7 @@
           </label>
           <input type="text" id="modalSkillName" value="${esc(suggestedName)}" placeholder="e.g. ${esc(prefix)} Overview" />
           <div style="font-size:11px;color:var(--muted);margin-top:3px;">
-            Prefix <code style="background:var(--code-bg);padding:1px 4px;border-radius:3px;">${esc(prefix)}</code> identifies origin repo & file path. You can customize the title as you wish.
+            Prefix <code style="background:var(--code-bg);padding:1px 4px;border-radius:3px;">${esc(prefix)}</code> identifies origin repo & file path.
           </div>
         </div>
 
@@ -1407,7 +2023,7 @@
 
     if (syncBtn) {
       syncBtn.disabled = true;
-      syncBtn.textContent = "Syncing & Embedding…";
+      syncBtn.innerHTML = '<span class="spinner-sm"></span> Syncing & Embedding…';
     }
 
     try {
@@ -1428,7 +2044,6 @@
 
       const data = JSON.parse(res.content[0].text);
       if (data.status === "ok" && data.synced > 0) {
-        // Update local file cache
         const files = window._mdFilesCache[repo] || [];
         const fileObj = files.find(f => f.path === filePath);
         if (fileObj) fileObj.isSynced = true;
@@ -1444,7 +2059,7 @@
 
         setTimeout(() => {
           window._closeMdModal();
-        }, 800);
+        }, 700);
       } else {
         throw new Error(data.message || "Failed to sync skill.");
       }
@@ -1476,7 +2091,7 @@
 
     if (statusEl) {
       statusEl.style.color = "var(--muted)";
-      statusEl.textContent = `Syncing ${selected.length} skills to Qdrant…`;
+      statusEl.innerHTML = `<span class="spinner-sm spinner-dark"></span> Syncing ${selected.length} skills to Qdrant…`;
     }
 
     try {
@@ -1511,8 +2126,6 @@
     }
   };
 
-
-
   window._toggleRepo = function (name) {
     if (state.selectedRepos.has(name)) {
       state.selectedRepos.delete(name);
@@ -1526,7 +2139,6 @@
   window._updateRepoDesc = function (name, desc) {
     state.selectedRepos.set(name, desc);
   };
-
 
   /* Sub-session: System Prompt */
   function renderPromptSession(container) {
@@ -1595,7 +2207,7 @@
         </div>
 
         <div class="repo-list" id="notionListContainer">
-          ${filteredPages.length === 0 ? '<div class="loading">No Notion pages found. Ensure Notion integration token is configured in Credentials tab.</div>' : ''}
+          ${filteredPages.length === 0 ? '<div class="loading-screen" style="padding:20px 0;"><p>No Notion pages found. Ensure Notion integration token is configured in Credentials tab.</p></div>' : ''}
           ${filteredPages.map(p => {
             const isSelected = state.selectedNotionPages.has(p.id);
             const selItem = state.selectedNotionPages.get(p.id);
@@ -1689,7 +2301,7 @@
     const refreshBtn = document.getElementById("refreshNotionBtn");
     if (refreshBtn) {
       refreshBtn.disabled = true;
-      refreshBtn.textContent = "Refreshing…";
+      refreshBtn.innerHTML = '<span class="spinner-sm"></span> Refreshing…';
     }
     try {
       const res = await app.callServerTool({ name: "config_list_notion_pages", arguments: {} });
@@ -1720,7 +2332,7 @@
   async function saveAppConfig() {
     const btn = document.getElementById("saveAppConfigBtn");
     btn.disabled = true;
-    btn.textContent = "Saving…";
+    btn.innerHTML = '<span class="spinner-sm"></span> Saving…';
     setStatus(null, "");
 
     const activeRepos = Array.from(state.selectedRepos.entries()).map(([name, description]) => ({
@@ -1741,7 +2353,7 @@
       const res = await app.callServerTool({
         name: "config_save_app_config",
         arguments: {
-          username: state.auth.username || "admin",
+          username: state.currentUser?.name || "admin",
           activeRepos,
           activeNotionPages,
           systemPrompt: state.systemPrompt,
@@ -1760,10 +2372,10 @@
       setStatus("err", "Error: " + err.message);
     }
     btn.disabled = false;
-    btn.textContent = "💾 Save Application Configuration";
+    btn.innerHTML = "💾 Save Application Configuration";
   }
 
   /* ------------------- Boot ------------------- */
   await app.connect();
-  await loadInitialData();
+  await checkSetupAndLoad();
 </script>

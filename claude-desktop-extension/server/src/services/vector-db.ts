@@ -21,10 +21,12 @@ import type {
   ActiveNotionPageConfigItem,
   AppConfigItem,
   AppConfigPayload,
+  TeamUserItem,
 } from "../tools/types.js";
 
 export const KNOWLEDGE_BASE_COLLECTION = "knowledge-base";
 export const APP_CONFIG_COLLECTION = "app-config";
+export const USERS_COLLECTION = "users";
 
 
 /**
@@ -617,6 +619,18 @@ export function getNotionSkillPointId(pageId: string): string {
 }
 
 /**
+ * Generate deterministic UUID for a user document in Qdrant users collection.
+ */
+export function getUserPointId(name: string): string {
+  const hash = crypto
+    .createHash("md5")
+    .update(`user:${name.trim().toLowerCase()}`)
+    .digest("hex");
+  return `${hash.slice(0, 8)}-${hash.slice(8, 12)}-${hash.slice(12, 16)}-${hash.slice(16, 20)}-${hash.slice(20, 32)}`;
+}
+
+
+/**
  * Centralized skill name suggestion and formatting function for GitHub files.
  * Prefix contains Git repo and file path, followed by the skill title.
  * e.g., "[github-repo: owner/repo, path: docs/guide.md] Architecture Overview"
@@ -924,5 +938,193 @@ export async function saveAppConfig(
   }
 }
 
+/* ------------------------------------------------------------------ *
+ * Team Users Collection Management (users)
+ * ------------------------------------------------------------------ */
+
+/**
+ * Ensure the users collection exists in Qdrant.
+ */
+export async function ensureUsersCollection(collectionName: string = USERS_COLLECTION): Promise<void> {
+  await ensureCollection(collectionName);
+}
+
+/**
+ * List all users stored in the Qdrant users collection.
+ */
+export async function listUsers(collectionName: string = USERS_COLLECTION): Promise<TeamUserItem[]> {
+  const { endpoint, apiKey } = await getActiveQdrantConfig();
+  await ensureUsersCollection(collectionName);
+
+  const headers = qdrantHeaders(apiKey);
+  try {
+    const res = await fetch(`${endpoint}/collections/${collectionName}/points/scroll`, {
+      method: "POST",
+      headers,
+      body: JSON.stringify({
+        limit: 200,
+        with_payload: true,
+        with_vector: false,
+      }),
+    });
+
+    if (!res.ok) {
+      const errText = await res.text().catch(() => res.statusText);
+      throw new RepoContextError(`Failed to retrieve users from Qdrant: ${errText}`);
+    }
+
+    const data = (await res.json()) as {
+      result?: {
+        points?: Array<{
+          id: string | number;
+          payload?: {
+            name?: string;
+            role?: string;
+            createdAt?: string;
+            updatedAt?: string;
+          };
+        }>;
+      };
+    };
+
+    const points = data.result?.points ?? [];
+    return points
+      .map((p) => ({
+        id: String(p.id),
+        name: p.payload?.name || "",
+        role: p.payload?.role || "Member",
+        createdAt: p.payload?.createdAt,
+        updatedAt: p.payload?.updatedAt,
+      }))
+      .filter((u) => u.name.length > 0)
+      .sort((a, b) => a.name.localeCompare(b.name));
+  } catch (err: unknown) {
+    if (err instanceof RepoContextError) throw err;
+    const message = err instanceof Error ? err.message : String(err);
+    throw new RepoContextError(`Could not list users from Qdrant: ${message}`);
+  }
+}
+
+/**
+ * Get a user by name from Qdrant users collection.
+ */
+export async function getUser(name: string, collectionName: string = USERS_COLLECTION): Promise<TeamUserItem | null> {
+  const cleanName = name?.trim();
+  if (!cleanName) return null;
+
+  const { endpoint, apiKey } = await getActiveQdrantConfig();
+  await ensureUsersCollection(collectionName);
+
+  const pointId = getUserPointId(cleanName);
+  const headers = qdrantHeaders(apiKey);
+
+  try {
+    const res = await fetch(`${endpoint}/collections/${collectionName}/points/${pointId}`, {
+      method: "GET",
+      headers,
+    });
+
+    if (!res.ok) {
+      if (res.status === 404) return null;
+      // Scroll fallback if point retrieval fails
+      const allUsers = await listUsers(collectionName).catch(() => []);
+      return allUsers.find((u) => u.name.toLowerCase() === cleanName.toLowerCase()) || null;
+    }
+
+    const data = (await res.json()) as {
+      result?: {
+        id: string | number;
+        payload?: {
+          name?: string;
+          role?: string;
+          createdAt?: string;
+          updatedAt?: string;
+        };
+      };
+    };
+
+    if (!data.result || !data.result.payload?.name) return null;
+
+    return {
+      id: String(data.result.id),
+      name: data.result.payload.name,
+      role: data.result.payload.role || "Member",
+      createdAt: data.result.payload.createdAt,
+      updatedAt: data.result.payload.updatedAt,
+    };
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Create or update a team user in the Qdrant users collection.
+ */
+export async function createUser(
+  params: { name: string; role: string },
+  collectionName: string = USERS_COLLECTION,
+): Promise<TeamUserItem> {
+  const name = params.name?.trim();
+  const role = params.role?.trim() || "Member";
+
+  if (!name) {
+    throw new RepoContextError("User name is required.");
+  }
+
+  const { endpoint, apiKey } = await getActiveQdrantConfig();
+  await ensureUsersCollection(collectionName);
+
+  const pointId = getUserPointId(name);
+  const existing = await getUser(name, collectionName).catch(() => null);
+
+  const now = new Date().toISOString();
+  const createdAt = existing?.createdAt || now;
+  const updatedAt = now;
+
+  const payload = {
+    name,
+    role,
+    createdAt,
+    updatedAt,
+  };
+
+  const vector = new Array(GEMINI_VECTOR_SIZE).fill(0);
+  const headers = qdrantHeaders(apiKey);
+
+  try {
+    const res = await fetch(`${endpoint}/collections/${collectionName}/points?wait=true`, {
+      method: "PUT",
+      headers,
+      body: JSON.stringify({
+        points: [
+          {
+            id: pointId,
+            vector,
+            payload,
+          },
+        ],
+      }),
+    });
+
+    if (!res.ok) {
+      const errText = await res.text().catch(() => res.statusText);
+      throw new RepoContextError(`Failed to save user into Qdrant collection "${collectionName}": ${errText}`);
+    }
+
+    return {
+      id: pointId,
+      name,
+      role,
+      createdAt,
+      updatedAt,
+    };
+  } catch (err: unknown) {
+    if (err instanceof RepoContextError) throw err;
+    const message = err instanceof Error ? err.message : String(err);
+    throw new RepoContextError(`Could not create user: ${message}`);
+  }
+}
+
 export { readQdrantConfig, saveQdrantConfig, clearQdrantConfig };
+
 
