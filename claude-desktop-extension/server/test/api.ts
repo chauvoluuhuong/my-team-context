@@ -349,7 +349,7 @@ const { buildPanel, buildSkillsPanel, buildTeamContextSystemPrompt, getDefaultSy
 const panelHtml = buildPanel("config");
 assert.ok(panelHtml.includes("SkillsComponent"), "buildPanel injects reusable SkillsComponent");
 assert.ok(panelHtml.includes("ExtApps"), "buildPanel inlines ExtApps bundle");
-assert.ok(panelHtml.includes("buildTeamContextSystemPrompt"), "buildPanel includes buildTeamContextSystemPrompt");
+assert.ok(panelHtml.includes("buildDefaultSystemPrompt"), "buildPanel includes buildDefaultSystemPrompt");
 
 const skillsPanelHtml = buildSkillsPanel();
 assert.ok(skillsPanelHtml.includes("SkillsComponent"), "buildSkillsPanel injects reusable SkillsComponent");

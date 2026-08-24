@@ -154,6 +154,8 @@ Please assist me throughout our work by using the \`my-team-context-mcp-server\`
 Please confirm you are ready to assist with our team context and give a brief greeting!`;
 }
 
+export const buildDefaultSystemPrompt = buildTeamContextSystemPrompt;
+
 export function getDefaultSystemPrompt(options?: SystemPromptContextOptions): string {
   return buildTeamContextSystemPrompt(options);
 }

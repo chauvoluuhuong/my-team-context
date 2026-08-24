@@ -103,16 +103,42 @@ export function registerConfigTools(server: McpServer): void {
         notionError = err instanceof Error ? err.message : String(err);
       }
 
-      const [appConfig, auth] = await Promise.all([
+      let [appConfig, auth] = await Promise.all([
         getAppConfig(username).catch(() => null),
-        getAuthState().catch(() => ({ hasAccount: false, isAuthenticated: false, username: null })),
+        getAuthState().catch(() => ({ hasAccount: false, isAuthenticated: false, username: null, role: "Member" })),
       ]);
 
       const defaultPrompt = getDefaultSystemPrompt({
         userName: username,
+        userRole: auth.role || undefined,
         activeRepos: appConfig?.activeRepos,
         activeNotionPages: appConfig?.activeNotionPages,
       });
+
+      if (!appConfig) {
+        appConfig = await saveAppConfig({
+          username,
+          activeRepos: [],
+          activeNotionPages: [],
+          systemPrompt: defaultPrompt,
+        }).catch(() => ({
+          id: "",
+          username,
+          activeRepos: [],
+          activeNotionPages: [],
+          systemPrompt: defaultPrompt,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        }));
+      } else if (!appConfig.systemPrompt || !appConfig.systemPrompt.trim()) {
+        appConfig.systemPrompt = defaultPrompt;
+        await saveAppConfig({
+          username,
+          activeRepos: appConfig.activeRepos,
+          activeNotionPages: appConfig.activeNotionPages,
+          systemPrompt: defaultPrompt,
+        }).catch(() => {});
+      }
 
       return text({
         status: "ok",
@@ -125,20 +151,10 @@ export function registerConfigTools(server: McpServer): void {
         notionError,
         notionPages,
         auth,
-        appConfig: appConfig
-          ? {
-            ...appConfig,
-            systemPrompt: appConfig.systemPrompt || defaultPrompt,
-          }
-          : {
-            id: "",
-            username,
-            activeRepos: [],
-            activeNotionPages: [],
-            systemPrompt: defaultPrompt,
-            createdAt: "",
-            updatedAt: "",
-          },
+        appConfig: {
+          ...appConfig,
+          systemPrompt: appConfig.systemPrompt || defaultPrompt,
+        },
         defaultSystemPrompt: defaultPrompt,
         repos,
         reposCount: repos.length,
@@ -194,16 +210,42 @@ export function registerConfigTools(server: McpServer): void {
         notionError = err instanceof Error ? err.message : String(err);
       }
 
-      const [appConfig, auth] = await Promise.all([
+      let [appConfig, auth] = await Promise.all([
         getAppConfig(username).catch(() => null),
-        getAuthState().catch(() => ({ hasAccount: false, isAuthenticated: false, username: null })),
+        getAuthState().catch(() => ({ hasAccount: false, isAuthenticated: false, username: null, role: "Member" })),
       ]);
 
       const defaultPrompt = getDefaultSystemPrompt({
         userName: username,
+        userRole: auth.role || undefined,
         activeRepos: appConfig?.activeRepos,
         activeNotionPages: appConfig?.activeNotionPages,
       });
+
+      if (!appConfig) {
+        appConfig = await saveAppConfig({
+          username,
+          activeRepos: [],
+          activeNotionPages: [],
+          systemPrompt: defaultPrompt,
+        }).catch(() => ({
+          id: "",
+          username,
+          activeRepos: [],
+          activeNotionPages: [],
+          systemPrompt: defaultPrompt,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        }));
+      } else if (!appConfig.systemPrompt || !appConfig.systemPrompt.trim()) {
+        appConfig.systemPrompt = defaultPrompt;
+        await saveAppConfig({
+          username,
+          activeRepos: appConfig.activeRepos,
+          activeNotionPages: appConfig.activeNotionPages,
+          systemPrompt: defaultPrompt,
+        }).catch(() => {});
+      }
 
       return text({
         status: "ok",
@@ -216,20 +258,10 @@ export function registerConfigTools(server: McpServer): void {
         notionError,
         notionPages,
         auth,
-        appConfig: appConfig
-          ? {
-            ...appConfig,
-            systemPrompt: appConfig.systemPrompt || defaultPrompt,
-          }
-          : {
-            id: "",
-            username,
-            activeRepos: [],
-            activeNotionPages: [],
-            systemPrompt: defaultPrompt,
-            createdAt: "",
-            updatedAt: "",
-          },
+        appConfig: {
+          ...appConfig,
+          systemPrompt: appConfig.systemPrompt || defaultPrompt,
+        },
         defaultSystemPrompt: defaultPrompt,
         repos,
       });

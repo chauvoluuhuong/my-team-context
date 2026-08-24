@@ -943,11 +943,14 @@
     }
   }
 
-  function buildTeamContextSystemPrompt() {
-    const userName = state.currentUser?.name || "Team Member";
-    const userRole = state.currentUser?.role ? ` (${state.currentUser.role})` : "";
-    const activeRepoList = Array.from(state.selectedRepos.keys());
-    const activeNotionList = Array.from(state.selectedNotionPages.values()).map(p => p.title || p.id);
+  function buildDefaultSystemPrompt(context) {
+    const userName = (context && context.userName) || state.currentUser?.name || "Team Member";
+    const userRole = (context && context.userRole) || (state.currentUser?.role ? ` (${state.currentUser.role})` : "");
+    const repos = (context && context.activeRepos) || Array.from(state.selectedRepos.keys());
+    const notion = (context && context.activeNotionPages) || Array.from(state.selectedNotionPages.values()).map(p => p.title || p.id);
+
+    const activeRepoList = Array.isArray(repos) ? repos : [];
+    const activeNotionList = Array.isArray(notion) ? notion : [];
 
     return `You are my Team Assistant and Engineering Co-Pilot helping me understand and navigate the context of our team's work.
 
@@ -994,8 +997,26 @@ Please confirm you are ready to assist with our team context and give a brief gr
         }
       });
 
-      state.defaultSystemPrompt = appData.defaultSystemPrompt || buildTeamContextSystemPrompt();
-      state.systemPrompt = appConfig.systemPrompt || state.defaultSystemPrompt;
+      state.defaultSystemPrompt = appData.defaultSystemPrompt || buildDefaultSystemPrompt();
+
+      // If app config has no custom system prompt yet, initialize and store the default prompt
+      if (!appConfig.systemPrompt || !appConfig.systemPrompt.trim()) {
+        state.systemPrompt = state.defaultSystemPrompt;
+        const activeRepos = Array.from(state.selectedRepos.entries()).map(([name, description]) => ({ name, description }));
+        const activeNotionPages = Array.from(state.selectedNotionPages.values());
+        await app.callServerTool({
+          name: "config_save_app_config",
+          arguments: {
+            username: state.currentUser?.name || "admin",
+            activeRepos,
+            activeNotionPages,
+            systemPrompt: state.systemPrompt,
+          },
+        }).catch(err => console.warn("Could not auto-persist default system prompt:", err));
+      } else {
+        state.systemPrompt = appConfig.systemPrompt;
+      }
+
       state.createdAt = appConfig.createdAt || "";
       state.updatedAt = appConfig.updatedAt || "";
     } catch (err) {
@@ -2223,7 +2244,7 @@ Please confirm you are ready to assist with our team context and give a brief gr
   /* Sub-session: System Prompt */
   function renderPromptSession(container) {
     if (!state.systemPrompt || !state.systemPrompt.trim()) {
-      state.systemPrompt = buildTeamContextSystemPrompt();
+      state.systemPrompt = buildDefaultSystemPrompt();
     }
 
     container.innerHTML = `
@@ -2244,7 +2265,7 @@ Please confirm you are ready to assist with our team context and give a brief gr
     });
 
     document.getElementById("resetPromptBtn")?.addEventListener("click", () => {
-      state.systemPrompt = buildTeamContextSystemPrompt();
+      state.systemPrompt = buildDefaultSystemPrompt();
       state.defaultSystemPrompt = state.systemPrompt;
       const area = document.getElementById("systemPromptArea");
       if (area) area.value = state.systemPrompt;
@@ -2472,7 +2493,7 @@ Please confirm you are ready to assist with our team context and give a brief gr
 
     const messageText = (state.systemPrompt && state.systemPrompt.trim())
       ? state.systemPrompt
-      : buildTeamContextSystemPrompt();
+      : buildDefaultSystemPrompt();
 
     try {
       if (typeof app.sendMessage === "function") {
