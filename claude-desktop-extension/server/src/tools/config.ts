@@ -112,7 +112,7 @@ export function registerConfigTools(server: McpServer): void {
         userName: username,
         userRole: auth.role || undefined,
         activeRepos: appConfig?.activeRepos,
-        activeNotionPages: appConfig?.activeNotionPages,
+        // activeNotionPages: appConfig?.activeNotionPages, // Will implement selective Notion pages later, all pages accessible for now
       });
 
       if (!appConfig) {
@@ -219,7 +219,7 @@ export function registerConfigTools(server: McpServer): void {
         userName: username,
         userRole: auth.role || undefined,
         activeRepos: appConfig?.activeRepos,
-        activeNotionPages: appConfig?.activeNotionPages,
+        // activeNotionPages: appConfig?.activeNotionPages, // Will implement selective Notion pages later, all pages accessible for now
       });
 
       if (!appConfig) {

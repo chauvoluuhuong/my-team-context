@@ -364,9 +364,25 @@ const generatedPrompt = buildTeamContextSystemPrompt({
 });
 assert.ok(generatedPrompt.includes("Current User: Alice (Staff Engineer)"));
 assert.ok(generatedPrompt.includes("Active Repositories: my-org/core-api"));
-assert.ok(generatedPrompt.includes("Active Notion Docs: Architecture RFC"));
+assert.ok(generatedPrompt.includes("Notion Workspace: All workspace documentation accessible"));
 assert.ok(generatedPrompt.includes("my-team-context-mcp-server"));
 assert.equal(getDefaultSystemPrompt({ userName: "Alice" }), buildTeamContextSystemPrompt({ userName: "Alice" }));
+
+// SQL Tools Tests (SQLite file/memory test)
+const testDbPath = path.join(dir, "test.sqlite");
+const sqliteMod = await import("node:sqlite");
+const testDb = new sqliteMod.DatabaseSync(testDbPath);
+testDb.exec(`
+  CREATE TABLE users (id INTEGER PRIMARY KEY AUTOINCREMENT, username TEXT NOT NULL, email TEXT);
+  INSERT INTO users (username, email) VALUES ('alice', 'alice@team.com'), ('bob', 'bob@team.com');
+  CREATE TABLE posts (id INTEGER PRIMARY KEY, user_id INTEGER, title TEXT, content TEXT);
+`);
+testDb.close();
+
+// Test sqlCheckConnection and validateSqlConnection with SQLite
+const sqliteValidation = await validateSqlConnection(`sqlite://${testDbPath}`);
+assert.equal(sqliteValidation.valid, true);
+assert.equal(sqliteValidation.dialect, "sqlite");
 
 server.close();
 await fs.rm(dir, { recursive: true, force: true });

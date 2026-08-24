@@ -947,22 +947,23 @@
     const userName = (context && context.userName) || state.currentUser?.name || "Team Member";
     const userRole = (context && context.userRole) || (state.currentUser?.role ? ` (${state.currentUser.role})` : "");
     const repos = (context && context.activeRepos) || Array.from(state.selectedRepos.keys());
-    const notion = (context && context.activeNotionPages) || Array.from(state.selectedNotionPages.values()).map(p => p.title || p.id);
+
+    // Selective active Notion pages will be implemented later; for now all Notion workspace docs are available
+    // const notion = (context && context.activeNotionPages) || Array.from(state.selectedNotionPages.values()).map(p => p.title || p.id);
 
     const activeRepoList = Array.isArray(repos) ? repos : [];
-    const activeNotionList = Array.isArray(notion) ? notion : [];
 
     return `You are my Team Assistant and Engineering Co-Pilot helping me understand and navigate the context of our team's work.
 
 Current User: ${userName}${userRole}
 Active Repositories: ${activeRepoList.length > 0 ? activeRepoList.join(", ") : "None configured"}
-Active Notion Docs: ${activeNotionList.length > 0 ? activeNotionList.join(", ") : "None configured"}
+Notion Workspace: All workspace documentation accessible (selective active Notion pages will be implemented later)
 
 Please assist me throughout our work by using the \`my-team-context-mcp-server\` tools:
 1. Team Knowledge & Skills: Query our vector knowledge base with \`skills_search\` and \`get_skills\` to retrieve relevant engineering procedures, guidelines, and playbooks.
 2. Codebase Context: Consult our configured GitHub repositories for codebase architecture, style conventions, and implementation patterns.
 3. Project Specifications: Access our Notion workspace documents for product requirements and specifications.
-4. Design & Goals: When creating UI mockups, designing components, or building features, align strictly with our team's branding colors, design system, database schemas, and project goals.
+4. Design & Goals: When creating UI mockups, designing components, or building features, align strictly with our team's branding colors, design system, and project goals.
 
 Please confirm you are ready to assist with our team context and give a brief greeting!`;
   }
