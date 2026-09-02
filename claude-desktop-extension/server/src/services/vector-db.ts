@@ -691,6 +691,7 @@ export async function getAppConfig(
                 description?: string;
                 lastEditedTime?: string;
                 icon?: string;
+                type?: string;
               }>;
               activeNotionPages?: Array<{
                 id?: string;
@@ -699,6 +700,7 @@ export async function getAppConfig(
                 description?: string;
                 lastEditedTime?: string;
                 icon?: string;
+                type?: string;
               }>;
               systemPrompt?: string;
               createdAt?: string;
@@ -723,6 +725,7 @@ export async function getAppConfig(
             description: n.description || "",
             lastEditedTime: n.lastEditedTime || "",
             icon: n.icon || "📄",
+            type: n.type === "database" ? "database" : "page",
           }));
 
           return {
@@ -770,6 +773,7 @@ export async function getAppConfig(
               description?: string;
               lastEditedTime?: string;
               icon?: string;
+              type?: string;
             }>;
             activeNotionPages?: Array<{
               id?: string;
@@ -778,6 +782,7 @@ export async function getAppConfig(
               description?: string;
               lastEditedTime?: string;
               icon?: string;
+              type?: string;
             }>;
             systemPrompt?: string;
             createdAt?: string;
@@ -812,6 +817,7 @@ export async function getAppConfig(
       description: n.description || "",
       lastEditedTime: n.lastEditedTime || "",
       icon: n.icon || "📄",
+      type: n.type === "database" ? "database" : "page",
     }));
 
     return {
@@ -872,6 +878,7 @@ export async function saveAppConfig(
     description: (n.description || "").trim(),
     lastEditedTime: (n.lastEditedTime || "").trim(),
     icon: (n.icon || "📄").trim(),
+    type: n.type === "database" ? "database" : "page",
   }));
 
   const systemPrompt =

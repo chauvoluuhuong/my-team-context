@@ -56,15 +56,104 @@ export interface NotionStatusResult {
   reason?: string;
 }
 
+export interface NotionResourceItem {
+  id: string;
+  type: "page" | "database";
+  title: string;
+  icon?: string | null;
+  cover?: string | null;
+  url: string;
+  parent?: any;
+  is_inline?: boolean;
+  archived?: boolean;
+  created_time?: string | null;
+  last_edited_time?: string | null;
+  properties_count?: number;
+  property_names?: string[];
+  description?: string | null;
+  isSynced?: boolean;
+  pointId?: string;
+}
+
 export interface NotionPageItem {
   id: string;
+  type?: "page" | "database";
   title: string;
   url: string;
   icon?: string;
+  description?: string | null;
   createdTime?: string;
   lastEditedTime?: string;
+  properties_count?: number;
+  property_names?: string[];
   isSynced?: boolean;
   pointId?: string;
+}
+
+export interface NotionListResourcesResult {
+  resources: NotionResourceItem[];
+  count: number;
+  pages_count: number;
+  databases_count: number;
+}
+
+export interface NotionFilterInstructionsResult {
+  database: {
+    id: string;
+    name: string;
+  };
+  how_to_search: {
+    method: string;
+    endpoint: string;
+    body_format: Record<string, unknown>;
+  };
+  filters: Record<string, unknown>;
+  examples: Array<{
+    description: string;
+    request: Record<string, unknown>;
+  }>;
+}
+
+export interface NotionResourceContentResult {
+  id: string;
+  type: "page" | "database";
+  title: string;
+  icon?: string | null;
+  cover?: string | null;
+  url: string;
+  parent?: any;
+  is_inline?: boolean;
+  created_time?: string | null;
+  last_edited_time?: string | null;
+  properties?: Record<string, any>;
+  markdown: string;
+  inline_databases?: any[];
+  inline_databases_count?: number;
+  blocks_count?: number;
+  comments?: any[];
+  columns?: string[];
+  row_count?: number;
+  rows?: any[];
+}
+
+export interface NotionSearchResult {
+  database: {
+    id: string;
+    title: string;
+    icon?: any;
+    url: string;
+  };
+  results: any[];
+  count: number;
+  total: number;
+  offset: number;
+  has_more: boolean;
+  next_cursor: string | null;
+  notice?: string | null;
+  filter_applied?: any;
+  notion_filter?: any;
+  text_matching?: any;
+  resolved?: Record<string, any>;
 }
 
 export interface NotionPagePreviewResult {
@@ -338,6 +427,7 @@ export interface ActiveNotionPageConfigItem {
   description?: string;
   lastEditedTime?: string;
   icon?: string;
+  type?: "page" | "database";
 }
 
 export interface AppConfigPayload {

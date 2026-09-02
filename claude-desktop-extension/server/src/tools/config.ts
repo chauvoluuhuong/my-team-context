@@ -219,7 +219,7 @@ export function registerConfigTools(server: McpServer): void {
         userName: username,
         userRole: auth.role || undefined,
         activeRepos: appConfig?.activeRepos,
-        // activeNotionPages: appConfig?.activeNotionPages, // Will implement selective Notion pages later, all pages accessible for now
+        activeNotionPages: appConfig?.activeNotionPages,
       });
 
       if (!appConfig) {
@@ -313,16 +313,17 @@ export function registerConfigTools(server: McpServer): void {
         activeNotionPages: z
           .array(
             z.object({
-              id: z.string().min(1).describe("Notion page ID"),
-              title: z.string().min(1).describe("Notion page title"),
-              url: z.string().optional().default("").describe("Page URL"),
-              description: z.string().optional().default("").describe("Description or context for this page"),
+              id: z.string().min(1).describe("Notion page or database ID"),
+              title: z.string().min(1).describe("Notion resource title"),
+              url: z.string().optional().default("").describe("Resource URL"),
+              description: z.string().optional().default("").describe("Description or context for this resource"),
               lastEditedTime: z.string().optional().default("").describe("Last edited timestamp"),
-              icon: z.string().optional().default("📄").describe("Page icon"),
+              icon: z.string().optional().default("📄").describe("Resource icon"),
+              type: z.enum(["page", "database"]).optional().default("page").describe("Resource type (page | database)"),
             }),
           )
           .optional()
-          .describe("Selected active Notion pages"),
+          .describe("Selected active Notion resources (pages and databases)"),
         systemPrompt: z.string().optional().describe("Custom system prompt in Markdown"),
       },
       _meta: { ui: { visibility: ["app"] } },

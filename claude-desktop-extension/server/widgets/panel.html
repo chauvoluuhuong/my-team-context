@@ -841,7 +841,8 @@
     selectedRepos: new Map(), // name -> description
     notionPages: [],
     notionPagesSearch: "",
-    selectedNotionPages: new Map(), // id -> { id, title, description, url, icon, lastEditedTime }
+    notionResourceTypeFilter: "all", // "all" | "page" | "database"
+    selectedNotionPages: new Map(), // id -> { id, title, description, url, icon, lastEditedTime, type }
     isNotionConnected: false,
     notionBotName: null,
     systemPrompt: "",
@@ -948,16 +949,35 @@
     const userRole = (context && context.userRole) || (state.currentUser?.role ? ` (${state.currentUser.role})` : "");
     const repos = (context && context.activeRepos) || Array.from(state.selectedRepos.keys());
 
-    // Selective active Notion pages will be implemented later; for now all Notion workspace docs are available
-    // const notion = (context && context.activeNotionPages) || Array.from(state.selectedNotionPages.values()).map(p => p.title || p.id);
-
+    let activeReposStr = "None configured";
     const activeRepoList = Array.isArray(repos) ? repos : [];
+    if (activeRepoList.length > 0) {
+      activeReposStr = activeRepoList
+        .map(r => (typeof r === "string" ? (state.selectedRepos.get(r) ? `${r} (${state.selectedRepos.get(r)})` : r) : r.description ? `${r.name} (${r.description})` : r.name))
+        .join(", ");
+    }
+
+    let activeNotionStr = "All workspace documentation accessible";
+    const activePages = (context && context.activeNotionPages) || Array.from(state.selectedNotionPages.values());
+    if (activePages && activePages.length > 0) {
+      const formatted = activePages.map(p => {
+        if (typeof p === "string") return p;
+        const icon = p.icon || (p.type === "database" ? "🗄️" : "📄");
+        const title = p.title || p.id || "Untitled";
+        const desc = p.description ? ` (${p.description})` : "";
+        const typeBadge = p.type === "database" ? " [Database]" : "";
+        return `${icon} ${title}${typeBadge}${desc}`;
+      }).filter(Boolean);
+      if (formatted.length > 0) {
+        activeNotionStr = formatted.join(", ");
+      }
+    }
 
     return `You are my Team Assistant and Engineering Co-Pilot helping me understand and navigate the context of our team's work.
 
 Current User: ${userName}${userRole}
-Active Repositories: ${activeRepoList.length > 0 ? activeRepoList.join(", ") : "None configured"}
-Notion Workspace: All workspace documentation accessible (selective active Notion pages will be implemented later)
+Active Repositories: ${activeReposStr}
+Active Notion Resources: ${activeNotionStr}
 
 Please assist me throughout our work by using the \`my-team-context-mcp-server\` tools:
 1. Team Knowledge & Skills: Query our vector knowledge base with \`skills_search\` and \`get_skills\` to retrieve relevant engineering procedures, guidelines, and playbooks.
@@ -997,7 +1017,8 @@ Please confirm you are ready to assist with our team context and give a brief gr
             url: n.url || "",
             description: n.description || "",
             lastEditedTime: n.lastEditedTime || "",
-            icon: n.icon || "📄",
+            icon: n.icon || (n.type === "database" ? "🗄️" : "📄"),
+            type: n.type === "database" ? "database" : "page",
           });
         }
       });
@@ -2285,7 +2306,7 @@ Please confirm you are ready to assist with our team context and give a brief gr
           <span style="font-size:32px;">📝</span>
           <h4 style="margin:8px 0 4px;font-size:15px;">Notion Workspace Not Connected</h4>
           <p style="color:var(--muted);font-size:12.5px;max-width:440px;margin:0 auto 16px;">
-            Configure your Notion Internal Integration Token in the Credentials tab to load and select active Notion pages.
+            Configure your Notion Internal Integration Token in the Credentials tab to load and select active Notion pages and databases.
           </p>
           <button class="primary" onclick="window._goToCredentialsTab()">⚡ Go to Credentials Tab</button>
         </div>
@@ -2293,49 +2314,88 @@ Please confirm you are ready to assist with our team context and give a brief gr
       return;
     }
 
+    const typeFilter = state.notionResourceTypeFilter || "all";
     const filterText = (state.notionPagesSearch || "").toLowerCase();
+
+    const totalPagesCount = state.notionPages.filter(p => p.type !== "database").length;
+    const totalDbsCount = state.notionPages.filter(p => p.type === "database").length;
+
+    let selectedPagesCount = 0;
+    let selectedDbsCount = 0;
+    state.selectedNotionPages.forEach(p => {
+      if (p.type === "database") selectedDbsCount++;
+      else selectedPagesCount++;
+    });
+
     const filteredPages = state.notionPages.filter(p => {
+      const isDb = p.type === "database";
+      if (typeFilter === "page" && isDb) return false;
+      if (typeFilter === "database" && !isDb) return false;
+
       const title = (p.title || "").toLowerCase();
       const sel = state.selectedNotionPages.get(p.id);
       const desc = sel ? (sel.description || "").toLowerCase() : "";
       return title.includes(filterText) || desc.includes(filterText);
     });
 
+    const selectedSummary = state.selectedNotionPages.size > 0
+      ? `${state.selectedNotionPages.size} of ${state.notionPages.length} selected (${selectedPagesCount} page${selectedPagesCount === 1 ? '' : 's'}, ${selectedDbsCount} database${selectedDbsCount === 1 ? '' : 's'})`
+      : `0 of ${state.notionPages.length} selected`;
+
     container.innerHTML = `
       <div class="card">
         <div class="card-header">
-          <span class="card-title">📝 Select Active Notion Pages</span>
+          <span class="card-title">📝 Select Active Notion Resources</span>
           <span style="font-size:12px;color:var(--muted);">
-            ${state.selectedNotionPages.size} of ${state.notionPages.length} selected
+            ${selectedSummary}
           </span>
         </div>
 
+        <div style="display:flex;gap:6px;margin:0 0 10px;align-items:center;flex-wrap:wrap;">
+          <span style="font-size:12px;color:var(--muted);margin-right:2px;">Resource Type:</span>
+          <button class="sub-pill ${typeFilter === 'all' ? 'active' : ''}" style="font-size:11.5px;padding:3px 8px;" onclick="window._setNotionTypeFilter('all')">
+            All (${state.notionPages.length})
+          </button>
+          <button class="sub-pill ${typeFilter === 'page' ? 'active' : ''}" style="font-size:11.5px;padding:3px 8px;" onclick="window._setNotionTypeFilter('page')">
+            📄 Pages (${totalPagesCount})
+          </button>
+          <button class="sub-pill ${typeFilter === 'database' ? 'active' : ''}" style="font-size:11.5px;padding:3px 8px;" onclick="window._setNotionTypeFilter('database')">
+            🗄️ Databases (${totalDbsCount})
+          </button>
+        </div>
+
         <div class="repo-controls">
-          <input type="text" class="repo-search-input" id="notionSearchInput" placeholder="🔍 Search Notion pages…" value="${esc(state.notionPagesSearch)}" />
-          <button class="secondary" id="selectAllNotionBtn" style="font-size:12px;padding:6px 10px;">Select All</button>
+          <input type="text" class="repo-search-input" id="notionSearchInput" placeholder="🔍 Search Notion pages & databases…" value="${esc(state.notionPagesSearch)}" />
+          <button class="secondary" id="selectAllNotionBtn" style="font-size:12px;padding:6px 10px;">Select All Filtered</button>
           <button class="secondary" id="clearAllNotionBtn" style="font-size:12px;padding:6px 10px;">Clear</button>
           <button class="secondary" id="refreshNotionBtn" style="font-size:12px;padding:6px 10px;">🔄 Refresh</button>
         </div>
 
         <div class="repo-list" id="notionListContainer">
-          ${filteredPages.length === 0 ? '<div class="loading-screen" style="padding:20px 0;"><p>No Notion pages found. Ensure Notion integration token is configured in Credentials tab.</p></div>' : ''}
+          ${filteredPages.length === 0 ? '<div class="loading-screen" style="padding:20px 0;"><p>No Notion resources found matching the criteria. Ensure Notion integration token is configured in Credentials tab and resources are shared.</p></div>' : ''}
           ${filteredPages.map(p => {
             const isSelected = state.selectedNotionPages.has(p.id);
             const selItem = state.selectedNotionPages.get(p.id);
             const desc = selItem ? (selItem.description || "") : "";
+            const isDb = p.type === "database";
+            const icon = p.icon || (isDb ? "🗄️" : "📄");
             const lastEdited = p.lastEditedTime ? new Date(p.lastEditedTime).toLocaleDateString() : "";
+            const propInfo = isDb && p.properties_count ? `<span style="font-size:11px;color:var(--muted);margin-left:4px;">(${p.properties_count} props)</span>` : "";
+
             return `
               <div class="repo-item ${isSelected ? 'selected' : ''}" data-id="${esc(p.id)}">
                 <div class="repo-main-row" onclick="window._toggleNotionPage('${esc(p.id)}')">
                   <input type="checkbox" class="repo-checkbox" ${isSelected ? 'checked' : ''} />
-                  <span style="font-size:15px;line-height:1;">${esc(p.icon || '📄')}</span>
-                  <span class="repo-name">${esc(p.title || 'Untitled Page')}</span>
+                  <span style="font-size:15px;line-height:1;">${esc(icon)}</span>
+                  <span class="repo-name">${esc(p.title || (isDb ? 'Untitled Database' : 'Untitled Page'))}</span>
+                  <span class="badge ${isDb ? 'purple' : 'idle'}" style="font-size:10px;padding:1px 6px;">${isDb ? '🗄️ Database' : '📄 Page'}</span>
+                  ${propInfo}
                   ${lastEdited ? `<span class="badge idle" style="font-size:10.5px;padding:1px 6px;">${esc(lastEdited)}</span>` : ''}
                   ${p.url ? `<a href="${esc(p.url)}" target="_blank" onclick="event.stopPropagation()" style="font-size:12px;color:var(--accent);text-decoration:none;margin-left:4px;" title="Open in Notion">↗</a>` : ''}
                 </div>
                 ${isSelected ? `
                   <div class="repo-desc-box">
-                    <input type="text" placeholder="Custom context description for this page (e.g. Product Requirements Document)" value="${esc(desc)}" oninput="window._updateNotionDesc('${esc(p.id)}', this.value)" />
+                    <input type="text" placeholder="${isDb ? 'Custom context description for this database (e.g. Sprint Tasks tracker or Engineering Roadmap)' : 'Custom context description for this page (e.g. Product Requirements Document)'}" value="${esc(desc)}" oninput="window._updateNotionDesc('${esc(p.id)}', this.value)" />
                   </div>
                 ` : ''}
               </div>
@@ -2351,15 +2411,17 @@ Please confirm you are ready to assist with our team context and give a brief gr
     });
 
     document.getElementById("selectAllNotionBtn")?.addEventListener("click", () => {
-      state.notionPages.forEach(p => {
+      filteredPages.forEach(p => {
         if (p && p.id && !state.selectedNotionPages.has(p.id)) {
+          const isDb = p.type === "database";
           state.selectedNotionPages.set(p.id, {
             id: p.id,
-            title: p.title || "",
+            title: p.title || (isDb ? "Untitled Database" : "Untitled Page"),
             url: p.url || "",
             description: "",
             lastEditedTime: p.lastEditedTime || "",
-            icon: p.icon || "📄",
+            icon: p.icon || (isDb ? "🗄️" : "📄"),
+            type: isDb ? "database" : "page",
           });
         }
       });
@@ -2376,6 +2438,12 @@ Please confirm you are ready to assist with our team context and give a brief gr
     });
   }
 
+  window._setNotionTypeFilter = function(filter) {
+    state.notionResourceTypeFilter = filter;
+    const subContent = document.getElementById("subSessionContent");
+    if (subContent) renderNotionSession(subContent);
+  };
+
   window._goToCredentialsTab = function() {
     switchTopTab("credentials");
   };
@@ -2386,13 +2454,15 @@ Please confirm you are ready to assist with our team context and give a brief gr
     } else {
       const pageObj = state.notionPages.find(p => p.id === pageId);
       if (pageObj) {
+        const isDb = pageObj.type === "database";
         state.selectedNotionPages.set(pageId, {
           id: pageObj.id,
-          title: pageObj.title || "",
+          title: pageObj.title || (isDb ? "Untitled Database" : "Untitled Page"),
           url: pageObj.url || "",
           description: "",
           lastEditedTime: pageObj.lastEditedTime || "",
-          icon: pageObj.icon || "📄",
+          icon: pageObj.icon || (isDb ? "🗄️" : "📄"),
+          type: isDb ? "database" : "page",
         });
       }
     }
@@ -2457,7 +2527,8 @@ Please confirm you are ready to assist with our team context and give a brief gr
       url: n.url || "",
       description: n.description || "",
       lastEditedTime: n.lastEditedTime || "",
-      icon: n.icon || "📄",
+      icon: n.icon || (n.type === "database" ? "🗄️" : "📄"),
+      type: n.type === "database" ? "database" : "page",
     }));
 
     try {

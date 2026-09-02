@@ -204,6 +204,8 @@ const {
   richTextToMarkdown,
   extractPageTitle,
   extractPageIcon,
+  dashedUuid,
+  isUuid,
 } = await import("../src/tools/notion.js");
 assert.equal((await validateNotionKey("")).valid, false, "empty Notion key fails");
 assert.equal((await notionCheckConnection()).connected, false, "unconfigured Notion reports disconnected");
@@ -231,6 +233,12 @@ assert.equal(
   "🎯",
   "extractPageIcon extracts emoji icon",
 );
+assert.equal(
+  dashedUuid("c1f7b889123456789abcdef012345678"),
+  "c1f7b889-1234-5678-9abc-def012345678",
+  "dashedUuid converts raw 32 hex to dashed format",
+);
+assert.equal(isUuid("c1f7b889-1234-5678-9abc-def012345678"), true, "isUuid detects valid UUID");
 
 const { getNotionSkillPointId, formatNotionSkillName } = await import(
   "../src/services/vector-db.js"
@@ -360,11 +368,14 @@ const generatedPrompt = buildTeamContextSystemPrompt({
   userName: "Alice",
   userRole: "Staff Engineer",
   activeRepos: [{ name: "my-org/core-api", description: "Core backend" }],
-  activeNotionPages: [{ id: "p-1", title: "Architecture RFC" }],
+  activeNotionPages: [
+    { id: "p-1", title: "Architecture RFC", description: "RFC Doc" },
+    { id: "db-1", title: "Sprint Tasks", type: "database", description: "Task Tracker" },
+  ],
 });
 assert.ok(generatedPrompt.includes("Current User: Alice (Staff Engineer)"));
-assert.ok(generatedPrompt.includes("Active Repositories: my-org/core-api"));
-assert.ok(generatedPrompt.includes("Notion Workspace: All workspace documentation accessible"));
+assert.ok(generatedPrompt.includes("Active Repositories: my-org/core-api (Core backend)"));
+assert.ok(generatedPrompt.includes("Active Notion Resources: 📄 Architecture RFC (RFC Doc), 🗄️ Sprint Tasks [Database] (Task Tracker)"));
 assert.ok(generatedPrompt.includes("SQL Database Querying: Use `sql_get_schema` and `sql_execute_query`"));
 assert.ok(generatedPrompt.includes("Always ask for explicit user approval before executing any actions that edit or modify data"));
 assert.ok(generatedPrompt.includes("my-team-context-mcp-server"));
