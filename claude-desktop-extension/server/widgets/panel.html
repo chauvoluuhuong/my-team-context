@@ -1838,11 +1838,23 @@ Please confirm you are ready to assist with our team context and give a brief gr
     state.statusType = null;
     state.statusMessage = "";
     const contentArea = document.getElementById("tabContent");
-    if (tab === "config" && (state.repos.length === 0 || state.notionPages.length === 0)) {
+    if (tab === "config") {
       if (contentArea) {
         contentArea.innerHTML = renderLoadingComponent("Loading Application Configuration…", "Fetching active repositories, Notion resources, and prompt settings");
       }
       await loadAppConfigData();
+      if (skillsComponent) {
+        await skillsComponent.loadSkills().catch(() => {});
+      }
+    } else if (tab === "credentials") {
+      if (contentArea) {
+        contentArea.innerHTML = renderLoadingComponent("Loading Connections & Credentials…", "Checking service statuses");
+      }
+      try {
+        const configRes = await app.callServerTool({ name: "panel_load_config", arguments: {} });
+        const cfg = JSON.parse(configRes.content[0].text);
+        state.credentials = cfg.config || {};
+      } catch {}
     }
     render();
   }
@@ -2503,20 +2515,26 @@ Please confirm you are ready to assist with our team context and give a brief gr
     else if (sub === "database") renderDatabaseSession(subContent);
   }
 
-  function switchSubSession(sub) {
+  async function switchSubSession(sub) {
     state.activeSubSession = sub;
-    const subContent = document.getElementById("subSessionContent");
-    if (subContent) {
-      if (sub === "github") renderGitHubSession(subContent);
-      else if (sub === "notion") renderNotionSession(subContent);
-      else if (sub === "skills") renderSkillsSession(subContent);
-      else if (sub === "prompt") renderPromptSession(subContent);
-      else if (sub === "database") renderDatabaseSession(subContent);
-    }
     ["github", "notion", "skills", "prompt", "database"].forEach(s => {
       const el = document.getElementById("pill" + s.charAt(0).toUpperCase() + s.slice(1));
       if (el) el.className = "sub-pill " + (s === sub ? "active" : "");
     });
+    const subContent = document.getElementById("subSessionContent");
+    if (!subContent) return;
+
+    if (sub === "github") {
+      renderGitHubSession(subContent);
+    } else if (sub === "notion") {
+      await window._refreshNotionPages(true);
+    } else if (sub === "skills") {
+      await skillsComponent.mount(subContent, true);
+    } else if (sub === "prompt") {
+      renderPromptSession(subContent);
+    } else if (sub === "database") {
+      renderDatabaseSession(subContent);
+    }
   }
 
   /* Sub-session: Skills & Knowledge Base (Component Mounted) */
@@ -3297,6 +3315,29 @@ Please confirm you are ready to assist with our team context and give a brief gr
         setStatus("ok", "✓ Application configuration saved to Qdrant app-config collection!");
         const ts = document.getElementById("saveTimestamp");
         if (ts) ts.textContent = "Updated: " + new Date().toLocaleTimeString();
+
+        // Always reload fresh authoritative data from server
+        await loadAppConfigData();
+        if (skillsComponent) {
+          await skillsComponent.loadSkills().catch(() => {});
+        }
+        const subContent = document.getElementById("subSessionContent");
+        if (subContent) {
+          if (state.activeSubSession === "github") renderGitHubSession(subContent);
+          else if (state.activeSubSession === "notion") renderNotionSession(subContent);
+          else if (state.activeSubSession === "skills") renderSkillsSession(subContent);
+          else if (state.activeSubSession === "prompt") renderPromptSession(subContent);
+          else if (state.activeSubSession === "database") renderDatabaseSession(subContent);
+        }
+        // Update sub-session pill counts
+        const selectedRepoCount = Array.from(state.selectedRepos.values()).length;
+        const selectedNotionCount = Array.from(state.selectedNotionPages.values()).length;
+        const pillGithub = document.getElementById("pillGithub");
+        if (pillGithub) pillGithub.textContent = `🐙 GitHub (${SERVICES_CATALOG.github.isConfigured() ? selectedRepoCount : 'Inactive'})`;
+        const pillNotion = document.getElementById("pillNotion");
+        if (pillNotion) pillNotion.textContent = `📝 Notion (${SERVICES_CATALOG.notion.isConfigured() ? selectedNotionCount : 'Inactive'})`;
+        const pillSkills = document.getElementById("pillSkills");
+        if (pillSkills) pillSkills.textContent = `🧠 Team Skills (${(state.skills || []).length})`;
       } else {
         setStatus("err", data.message || "Failed to save configuration.");
       }

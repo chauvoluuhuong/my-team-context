@@ -44,9 +44,9 @@ export class SkillsComponent {
     };
   }
 
-  async mount(container) {
+  async mount(container, forceReload = true) {
     this.container = container;
-    if (!this.skills || this.skills.length === 0) {
+    if (forceReload || !this.skills || this.skills.length === 0) {
       await this.loadSkills();
     } else {
       this.render();
