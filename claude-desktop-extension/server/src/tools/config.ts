@@ -14,6 +14,7 @@ import { text, guarded, getDefaultSystemPrompt, RepoContextError } from "../util
 import { whoami, listRepos, listFiles, readFile } from "./github.js";
 import {
   searchNotionPages,
+  listResources,
   fetchNotionPageContent,
   notionCheckConnection,
 } from "./notion.js";
@@ -104,7 +105,8 @@ export function registerConfigTools(server: McpServer): void {
           botName: check.botName,
         };
         if (check.connected) {
-          notionPages = await searchNotionPages({ limit: 100 }).catch(() => []);
+          const res = await listResources().catch(() => ({ resources: [] }));
+          notionPages = res.resources || [];
         }
       } catch (err: unknown) {
         notionError = err instanceof Error ? err.message : String(err);
@@ -214,7 +216,8 @@ export function registerConfigTools(server: McpServer): void {
           botName: check.botName,
         };
         if (check.connected) {
-          notionPages = await searchNotionPages({ limit: 100 }).catch(() => []);
+          const res = await listResources().catch(() => ({ resources: [] }));
+          notionPages = res.resources || [];
         }
       } catch (err: unknown) {
         notionError = err instanceof Error ? err.message : String(err);
@@ -327,7 +330,7 @@ export function registerConfigTools(server: McpServer): void {
           .array(
             z.object({
               id: z.string().min(1).describe("Notion page or database ID"),
-              title: z.string().min(1).describe("Notion resource title"),
+              title: z.string().optional().default("Untitled").describe("Notion resource title"),
               url: z.string().optional().default("").describe("Resource URL"),
               description: z.string().optional().default("").describe("Description or context for this resource"),
               lastEditedTime: z.string().optional().default("").describe("Last edited timestamp"),
@@ -636,7 +639,11 @@ export function registerConfigTools(server: McpServer): void {
       _meta: { ui: { visibility: ["app"] } },
     },
     guarded(async ({ query, limit }: { query?: string; limit?: number }) => {
-      const pages = await searchNotionPages({ query, limit: limit || 500 });
+      const res = await listResources({ query });
+      let pages = res.resources || [];
+      if (limit !== undefined && limit > 0) {
+        pages = pages.slice(0, limit);
+      }
       const pagesWithStatus = await Promise.all(
         pages.map(async (p) => {
           const pointId = getNotionSkillPointId(p.id);
@@ -898,16 +905,17 @@ export function registerConfigTools(server: McpServer): void {
         activeNotionPages: z
           .array(
             z.object({
-              id: z.string().describe("Notion Page ID"),
-              title: z.string().describe("Notion Page Title"),
+              id: z.string().describe("Notion Page or Database ID"),
+              title: z.string().optional().default("Untitled").describe("Notion Resource Title"),
               url: z.string().optional().describe("Page URL"),
-              description: z.string().optional().describe("Description/context notes for this page"),
+              description: z.string().optional().default("").describe("Description/context notes for this resource"),
               lastEditedTime: z.string().optional().describe("Last edited timestamp"),
-              icon: z.string().optional().describe("Page icon"),
+              icon: z.string().optional().describe("Resource icon"),
+              type: z.enum(["page", "database"]).optional().default("page").describe("Resource type: 'page' or 'database'"),
             }),
           )
           .optional()
-          .describe("List of active Notion pages"),
+          .describe("List of active Notion resources (pages and databases) with descriptions and types"),
         systemPrompt: z.string().optional().describe("Markdown system prompt"),
       },
     },

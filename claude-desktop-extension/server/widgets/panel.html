@@ -1311,10 +1311,10 @@ Please confirm you are ready to assist with our team context and give a brief gr
         if (n && n.id) {
           state.selectedNotionPages.set(n.id, {
             id: n.id,
-            title: n.title || "",
+            title: n.title || (n.type === "database" ? "Untitled Database" : "Untitled Page"),
             url: n.url || "",
             description: n.description || "",
-            lastEditedTime: n.lastEditedTime || "",
+            lastEditedTime: n.lastEditedTime || n.last_edited_time || "",
             icon: n.icon || (n.type === "database" ? "🗄️" : "📄"),
             type: n.type === "database" ? "database" : "page",
           });
@@ -3043,6 +3043,24 @@ Please confirm you are ready to assist with our team context and give a brief gr
     const typeFilter = state.notionResourceTypeFilter || "all";
     const filterText = (state.notionPagesSearch || "").toLowerCase();
 
+    // Merge any selected items that might be missing from state.notionPages
+    const existingIds = new Set(state.notionPages.map(p => p.id));
+    state.selectedNotionPages.forEach((item, id) => {
+      if (!existingIds.has(id)) {
+        state.notionPages.push({
+          id: item.id,
+          title: item.title || (item.type === "database" ? "Untitled Database" : "Untitled Page"),
+          url: item.url || "",
+          description: item.description || "",
+          icon: item.icon || (item.type === "database" ? "🗄️" : "📄"),
+          type: item.type === "database" ? "database" : "page",
+          lastEditedTime: item.lastEditedTime || "",
+          last_edited_time: item.lastEditedTime || "",
+        });
+        existingIds.add(id);
+      }
+    });
+
     const totalPagesCount = state.notionPages.filter(p => p.type !== "database").length;
     const totalDbsCount = state.notionPages.filter(p => p.type === "database").length;
 
@@ -3060,7 +3078,7 @@ Please confirm you are ready to assist with our team context and give a brief gr
 
       const title = (p.title || "").toLowerCase();
       const sel = state.selectedNotionPages.get(p.id);
-      const desc = sel ? (sel.description || "").toLowerCase() : "";
+      const desc = sel ? (sel.description || "").toLowerCase() : (p.description || "").toLowerCase();
       return title.includes(filterText) || desc.includes(filterText);
     });
 
@@ -3102,10 +3120,11 @@ Please confirm you are ready to assist with our team context and give a brief gr
           ${filteredPages.map(p => {
             const isSelected = state.selectedNotionPages.has(p.id);
             const selItem = state.selectedNotionPages.get(p.id);
-            const desc = selItem ? (selItem.description || "") : "";
+            const desc = selItem ? (selItem.description || "") : (p.description || "");
             const isDb = p.type === "database";
             const icon = p.icon || (isDb ? "🗄️" : "📄");
-            const lastEdited = p.lastEditedTime ? new Date(p.lastEditedTime).toLocaleDateString() : "";
+            const lastEditedRaw = p.lastEditedTime || p.last_edited_time;
+            const lastEdited = lastEditedRaw ? new Date(lastEditedRaw).toLocaleDateString() : "";
             const propInfo = isDb && p.properties_count ? `<span style="font-size:11px;color:var(--muted);margin-left:4px;">(${p.properties_count} props)</span>` : "";
 
             return `
@@ -3144,8 +3163,8 @@ Please confirm you are ready to assist with our team context and give a brief gr
             id: p.id,
             title: p.title || (isDb ? "Untitled Database" : "Untitled Page"),
             url: p.url || "",
-            description: "",
-            lastEditedTime: p.lastEditedTime || "",
+            description: p.description || "",
+            lastEditedTime: p.lastEditedTime || p.last_edited_time || "",
             icon: p.icon || (isDb ? "🗄️" : "📄"),
             type: isDb ? "database" : "page",
           });
@@ -3185,8 +3204,8 @@ Please confirm you are ready to assist with our team context and give a brief gr
           id: pageObj.id,
           title: pageObj.title || (isDb ? "Untitled Database" : "Untitled Page"),
           url: pageObj.url || "",
-          description: "",
-          lastEditedTime: pageObj.lastEditedTime || "",
+          description: pageObj.description || "",
+          lastEditedTime: pageObj.lastEditedTime || pageObj.last_edited_time || "",
           icon: pageObj.icon || (isDb ? "🗄️" : "📄"),
           type: isDb ? "database" : "page",
         });
@@ -3253,7 +3272,7 @@ Please confirm you are ready to assist with our team context and give a brief gr
 
     const activeNotionPages = Array.from(state.selectedNotionPages.values()).map(n => ({
       id: n.id,
-      title: n.title || "",
+      title: n.title || (n.type === "database" ? "Untitled Database" : "Untitled Page"),
       url: n.url || "",
       description: n.description || "",
       lastEditedTime: n.lastEditedTime || "",

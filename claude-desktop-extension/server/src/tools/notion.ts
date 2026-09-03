@@ -171,11 +171,12 @@ export async function searchAllResources(
   apiKeyOverride?: string,
 ): Promise<any[]> {
   const out: any[] = [];
-  const maxItems = params?.limit || 1000;
+  const maxItems = params?.limit;
   let cursor: string | undefined = undefined;
   do {
+    const pageSize = maxItems ? Math.min(100, maxItems - out.length) : 100;
     const body: Record<string, any> = {
-      page_size: Math.min(100, maxItems - out.length),
+      page_size: pageSize,
       start_cursor: cursor,
     };
     if (params?.query && params.query.trim()) body.query = params.query.trim();
@@ -183,7 +184,7 @@ export async function searchAllResources(
 
     const res = await searchObjects(body, apiKeyOverride);
     out.push(...(res.results || []));
-    cursor = res.has_more && out.length < maxItems ? res.next_cursor : undefined;
+    cursor = res.has_more && (!maxItems || out.length < maxItems) ? res.next_cursor : undefined;
   } while (cursor);
   return out;
 }
@@ -453,7 +454,9 @@ function shapeResource(item: any): NotionResourceItem {
     archived: Boolean(item.archived),
     description,
     created_time: item.created_time || null,
+    createdTime: item.created_time || null,
     last_edited_time: item.last_edited_time || null,
+    lastEditedTime: item.last_edited_time || null,
     properties_count: Object.keys(item.properties || {}).length,
   };
 
@@ -1280,7 +1283,9 @@ export async function searchNotionPages(params?: {
     },
   );
 
-  return result.resources.slice(0, params?.limit || 500).map((r) => ({
+  const items = params?.limit !== undefined ? result.resources.slice(0, params.limit) : result.resources;
+
+  return items.map((r) => ({
     id: r.id,
     type: r.type,
     title: r.title,
@@ -2079,12 +2084,17 @@ export function registerNotionTools(server: McpServer): void {
   );
 
   // 2. Discover and list all Notion resources (pages and databases)
+  const listResourcesHandler = guarded(async ({ type, query }: { type?: "page" | "database" | "all"; query?: string }) => {
+    const res = await listResources({ type, query });
+    return text(res);
+  });
+
   server.registerTool(
     "notion_list_resources",
     {
       title: "List Notion Resources",
       description:
-        "Discover and list accessible pages and databases in the connected Notion workspace, with property counts and types.",
+        "Discover and list all accessible pages and databases in the connected Notion workspace, with property counts and types.",
       annotations: { title: "List Notion Resources", readOnlyHint: true },
       inputSchema: {
         type: z
@@ -2097,13 +2107,36 @@ export function registerNotionTools(server: McpServer): void {
           .describe("Optional title search term to filter Notion resources"),
       },
     },
-    guarded(async ({ type, query }: { type?: "page" | "database" | "all"; query?: string }) => {
-      const res = await listResources({ type, query });
-      return text(res);
-    }),
+    listResourcesHandler,
+  );
+
+  server.registerTool(
+    "notion_list_resource",
+    {
+      title: "List Notion Resource",
+      description:
+        "Discover and list all accessible pages and databases in the connected Notion workspace (alias for notion_list_resources).",
+      annotations: { title: "List Notion Resource", readOnlyHint: true },
+      inputSchema: {
+        type: z
+          .enum(["page", "database", "all"])
+          .optional()
+          .describe("Filter resources by type ('page', 'database', or 'all')"),
+        query: z
+          .string()
+          .optional()
+          .describe("Optional title search term to filter Notion resources"),
+      },
+    },
+    listResourcesHandler,
   );
 
   // 3. Schema and filter instructions for a database
+  const filterInstructionsHandler = guarded(async ({ databaseId, refresh }: { databaseId?: string; refresh?: boolean }) => {
+    const instructions = await filterInstructions({ databaseId, refresh });
+    return text(instructions);
+  });
+
   server.registerTool(
     "notion_filter_instructions",
     {
@@ -2122,13 +2155,61 @@ export function registerNotionTools(server: McpServer): void {
           .describe("Force reload schema and options bypassing cache"),
       },
     },
-    guarded(async ({ databaseId, refresh }: { databaseId?: string; refresh?: boolean }) => {
-      const instructions = await filterInstructions({ databaseId, refresh });
-      return text(instructions);
-    }),
+    filterInstructionsHandler,
+  );
+
+  server.registerTool(
+    "notion_filter_instruction",
+    {
+      title: "Get Notion Filter Instruction",
+      description:
+        "Fetch self-describing filter capability document, accepted field values, and search examples for any Notion database (alias for notion_filter_instructions).",
+      annotations: { title: "Get Notion Filter Instruction", readOnlyHint: true },
+      inputSchema: {
+        databaseId: z
+          .string()
+          .optional()
+          .describe("Notion Database ID, title, or URL (defaults to first database in workspace)"),
+        refresh: z
+          .boolean()
+          .optional()
+          .describe("Force reload schema and options bypassing cache"),
+      },
+    },
+    filterInstructionsHandler,
   );
 
   // 4. Get full content of a page or database
+  const getPageHandler = guarded(async ({ pageId, resourceId }: { pageId?: string; resourceId?: string }) => {
+    const id = (pageId || resourceId || "").trim();
+    if (!id) {
+      throw new RepoContextError("pageId or resourceId is required to fetch Notion content.");
+    }
+    const content = await getResourceContent(id);
+    return text(content);
+  });
+
+  server.registerTool(
+    "notion_get_page",
+    {
+      title: "Get Notion Page Content",
+      description:
+        "Fetch full Markdown content and metadata for a Notion page or database, including nested blocks, inline databases formatted as Markdown tables, and comments.",
+      annotations: { title: "Get Notion Page", readOnlyHint: true },
+      inputSchema: {
+        pageId: z
+          .string()
+          .optional()
+          .describe("Notion Page ID, Database ID, URL, or resource title"),
+        resourceId: z
+          .string()
+          .optional()
+          .describe("Alias for pageId: Notion Page ID, Database ID, URL, or resource title"),
+      },
+    },
+    getPageHandler,
+  );
+
   server.registerTool(
     "notion_get_resource_content",
     {
@@ -2139,14 +2220,15 @@ export function registerNotionTools(server: McpServer): void {
       inputSchema: {
         resourceId: z
           .string()
-          .min(1)
+          .optional()
           .describe("Notion Page ID, Database ID, URL, or resource title"),
+        pageId: z
+          .string()
+          .optional()
+          .describe("Alias for resourceId: Notion Page ID, Database ID, URL, or resource title"),
       },
     },
-    guarded(async ({ resourceId }: { resourceId: string }) => {
-      const content = await getResourceContent(resourceId);
-      return text(content);
-    }),
+    getPageHandler,
   );
 
   // 5. Deep schema-aware search

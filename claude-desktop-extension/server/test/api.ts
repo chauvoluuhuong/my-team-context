@@ -240,6 +240,57 @@ assert.equal(
 );
 assert.equal(isUuid("c1f7b889-1234-5678-9abc-def012345678"), true, "isUuid detects valid UUID");
 
+// Tool registration verification
+const { registerNotionTools } = await import("../src/tools/notion.js");
+const fakeMcpServer: any = {
+  registeredTools: new Map<string, any>(),
+  registerTool(name: string, def: any, handler: any) {
+    this.registeredTools.set(name, { def, handler });
+  },
+};
+registerNotionTools(fakeMcpServer);
+assert.ok(fakeMcpServer.registeredTools.has("notion_check_connection"), "registers notion_check_connection");
+assert.ok(fakeMcpServer.registeredTools.has("notion_list_resources"), "registers notion_list_resources");
+assert.ok(fakeMcpServer.registeredTools.has("notion_list_resource"), "registers notion_list_resource alias");
+assert.ok(fakeMcpServer.registeredTools.has("notion_filter_instructions"), "registers notion_filter_instructions");
+assert.ok(fakeMcpServer.registeredTools.has("notion_filter_instruction"), "registers notion_filter_instruction alias");
+assert.ok(fakeMcpServer.registeredTools.has("notion_get_page"), "registers notion_get_page");
+assert.ok(fakeMcpServer.registeredTools.has("notion_get_resource_content"), "registers notion_get_resource_content alias");
+assert.ok(fakeMcpServer.registeredTools.has("notion_search"), "registers notion_search");
+
+// Verify activeNotionPages with type, description, id in save_app_config schema
+const { registerConfigTools } = await import("../src/tools/config.js");
+const configServer: any = {
+  registeredTools: new Map<string, any>(),
+  registerTool(name: string, def: any, handler: any) {
+    this.registeredTools.set(name, { def, handler });
+  },
+};
+registerConfigTools(configServer);
+const saveAppTool = configServer.registeredTools.get("save_app_config");
+assert.ok(saveAppTool, "save_app_config tool registered");
+const parsedActivePages = saveAppTool.def.inputSchema.activeNotionPages.parse([
+  {
+    id: "12345678-1234-1234-1234-123456789abc",
+    type: "database",
+    description: "Active sprint database",
+  },
+  {
+    id: "87654321-4321-4321-4321-cba987654321",
+    title: "Product Specs",
+    type: "page",
+    description: "Core product specification page",
+  },
+]);
+assert.equal(parsedActivePages.length, 2);
+assert.equal(parsedActivePages[0].id, "12345678-1234-1234-1234-123456789abc");
+assert.equal(parsedActivePages[0].type, "database");
+assert.equal(parsedActivePages[0].description, "Active sprint database");
+assert.equal(parsedActivePages[0].title, "Untitled");
+assert.equal(parsedActivePages[1].id, "87654321-4321-4321-4321-cba987654321");
+assert.equal(parsedActivePages[1].type, "page");
+assert.equal(parsedActivePages[1].description, "Core product specification page");
+
 const { getNotionSkillPointId, formatNotionSkillName } = await import(
   "../src/services/vector-db.js"
 );

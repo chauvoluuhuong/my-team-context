@@ -915,11 +915,11 @@ export async function saveAppConfig(
       : existing?.activeNotionPages || []
   ).map((n) => ({
     id: (n.id || "").trim(),
-    title: (n.title || "").trim(),
+    title: (n.title || "Untitled").trim(),
     url: (n.url || "").trim(),
     description: (n.description || "").trim(),
     lastEditedTime: (n.lastEditedTime || "").trim(),
-    icon: (n.icon || "📄").trim(),
+    icon: (n.icon || (n.type === "database" ? "🗄️" : "📄")).trim(),
     type: n.type === "database" ? "database" : "page",
   }));
 
@@ -947,7 +947,7 @@ export async function saveAppConfig(
   let vector: number[];
   try {
     const reposSummary = cleanRepos.map((r) => `${r.name} (${r.description})`).join(", ");
-    const notionSummary = cleanNotionPages.map((n) => `${n.title} (${n.description})`).join(", ");
+    const notionSummary = cleanNotionPages.map((n) => `${n.title} [${n.type || "page"}] (${n.description})`).join(", ");
     const connsSummary = Object.keys(cleanConnections).filter((k) => cleanConnections[k]?.enabled !== false).join(", ");
     const summary = `App config for @${username}. Active repos: ${reposSummary || "none"}. Active Notion pages: ${notionSummary || "none"}. Active connections: ${connsSummary || "none"}.`;
     vector = await generateGeminiEmbedding(summary);

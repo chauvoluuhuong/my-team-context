@@ -67,7 +67,9 @@ export interface NotionResourceItem {
   is_inline?: boolean;
   archived?: boolean;
   created_time?: string | null;
+  createdTime?: string | null;
   last_edited_time?: string | null;
+  lastEditedTime?: string | null;
   properties_count?: number;
   property_names?: string[];
   description?: string | null;
