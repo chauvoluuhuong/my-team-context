@@ -513,6 +513,42 @@ export async function deleteSkill(
 }
 
 /**
+ * Delete all skills/documents in Qdrant knowledge-base originating from a specific source.
+ */
+export async function deleteSkillsBySource(
+  source: string,
+  collectionName: string = KNOWLEDGE_BASE_COLLECTION,
+): Promise<boolean> {
+  if (!source || !source.trim()) return false;
+
+  const { endpoint, apiKey } = await getActiveQdrantConfig();
+  const headers = qdrantHeaders(apiKey);
+
+  try {
+    const res = await fetch(`${endpoint}/collections/${collectionName}/points/delete?wait=true`, {
+      method: "POST",
+      headers,
+      body: JSON.stringify({
+        filter: {
+          must: [
+            {
+              key: "metadata.source",
+              match: {
+                value: source.trim(),
+              },
+            },
+          ],
+        },
+      }),
+    });
+
+    return res.ok;
+  } catch {
+    return false;
+  }
+}
+
+/**
  * Semantic search skills in Qdrant knowledge-base collection using Gemini query embeddings.
  */
 export async function searchSkills(

@@ -9,6 +9,7 @@
 import { z } from "zod";
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { readNotionKey } from "../utils/store.js";
+import { readEnvConfig } from "../utils/env.js";
 import { getAppConfig } from "../services/vector-db.js";
 import { text, guarded, RepoContextError } from "../utils/helpers.js";
 import type {
@@ -45,7 +46,8 @@ export class NotionError extends Error {
 }
 
 export async function getEffectiveNotionKey(): Promise<string | null> {
-  const username = process.env.CURRENT_USER_NAME || process.env.USER_NAME;
+  const env = await readEnvConfig().catch(() => ({} as Record<string, string>));
+  const username = env.CURRENT_USER_NAME || env.USER_NAME || process.env.CURRENT_USER_NAME || process.env.USER_NAME;
   if (username) {
     try {
       const cfg = await getAppConfig(username);

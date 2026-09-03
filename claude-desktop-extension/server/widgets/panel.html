@@ -2251,25 +2251,25 @@ Please confirm you are ready to assist with our team context and give a brief gr
     });
 
     try {
-      let res;
+      // 1. If qdrant or gemini, update bootstrap credentials in .env/keychain
       if (serviceId === "qdrant" || serviceId === "gemini") {
         const updatedCreds = { ...state.credentials, ...serviceCreds };
-        res = await app.callServerTool({
+        await app.callServerTool({
           name: "panel_save_all_credentials",
           arguments: updatedCreds
-        });
-      } else {
-        // Save to appConfig, NOT .env!
-        res = await app.callServerTool({
-          name: "panel_save_connection",
-          arguments: {
-            username: state.currentUser?.name || undefined,
-            service: serviceId,
-            credentials: serviceCreds,
-            enabled: true,
-          }
-        });
+        }).catch(err => console.warn("Bootstrap env save warning:", err));
       }
+
+      // 2. ALWAYS save connection and its credentials into appConfig for ALL services!
+      const res = await app.callServerTool({
+        name: "panel_save_connection",
+        arguments: {
+          username: state.currentUser?.name || undefined,
+          service: serviceId,
+          credentials: serviceCreds,
+          enabled: true,
+        }
+      });
       const data = JSON.parse(res.content[0].text);
       if (data.status === "ok") {
         Object.assign(state.credentials, serviceCreds);
@@ -2324,7 +2324,7 @@ Please confirm you are ready to assist with our team context and give a brief gr
     // Render immediately for instant toggle response
     render();
 
-    if (state.connections?.[serviceId] && serviceId !== "qdrant" && serviceId !== "gemini") {
+    if (state.connections?.[serviceId]) {
       try {
         await app.callServerTool({
           name: "panel_save_connection",
@@ -2345,17 +2345,25 @@ Please confirm you are ready to assist with our team context and give a brief gr
     const meta = SERVICES_CATALOG[serviceId];
     if (!meta) return;
 
-    if (!confirm(`Disconnect ${meta.name}? This will remove its connection and credentials from appConfig.`)) {
-      return;
-    }
-
-    // Optimistically remove and re-render immediately
+    // 1. Remove connection and credentials from local state immediately
     if (state.connections) delete state.connections[serviceId];
     meta.fields.forEach(f => { delete state.credentials[f.key]; });
     state.disabledConnections.delete(serviceId);
     delete state.connectionBadges[serviceId];
+
+    // 2. Clean up local data of this service
+    if (serviceId === "github") {
+      state.activeRepos = [];
+      state.allRepos = [];
+      state.repos = [];
+    } else if (serviceId === "notion") {
+      state.activeNotionPages = [];
+      state.notionPages = [];
+    }
+
+    // 3. Render immediately
     render();
-    setStatus(null, `Disconnecting ${meta.name}…`);
+    setStatus(null, `Disconnecting ${meta.name} and clearing data…`);
 
     try {
       if (serviceId === "qdrant" || serviceId === "gemini") {
@@ -2364,19 +2372,19 @@ Please confirm you are ready to assist with our team context and give a brief gr
         await app.callServerTool({
           name: "panel_save_all_credentials",
           arguments: updatedCreds
-        });
-      } else {
-        // Remove from appConfig
-        await app.callServerTool({
-          name: "panel_remove_connection",
-          arguments: {
-            username: state.currentUser?.name || undefined,
-            service: serviceId,
-          }
-        });
+        }).catch(() => {});
       }
 
-      setStatus("ok", `✓ Disconnected ${meta.name} and removed from appConfig.`);
+      // Remove from appConfig and clean up all data in Qdrant database
+      await app.callServerTool({
+        name: "panel_remove_connection",
+        arguments: {
+          username: state.currentUser?.name || undefined,
+          service: serviceId,
+        }
+      });
+
+      setStatus("ok", `✓ Disconnected ${meta.name} and removed all data from database.`);
       loadAppConfigData().then(() => render()).catch(() => {});
     } catch (err) {
       setStatus("err", `Failed to disconnect ${meta.name}: ${err.message}`);

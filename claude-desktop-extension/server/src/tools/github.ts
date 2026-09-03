@@ -19,6 +19,7 @@ import {
   clearActiveRepo,
 } from "../utils/store.js";
 import { RepoContextError, text, guarded } from "../utils/helpers.js";
+import { readEnvConfig } from "../utils/env.js";
 import type {
   ValidateTokenResult,
   WhoamiResult,
@@ -49,7 +50,8 @@ const NO_REPO =
   "the user pick one, or set_active_repo if they already named it.";
 
 async function getEffectiveGitHubToken(): Promise<string | null> {
-  const username = process.env.CURRENT_USER_NAME || process.env.USER_NAME;
+  const env = await readEnvConfig().catch(() => ({} as Record<string, string>));
+  const username = env.CURRENT_USER_NAME || env.USER_NAME || process.env.CURRENT_USER_NAME || process.env.USER_NAME;
   if (username) {
     try {
       const cfg = await getAppConfig(username);

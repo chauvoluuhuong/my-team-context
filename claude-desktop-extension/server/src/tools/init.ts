@@ -40,6 +40,7 @@ import {
   ensureUsersCollection,
   getAppConfig,
   saveAppConfig,
+  deleteSkillsBySource,
 } from "../services/vector-db.js";
 import { sqlCheckConnection, validateSqlConnection } from "./sql.js";
 import { validateGeminiKey, geminiCheckConnection } from "../services/embedding.js";
@@ -493,6 +494,46 @@ export function registerInitTools(server: McpServer): void {
 
       setSessionUser(name, role);
 
+      // Seed bootstrap connections into appConfig.connections
+      try {
+        const existingConfig = await getAppConfig(name).catch(() => null);
+        const connections = existingConfig?.connections || {};
+        const env = await readEnvConfig();
+        let changed = false;
+        if (env.QDRANT_URL && !connections.qdrant) {
+          connections.qdrant = {
+            id: "qdrant",
+            enabled: true,
+            credentials: {
+              QDRANT_URL: env.QDRANT_URL,
+              QDRANT_API_KEY: env.QDRANT_API_KEY || "",
+            },
+            updatedAt: new Date().toISOString(),
+          };
+          changed = true;
+        }
+        if (env.GEMINI_API_KEY && !connections.gemini) {
+          connections.gemini = {
+            id: "gemini",
+            enabled: true,
+            credentials: {
+              GEMINI_API_KEY: env.GEMINI_API_KEY,
+            },
+            updatedAt: new Date().toISOString(),
+          };
+          changed = true;
+        }
+        if (changed || !existingConfig) {
+          await saveAppConfig({
+            username: name,
+            activeRepos: existingConfig?.activeRepos || [],
+            activeNotionPages: existingConfig?.activeNotionPages || [],
+            systemPrompt: existingConfig?.systemPrompt,
+            connections,
+          });
+        }
+      } catch {}
+
       return text({
         success: true,
         user: { name, role },
@@ -532,6 +573,46 @@ export function registerInitTools(server: McpServer): void {
       });
 
       setSessionUser(name, role);
+
+      // Seed bootstrap connections into appConfig.connections
+      try {
+        const existingConfig = await getAppConfig(name).catch(() => null);
+        const connections = existingConfig?.connections || {};
+        const env = await readEnvConfig();
+        let changed = false;
+        if (env.QDRANT_URL && !connections.qdrant) {
+          connections.qdrant = {
+            id: "qdrant",
+            enabled: true,
+            credentials: {
+              QDRANT_URL: env.QDRANT_URL,
+              QDRANT_API_KEY: env.QDRANT_API_KEY || "",
+            },
+            updatedAt: new Date().toISOString(),
+          };
+          changed = true;
+        }
+        if (env.GEMINI_API_KEY && !connections.gemini) {
+          connections.gemini = {
+            id: "gemini",
+            enabled: true,
+            credentials: {
+              GEMINI_API_KEY: env.GEMINI_API_KEY,
+            },
+            updatedAt: new Date().toISOString(),
+          };
+          changed = true;
+        }
+        if (changed || !existingConfig) {
+          await saveAppConfig({
+            username: name,
+            activeRepos: existingConfig?.activeRepos || [],
+            activeNotionPages: existingConfig?.activeNotionPages || [],
+            systemPrompt: existingConfig?.systemPrompt,
+            connections,
+          });
+        }
+      } catch {}
 
       return text({
         success: true,
@@ -775,31 +856,47 @@ export function registerInitTools(server: McpServer): void {
       const existing = await getAppConfig(username).catch(() => null);
       const connections = existing?.connections || {};
 
+      // 1. Remove service from appConfig connections
       delete connections[args.service];
 
-      await saveAppConfig({
-        username,
-        activeRepos: existing?.activeRepos || [],
-        activeNotionPages: existing?.activeNotionPages || [],
-        systemPrompt: existing?.systemPrompt,
-        connections,
-      });
+      // 2. Remove associated service data in database and appConfig
+      let activeRepos = existing?.activeRepos || [];
+      let activeNotionPages = existing?.activeNotionPages || [];
 
-      // Clear any legacy env / keychain
       if (args.service === "github") {
+        activeRepos = [];
+        await deleteSkillsBySource("repo").catch(() => {});
+        await deleteSkillsBySource("github").catch(() => {});
         await clearToken();
         await writeEnvConfig({ GITHUB_TOKEN: "" });
       } else if (args.service === "notion") {
+        activeNotionPages = [];
+        await deleteSkillsBySource("notion").catch(() => {});
         await clearNotionKey();
         await writeEnvConfig({ NOTION_API_KEY: "" });
       } else if (args.service === "sql") {
         await clearSqlConnectionString();
         await writeEnvConfig({ DATABASE_URL: "" });
+      } else if (args.service === "qdrant") {
+        await clearQdrantConfig();
+        await writeEnvConfig({ QDRANT_URL: "", QDRANT_API_KEY: "" });
+      } else if (args.service === "gemini") {
+        await clearGeminiKey();
+        await writeEnvConfig({ GEMINI_API_KEY: "" });
       }
+
+      // 3. Persist cleaned appConfig to Qdrant
+      await saveAppConfig({
+        username,
+        activeRepos,
+        activeNotionPages,
+        systemPrompt: existing?.systemPrompt,
+        connections,
+      });
 
       return text({
         status: "ok",
-        message: `Connection ${args.service} removed from appConfig successfully.`,
+        message: `Connection ${args.service} and its data removed from appConfig and database successfully.`,
         connections,
       });
     }),

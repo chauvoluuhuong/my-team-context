@@ -6,12 +6,29 @@
  */
 
 import { readGeminiKey } from "../utils/store.js";
+import { readEnvConfig } from "../utils/env.js";
+import { getAppConfig } from "./vector-db.js";
 import { RepoContextError } from "../utils/helpers.js";
 import type { ValidateGeminiResult, GeminiStatusResult } from "../tools/types.js";
 
 export const GEMINI_EMBEDDING_MODEL = "gemini-embedding-2";
 export const GEMINI_VECTOR_SIZE = 3072;
 const GEMINI_API_BASE = "https://generativelanguage.googleapis.com/v1beta";
+
+export async function getEffectiveGeminiKey(): Promise<string | null> {
+  const env = await readEnvConfig().catch(() => ({} as Record<string, string>));
+  const username = env.CURRENT_USER_NAME || env.USER_NAME || process.env.CURRENT_USER_NAME || process.env.USER_NAME;
+  if (username) {
+    try {
+      const cfg = await getAppConfig(username);
+      const conn = cfg?.connections?.gemini;
+      if (conn && conn.enabled !== false && conn.credentials?.GEMINI_API_KEY) {
+        return conn.credentials.GEMINI_API_KEY.trim();
+      }
+    } catch {}
+  }
+  return readGeminiKey();
+}
 
 /**
  * Validate a Gemini API key against Google Generative Language API.
@@ -61,7 +78,7 @@ export async function validateGeminiKey(apiKey: string): Promise<ValidateGeminiR
  * Check the connection status with stored or provided Gemini API key.
  */
 export async function geminiCheckConnection(apiKeyOverride?: string): Promise<GeminiStatusResult> {
-  const apiKey = apiKeyOverride?.trim() || (await readGeminiKey());
+  const apiKey = apiKeyOverride?.trim() || (await getEffectiveGeminiKey());
   if (!apiKey) {
     return {
       connected: false,
@@ -95,7 +112,7 @@ export async function generateGeminiEmbedding(
     throw new RepoContextError("Cannot generate vector embedding for empty text.");
   }
 
-  const apiKey = apiKeyOverride?.trim() || (await readGeminiKey());
+  const apiKey = apiKeyOverride?.trim() || (await getEffectiveGeminiKey());
   if (!apiKey) {
     throw new RepoContextError(
       "Gemini API key is not configured. Please add your GEMINI_API_KEY in the settings panel to generate embeddings.",

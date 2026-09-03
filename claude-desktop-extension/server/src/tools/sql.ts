@@ -12,6 +12,7 @@ import {
   saveSqlConnectionString,
   clearSqlConnectionString,
 } from "../utils/store.js";
+import { readEnvConfig } from "../utils/env.js";
 import { getAppConfig } from "../services/vector-db.js";
 import { text, guarded, RepoContextError } from "../utils/helpers.js";
 import type { ValidateSqlResult, SqlStatusResult } from "./types.js";
@@ -154,7 +155,8 @@ export async function validateSqlConnection(connectionString: string): Promise<V
 }
 
 export async function getEffectiveSqlConnectionString(): Promise<string | null> {
-  const username = process.env.CURRENT_USER_NAME || process.env.USER_NAME;
+  const env = await readEnvConfig().catch(() => ({} as Record<string, string>));
+  const username = env.CURRENT_USER_NAME || env.USER_NAME || process.env.CURRENT_USER_NAME || process.env.USER_NAME;
   if (username) {
     try {
       const cfg = await getAppConfig(username);
