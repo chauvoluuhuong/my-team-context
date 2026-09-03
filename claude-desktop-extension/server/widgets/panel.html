@@ -1779,7 +1779,7 @@ Please confirm you are ready to assist with our team context and give a brief gr
   function renderMainDashboard() {
     const userName = state.currentUser?.name || "Member";
     const userRole = state.currentUser?.role || "Member";
-    const activeCount = Object.keys(SERVICES_CATALOG).filter(id => SERVICES_CATALOG[id].isConfigured() && !state.disabledConnections.has(id)).length;
+    const activeCount = Object.keys(SERVICES_CATALOG).filter(id => !SERVICES_CATALOG[id].hidden && SERVICES_CATALOG[id].isConfigured() && !state.disabledConnections.has(id)).length;
 
     root.innerHTML = `
       <div class="header">
@@ -1917,6 +1917,7 @@ Please confirm you are ready to assist with our team context and give a brief gr
       name: "Qdrant Vector DB",
       icon: "🧠",
       category: "Vector Storage",
+      hidden: true,
       description: "Store high-dimensional embeddings for fast semantic retrieval and memory.",
       fields: [
         { key: "QDRANT_URL", label: "Cluster Endpoint URL", type: "text", placeholder: "https://xxx.cloud.qdrant.io", help: "Your Qdrant Cloud or local Docker endpoint." },
@@ -1933,6 +1934,7 @@ Please confirm you are ready to assist with our team context and give a brief gr
       name: "Google Gemini Embeddings",
       icon: "✨",
       category: "AI & Embeddings",
+      hidden: true,
       description: "Generates semantic embeddings for code, documentation, and chat context.",
       fields: [
         { key: "GEMINI_API_KEY", label: "Gemini API Key", type: "password", placeholder: "AIzaSy…", help: "Get an API key from Google AI Studio (aistudio.google.com)." }
@@ -1961,7 +1963,7 @@ Please confirm you are ready to assist with our team context and give a brief gr
   /* ------------------- Tab 1: Connections Manager ------------------- */
 
   function renderCredentialsTab(container) {
-    const configuredKeys = Object.keys(SERVICES_CATALOG).filter(id => SERVICES_CATALOG[id].isConfigured());
+    const configuredKeys = Object.keys(SERVICES_CATALOG).filter(id => !SERVICES_CATALOG[id].hidden && SERVICES_CATALOG[id].isConfigured());
 
     let cardsHtml = "";
     if (configuredKeys.length === 0) {
@@ -2082,7 +2084,9 @@ Please confirm you are ready to assist with our team context and give a brief gr
     if (!modalContainer) return;
 
     let catalogCards = "";
-    Object.keys(SERVICES_CATALOG).forEach(id => {
+    Object.keys(SERVICES_CATALOG)
+      .filter(id => !SERVICES_CATALOG[id].hidden)
+      .forEach(id => {
       const item = SERVICES_CATALOG[id];
       const isConfigured = item.isConfigured();
 
