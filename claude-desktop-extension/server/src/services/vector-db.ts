@@ -703,6 +703,7 @@ export async function getAppConfig(
                 icon?: string;
                 type?: string;
               }>;
+              connections?: Record<string, ConnectionConfigItem>;
               systemPrompt?: string;
               createdAt?: string;
               updatedAt?: string;
@@ -786,6 +787,7 @@ export async function getAppConfig(
               icon?: string;
               type?: string;
             }>;
+            connections?: Record<string, ConnectionConfigItem>;
             systemPrompt?: string;
             createdAt?: string;
             updatedAt?: string;

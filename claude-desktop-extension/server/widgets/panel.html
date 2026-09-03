@@ -1273,7 +1273,10 @@ Please confirm you are ready to assist with our team context and give a brief gr
 
   async function loadAppConfigData() {
     try {
-      const appStateRes = await app.callServerTool({ name: "config_get_app_state", arguments: {} });
+      const appStateRes = await app.callServerTool({
+        name: "config_get_app_state",
+        arguments: { username: state.currentUser?.name || undefined }
+      });
       const appData = JSON.parse(appStateRes.content[0].text);
 
       state.repos = appData.repos || [];
@@ -1282,7 +1285,9 @@ Please confirm you are ready to assist with our team context and give a brief gr
       state.notionPages = appData.notionPages || [];
 
       const appConfig = appData.appConfig || {};
-      state.connections = appConfig.connections || {};
+      const remoteConns = appConfig.connections || {};
+      // Merge remote connections preserving any locally active state
+      state.connections = Object.assign({}, state.connections, remoteConns);
       state.disabledConnections.clear();
       Object.keys(state.connections).forEach(serviceId => {
         const conn = state.connections[serviceId];
@@ -1329,6 +1334,7 @@ Please confirm you are ready to assist with our team context and give a brief gr
             username: state.currentUser?.name || "admin",
             activeRepos,
             activeNotionPages,
+            connections: state.connections || {},
             systemPrompt: state.systemPrompt,
           },
         }).catch(err => console.warn("Could not auto-persist default system prompt:", err));
@@ -1339,7 +1345,7 @@ Please confirm you are ready to assist with our team context and give a brief gr
       state.createdAt = appConfig.createdAt || "";
       state.updatedAt = appConfig.updatedAt || "";
     } catch (err) {
-      console.error("Failed to load app config data:", err);
+      console.warn("Could not load full app config data:", err);
     }
   }
 
@@ -1862,6 +1868,19 @@ Please confirm you are ready to assist with our team context and give a brief gr
 
   /* ------------------- Services Catalog & Connection Definitions ------------------- */
 
+  function isServiceConfigured(id) {
+    const conn = state.connections?.[id];
+    if (conn && conn.credentials) {
+      const hasCred = Object.values(conn.credentials).some(v => Boolean(v && String(v).trim()));
+      if (hasCred) return true;
+    }
+    const meta = SERVICES_CATALOG[id];
+    if (meta && meta.fields) {
+      return meta.fields.some(f => Boolean(state.credentials?.[f.key] && String(state.credentials[f.key]).trim()));
+    }
+    return false;
+  }
+
   const SERVICES_CATALOG = {
     github: {
       id: "github",
@@ -1872,7 +1891,7 @@ Please confirm you are ready to assist with our team context and give a brief gr
       fields: [
         { key: "GITHUB_TOKEN", label: "Personal Access Token", type: "password", placeholder: "ghp_… or github_pat_…", help: "Classic token with 'repo' scope or fine-grained PAT." }
       ],
-      isConfigured: () => Boolean(state.connections?.github?.credentials?.GITHUB_TOKEN || state.credentials?.GITHUB_TOKEN),
+      isConfigured: () => isServiceConfigured("github"),
       getDetail: () => {
         const count = state.repos?.length || 0;
         return count > 0 ? `${count} active repositories indexed` : "Ready to index repositories";
@@ -1887,7 +1906,7 @@ Please confirm you are ready to assist with our team context and give a brief gr
       fields: [
         { key: "NOTION_API_KEY", label: "Internal Integration Token", type: "password", placeholder: "secret_…", help: "Create at notion.so/my-integrations and share workspace pages with your integration bot." }
       ],
-      isConfigured: () => Boolean(state.connections?.notion?.credentials?.NOTION_API_KEY || state.credentials?.NOTION_API_KEY),
+      isConfigured: () => isServiceConfigured("notion"),
       getDetail: () => {
         if (state.notionBotName) return `Bot: ${state.notionBotName} (${state.notionPages?.length || 0} resources)`;
         return state.notionPages?.length ? `${state.notionPages.length} resources synced` : "Workspace connected";
@@ -1903,7 +1922,7 @@ Please confirm you are ready to assist with our team context and give a brief gr
         { key: "QDRANT_URL", label: "Cluster Endpoint URL", type: "text", placeholder: "https://xxx.cloud.qdrant.io", help: "Your Qdrant Cloud or local Docker endpoint." },
         { key: "QDRANT_API_KEY", label: "API Key (Optional for local)", type: "password", placeholder: "Qdrant API Key", help: "Required for Qdrant Cloud clusters." }
       ],
-      isConfigured: () => Boolean(state.credentials?.QDRANT_URL),
+      isConfigured: () => isServiceConfigured("qdrant"),
       getDetail: () => {
         const url = state.credentials?.QDRANT_URL || "";
         return url ? url.replace(/^https?:\/\//, "").split(":")[0] : "Vector cluster configured";
@@ -1918,7 +1937,7 @@ Please confirm you are ready to assist with our team context and give a brief gr
       fields: [
         { key: "GEMINI_API_KEY", label: "Gemini API Key", type: "password", placeholder: "AIzaSy…", help: "Get an API key from Google AI Studio (aistudio.google.com)." }
       ],
-      isConfigured: () => Boolean(state.credentials?.GEMINI_API_KEY || state.connections?.gemini?.credentials?.GEMINI_API_KEY),
+      isConfigured: () => isServiceConfigured("gemini"),
       getDetail: () => "text-embedding-004 model active"
     },
     sql: {
@@ -1930,7 +1949,7 @@ Please confirm you are ready to assist with our team context and give a brief gr
       fields: [
         { key: "DATABASE_URL", label: "Connection URI", type: "password", placeholder: "postgresql://user:pass@host:5432/dbname", help: "Format: postgresql://... or mysql://..." }
       ],
-      isConfigured: () => Boolean(state.connections?.sql?.credentials?.DATABASE_URL || state.credentials?.DATABASE_URL),
+      isConfigured: () => isServiceConfigured("sql"),
       getDetail: () => {
         const uri = state.connections?.sql?.credentials?.DATABASE_URL || state.credentials?.DATABASE_URL || "";
         const proto = uri.split("://")[0] || "SQL";
@@ -2244,6 +2263,7 @@ Please confirm you are ready to assist with our team context and give a brief gr
         res = await app.callServerTool({
           name: "panel_save_connection",
           arguments: {
+            username: state.currentUser?.name || undefined,
             service: serviceId,
             credentials: serviceCreds,
             enabled: true,
@@ -2262,10 +2282,17 @@ Please confirm you are ready to assist with our team context and give a brief gr
         };
         state.disabledConnections.delete(serviceId);
         state.connectionBadges[serviceId] = { type: "ok", text: "✓ Connected" };
+
+        // 1. Close modal and RENDER IMMEDIATELY so the card is visible without any delay
         window._closeConnModal();
-        await loadAppConfigData();
         render();
         setStatus("ok", `✓ ${meta.name} connection saved to appConfig!`);
+
+        // 2. Refresh repos/notion pages in background without blocking UI
+        loadAppConfigData().then(() => {
+          render();
+        }).catch(err => console.warn("Background config reload warning:", err));
+
         return;
       } else {
         setStatus("err", data.message || `Failed to save ${meta.name} connection.`);
@@ -2294,11 +2321,15 @@ Please confirm you are ready to assist with our team context and give a brief gr
       setStatus(null, `Disabled ${meta?.name || serviceId}.`);
     }
 
+    // Render immediately for instant toggle response
+    render();
+
     if (state.connections?.[serviceId] && serviceId !== "qdrant" && serviceId !== "gemini") {
       try {
         await app.callServerTool({
           name: "panel_save_connection",
           arguments: {
+            username: state.currentUser?.name || undefined,
             service: serviceId,
             credentials: state.connections[serviceId].credentials || {},
             enabled: !isDisabled,
@@ -2308,7 +2339,6 @@ Please confirm you are ready to assist with our team context and give a brief gr
         console.warn("Could not sync toggle to appConfig:", e);
       }
     }
-    render();
   };
 
   window._disconnectConnection = async function(serviceId) {
@@ -2318,6 +2348,14 @@ Please confirm you are ready to assist with our team context and give a brief gr
     if (!confirm(`Disconnect ${meta.name}? This will remove its connection and credentials from appConfig.`)) {
       return;
     }
+
+    // Optimistically remove and re-render immediately
+    if (state.connections) delete state.connections[serviceId];
+    meta.fields.forEach(f => { delete state.credentials[f.key]; });
+    state.disabledConnections.delete(serviceId);
+    delete state.connectionBadges[serviceId];
+    render();
+    setStatus(null, `Disconnecting ${meta.name}…`);
 
     try {
       if (serviceId === "qdrant" || serviceId === "gemini") {
@@ -2331,18 +2369,15 @@ Please confirm you are ready to assist with our team context and give a brief gr
         // Remove from appConfig
         await app.callServerTool({
           name: "panel_remove_connection",
-          arguments: { service: serviceId }
+          arguments: {
+            username: state.currentUser?.name || undefined,
+            service: serviceId,
+          }
         });
       }
 
-      if (state.connections) delete state.connections[serviceId];
-      meta.fields.forEach(f => { delete state.credentials[f.key]; });
-      state.disabledConnections.delete(serviceId);
-      delete state.connectionBadges[serviceId];
-
-      await loadAppConfigData();
-      render();
       setStatus("ok", `✓ Disconnected ${meta.name} and removed from appConfig.`);
+      loadAppConfigData().then(() => render()).catch(() => {});
     } catch (err) {
       setStatus("err", `Failed to disconnect ${meta.name}: ${err.message}`);
     }

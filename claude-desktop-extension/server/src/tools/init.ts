@@ -720,15 +720,16 @@ export function registerInitTools(server: McpServer): void {
       description: "Internal: save or update a connection and its credentials in appConfig (not in environment variables).",
       annotations: { title: "Save Connection", readOnlyHint: false },
       inputSchema: {
+        username: z.string().optional().describe("Target username"),
         service: z.string().describe("Target service name (e.g. github, notion, sql)"),
-        credentials: z.record(z.string()).describe("Service credentials"),
+        credentials: z.record(z.string(), z.string()).describe("Service credentials"),
         enabled: z.boolean().optional().default(true).describe("Whether connection is enabled"),
       },
       _meta: { ui: { visibility: ["app"] } },
     },
-    guarded(async (args: { service: string; credentials: Record<string, string>; enabled?: boolean }) => {
+    guarded(async (args: { username?: string; service: string; credentials: Record<string, string>; enabled?: boolean }) => {
       const envConfig = await readEnvConfig();
-      const username = envConfig.CURRENT_USER_NAME || envConfig.USER_NAME || getSessionUser() || "admin";
+      const username = args.username?.trim() || envConfig.CURRENT_USER_NAME || envConfig.USER_NAME || getSessionUser() || "admin";
       const existing = await getAppConfig(username).catch(() => null);
       const connections = existing?.connections || {};
 
@@ -763,13 +764,14 @@ export function registerInitTools(server: McpServer): void {
       description: "Internal: remove a connection from appConfig and clean up its credentials.",
       annotations: { title: "Remove Connection", readOnlyHint: false },
       inputSchema: {
+        username: z.string().optional().describe("Target username"),
         service: z.string().describe("Target service name (e.g. github, notion, sql)"),
       },
       _meta: { ui: { visibility: ["app"] } },
     },
-    guarded(async (args: { service: string }) => {
+    guarded(async (args: { username?: string; service: string }) => {
       const envConfig = await readEnvConfig();
-      const username = envConfig.CURRENT_USER_NAME || envConfig.USER_NAME || getSessionUser() || "admin";
+      const username = args.username?.trim() || envConfig.CURRENT_USER_NAME || envConfig.USER_NAME || getSessionUser() || "admin";
       const existing = await getAppConfig(username).catch(() => null);
       const connections = existing?.connections || {};
 

@@ -18,6 +18,7 @@ import {
   notionCheckConnection,
 } from "./notion.js";
 import { getAuthState, getSessionUser } from "./init.js";
+import { readEnvConfig } from "../utils/env.js";
 import {
   getAppConfig,
   saveAppConfig,
@@ -40,6 +41,12 @@ async function resolveEffectiveUsername(providedUsername?: string): Promise<stri
   const sessionUser = getSessionUser();
   if (sessionUser && sessionUser.trim()) {
     return sessionUser.trim();
+  }
+
+  const env = await readEnvConfig().catch(() => ({} as Record<string, string>));
+  const envUser = env.CURRENT_USER_NAME || env.USER_NAME || process.env.CURRENT_USER_NAME || process.env.USER_NAME;
+  if (envUser && envUser.trim()) {
+    return envUser.trim();
   }
 
   const gh = await whoami().catch(() => ({ authenticated: false, login: undefined }));
@@ -120,12 +127,14 @@ export function registerConfigTools(server: McpServer): void {
           username,
           activeRepos: [],
           activeNotionPages: [],
+          connections: {},
           systemPrompt: defaultPrompt,
         }).catch(() => ({
           id: "",
           username,
           activeRepos: [],
           activeNotionPages: [],
+          connections: {},
           systemPrompt: defaultPrompt,
           createdAt: new Date().toISOString(),
           updatedAt: new Date().toISOString(),
@@ -136,6 +145,7 @@ export function registerConfigTools(server: McpServer): void {
           username,
           activeRepos: appConfig.activeRepos,
           activeNotionPages: appConfig.activeNotionPages,
+          connections: appConfig.connections || {},
           systemPrompt: defaultPrompt,
         }).catch(() => {});
       }
@@ -153,7 +163,7 @@ export function registerConfigTools(server: McpServer): void {
         auth,
         appConfig: {
           ...appConfig,
-          systemPrompt: appConfig.systemPrompt || defaultPrompt,
+          systemPrompt: appConfig?.systemPrompt || defaultPrompt,
         },
         defaultSystemPrompt: defaultPrompt,
         repos,
@@ -227,12 +237,14 @@ export function registerConfigTools(server: McpServer): void {
           username,
           activeRepos: [],
           activeNotionPages: [],
+          connections: {},
           systemPrompt: defaultPrompt,
         }).catch(() => ({
           id: "",
           username,
           activeRepos: [],
           activeNotionPages: [],
+          connections: {},
           systemPrompt: defaultPrompt,
           createdAt: new Date().toISOString(),
           updatedAt: new Date().toISOString(),
@@ -243,6 +255,7 @@ export function registerConfigTools(server: McpServer): void {
           username,
           activeRepos: appConfig.activeRepos,
           activeNotionPages: appConfig.activeNotionPages,
+          connections: appConfig.connections || {},
           systemPrompt: defaultPrompt,
         }).catch(() => {});
       }
@@ -260,7 +273,7 @@ export function registerConfigTools(server: McpServer): void {
         auth,
         appConfig: {
           ...appConfig,
-          systemPrompt: appConfig.systemPrompt || defaultPrompt,
+          systemPrompt: appConfig?.systemPrompt || defaultPrompt,
         },
         defaultSystemPrompt: defaultPrompt,
         repos,
@@ -324,7 +337,7 @@ export function registerConfigTools(server: McpServer): void {
           )
           .optional()
           .describe("Selected active Notion resources (pages and databases)"),
-        connections: z.record(z.any()).optional().describe("Configured service connections and credentials"),
+        connections: z.record(z.string(), z.any()).optional().describe("Configured service connections and credentials"),
         systemPrompt: z.string().optional().describe("Custom system prompt in Markdown"),
       },
       _meta: { ui: { visibility: ["app"] } },

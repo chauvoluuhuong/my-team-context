@@ -452,7 +452,7 @@ export interface AppConfigItem {
   username: string;
   activeRepos: ActiveRepoConfigItem[];
   activeNotionPages: ActiveNotionPageConfigItem[];
-  connections: Record<string, ConnectionConfigItem>;
+  connections?: Record<string, ConnectionConfigItem>;
   systemPrompt: string;
   createdAt: string;
   updatedAt: string;
