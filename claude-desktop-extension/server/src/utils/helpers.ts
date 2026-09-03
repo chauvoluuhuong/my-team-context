@@ -181,4 +181,5 @@ export function getDefaultSystemPrompt(options?: SystemPromptContextOptions): st
 }
 
 export * from "./notion-guide.js";
+export * from "./github-guide.js";
 

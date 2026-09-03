@@ -667,6 +667,17 @@ export function getNotionGuideSkillPointId(username: string = "default"): string
 }
 
 /**
+ * Generate deterministic UUID for the "How to use GitHub tools" guide skill in Qdrant.
+ */
+export function getGitHubGuideSkillPointId(username: string = "default"): string {
+  const hash = crypto
+    .createHash("md5")
+    .update(`github-guide-skill:${username.trim().toLowerCase()}`)
+    .digest("hex");
+  return `${hash.slice(0, 8)}-${hash.slice(8, 12)}-${hash.slice(12, 16)}-${hash.slice(16, 20)}-${hash.slice(20, 32)}`;
+}
+
+/**
  * Generate deterministic UUID for a user document in Qdrant users collection.
  */
 export function getUserPointId(name: string): string {

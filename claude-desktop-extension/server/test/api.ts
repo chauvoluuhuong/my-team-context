@@ -287,6 +287,32 @@ assert.ok(sampleSkillContent.includes("Architecture RFC"), "includes active page
 assert.ok(sampleSkillContent.includes("Engineering Roadmap"), "includes active database");
 assert.ok(sampleSkillContent.includes("Filter Instructions for \"Engineering Roadmap\""), "includes filter instructions section");
 
+// GitHub Guide Skill tests
+const { getGitHubGuideSkillPointId } = await import("../src/services/vector-db.js");
+const ghPointId1 = getGitHubGuideSkillPointId("alice");
+const ghPointId2 = getGitHubGuideSkillPointId("ALICE");
+assert.equal(ghPointId1, ghPointId2, "github guide point ID is deterministic and case-insensitive");
+assert.match(ghPointId1, /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/);
+
+const { buildGitHubGuideSkillContent } = await import("../src/utils/github-guide.js");
+const sampleGhSkillContent = await buildGitHubGuideSkillContent([
+  {
+    name: "acme/web-frontend",
+    description: "Core React and TypeScript web app",
+  },
+  {
+    name: "acme/backend-api",
+    description: "Go REST microservices",
+  },
+]);
+assert.ok(sampleGhSkillContent.includes("# How to use GitHub tools"), "github skill title present");
+assert.ok(sampleGhSkillContent.includes("repo_overview"), "references repo_overview");
+assert.ok(sampleGhSkillContent.includes("list_repo_files"), "references list_repo_files");
+assert.ok(sampleGhSkillContent.includes("read_repo_file"), "references read_repo_file");
+assert.ok(sampleGhSkillContent.includes("search_repo_code"), "references search_repo_code");
+assert.ok(sampleGhSkillContent.includes("acme/web-frontend"), "includes active frontend repo");
+assert.ok(sampleGhSkillContent.includes("acme/backend-api"), "includes active backend repo");
+
 // Verify activeNotionPages with type, description, id in save_app_config schema
 const { registerConfigTools } = await import("../src/tools/config.js");
 const configServer: any = {

@@ -21,6 +21,7 @@ import {
 import { getAuthState, getSessionUser } from "./init.js";
 import { readEnvConfig } from "../utils/env.js";
 import { syncNotionGuideSkill } from "../utils/notion-guide.js";
+import { syncGitHubGuideSkill } from "../utils/github-guide.js";
 import {
   getAppConfig,
   saveAppConfig,
@@ -369,11 +370,17 @@ export function registerConfigTools(server: McpServer): void {
           systemPrompt,
         });
 
-        // Automatically sync the "How to use Notion tools" skill into Qdrant
-        await syncNotionGuideSkill({
-          username,
-          activeNotionPages: saved.activeNotionPages,
-        }).catch((err) => console.warn("Failed to sync Notion guide skill:", err));
+        // Automatically sync the "How to use Notion tools" and "How to use GitHub tools" skills into Qdrant
+        await Promise.all([
+          syncNotionGuideSkill({
+            username,
+            activeNotionPages: saved.activeNotionPages,
+          }).catch((err) => console.warn("Failed to sync Notion guide skill:", err)),
+          syncGitHubGuideSkill({
+            username,
+            activeRepos: saved.activeRepos,
+          }).catch((err) => console.warn("Failed to sync GitHub guide skill:", err)),
+        ]);
 
         return text({
           status: "ok",
@@ -946,11 +953,17 @@ export function registerConfigTools(server: McpServer): void {
           systemPrompt,
         });
 
-        // Automatically sync the "How to use Notion tools" skill into Qdrant
-        await syncNotionGuideSkill({
-          username,
-          activeNotionPages: saved.activeNotionPages,
-        }).catch((err) => console.warn("Failed to sync Notion guide skill:", err));
+        // Automatically sync the "How to use Notion tools" and "How to use GitHub tools" skills into Qdrant
+        await Promise.all([
+          syncNotionGuideSkill({
+            username,
+            activeNotionPages: saved.activeNotionPages,
+          }).catch((err) => console.warn("Failed to sync Notion guide skill:", err)),
+          syncGitHubGuideSkill({
+            username,
+            activeRepos: saved.activeRepos,
+          }).catch((err) => console.warn("Failed to sync GitHub guide skill:", err)),
+        ]);
 
         return text({
           status: "ok",
