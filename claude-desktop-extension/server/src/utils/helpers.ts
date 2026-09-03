@@ -108,6 +108,116 @@ export function buildConfigPanel(): string {
 }
 
 
+export interface ConnectionSkillItem {
+  connectionId: string;
+  serviceName: string;
+  skillName: string;
+  description: string;
+  readInstruction: string;
+}
+
+/**
+ * Resolve the guide skill and agent instruction for a specific connection.
+ */
+export function resolveSkillOfConnection(connectionId: string): ConnectionSkillItem | null {
+  const id = connectionId.trim().toLowerCase();
+
+  switch (id) {
+    case "github":
+      return {
+        connectionId: "github",
+        serviceName: "GitHub",
+        skillName: "How to use GitHub tools",
+        description: "Usage guidelines, repository architecture, and code navigation rules",
+        readInstruction:
+          'Before interacting with our codebases or searching code, read the skill "How to use GitHub tools" by calling skills_search({ query: "How to use GitHub tools" }) or get_skills to learn our active repositories, file structures, and code search rules.',
+      };
+
+    case "notion":
+      return {
+        connectionId: "notion",
+        serviceName: "Notion",
+        skillName: "How to use Notion tools",
+        description: "Active pages, databases, and database filter specifications",
+        readInstruction:
+          'Before querying Notion or looking up project documentation, read the skill "How to use Notion tools" by calling skills_search({ query: "How to use Notion tools" }) or get_skills to learn our active documentation resources and exact database filter schemas.',
+      };
+
+    case "sql":
+      return {
+        connectionId: "sql",
+        serviceName: "SQL Database",
+        skillName: "How to use SQL Database tools",
+        description: "Database querying, schema inspection, and safety guidelines",
+        readInstruction:
+          'Before writing or executing database queries, consult the database schema and guidelines using sql_get_schema to inspect table definitions, foreign keys, and query limits.',
+      };
+
+    default:
+      return null;
+  }
+}
+
+/**
+ * Resolve all guide skills for added/active connections.
+ */
+export function resolveConnectionSkills(
+  connections?: Record<string, any> | string[],
+  options?: SystemPromptContextOptions,
+): ConnectionSkillItem[] {
+  const activeIds = new Set<string>();
+
+  // 1. Check connections parameter if provided
+  if (Array.isArray(connections)) {
+    connections.forEach((id) => {
+      if (typeof id === "string" && id.trim()) {
+        activeIds.add(id.trim().toLowerCase());
+      }
+    });
+  } else if (connections && typeof connections === "object") {
+    Object.entries(connections).forEach(([key, conn]) => {
+      if (!conn) return;
+      const id = key.trim().toLowerCase();
+      if (conn.enabled !== false) {
+        const hasCreds =
+          conn.credentials &&
+          typeof conn.credentials === "object" &&
+          Object.values(conn.credentials).some((v) => Boolean(v && String(v).trim()));
+        if (hasCreds || conn.enabled === true) {
+          activeIds.add(id);
+        }
+      }
+    });
+  }
+
+  // 2. Fall back to / augment with active options items
+  if (options?.activeRepos && options.activeRepos.length > 0) {
+    activeIds.add("github");
+  }
+  if (options?.activeNotionPages && options.activeNotionPages.length > 0) {
+    activeIds.add("notion");
+  }
+
+  const result: ConnectionSkillItem[] = [];
+  const orderedIds = ["github", "notion", "sql"];
+
+  for (const id of orderedIds) {
+    if (activeIds.has(id)) {
+      const item = resolveSkillOfConnection(id);
+      if (item) result.push(item);
+    }
+  }
+
+  for (const id of activeIds) {
+    if (!orderedIds.includes(id)) {
+      const item = resolveSkillOfConnection(id);
+      if (item) result.push(item);
+    }
+  }
+
+  return result;
+}
+
 export interface SystemPromptContextOptions {
   userName?: string;
   userRole?: string;
@@ -122,6 +232,7 @@ export interface SystemPromptContextOptions {
         type?: "page" | "database";
       }
   )[];
+  connections?: Record<string, any> | string[];
 }
 
 export function buildTeamContextSystemPrompt(options?: SystemPromptContextOptions): string {
@@ -155,12 +266,23 @@ export function buildTeamContextSystemPrompt(options?: SystemPromptContextOption
     }
   }
 
+  const connectionSkills = resolveConnectionSkills(options?.connections, options);
+
+  let skillsSection = "";
+  if (connectionSkills.length > 0) {
+    const list = connectionSkills
+      .map((s) => `- **${s.skillName}** (${s.serviceName}): ${s.readInstruction}`)
+      .join("\n");
+
+    skillsSection = `\nRequired Connection Skills to Read:\nBased on the connections configured for our team, you MUST read and consult these guide skills in our vector knowledge base before invoking tools for these services:\n${list}\n`;
+  }
+
   return `You are my Team Assistant and Engineering Co-Pilot helping me understand and navigate the context of our team's work.
 
 Current User: ${userName}${userRole}
 Active Repositories: ${activeReposStr}
 Active Notion Resources: ${activeNotionStr}
-
+${skillsSection}
 Please assist me throughout our work by using the \`my-team-context-mcp-server\` tools:
 1. Team Knowledge & Skills: Query our vector knowledge base with \`skills_search\` and \`get_skills\` to retrieve relevant engineering procedures, guidelines, and playbooks.
 2. Codebase Context: Consult our configured GitHub repositories for codebase architecture, style conventions, and implementation patterns.
