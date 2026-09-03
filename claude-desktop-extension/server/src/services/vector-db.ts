@@ -19,6 +19,7 @@ import type {
   ListSkillsResult,
   ActiveRepoConfigItem,
   ActiveNotionPageConfigItem,
+  ConnectionConfigItem,
   AppConfigItem,
   AppConfigPayload,
   TeamUserItem,
@@ -733,6 +734,7 @@ export async function getAppConfig(
             username: p.username || username,
             activeRepos,
             activeNotionPages,
+            connections: (p.connections as Record<string, ConnectionConfigItem>) || {},
             systemPrompt: p.systemPrompt || "",
             createdAt: p.createdAt || new Date().toISOString(),
             updatedAt: p.updatedAt || new Date().toISOString(),
@@ -825,6 +827,7 @@ export async function getAppConfig(
       username: matched.payload.username || username || "",
       activeRepos,
       activeNotionPages,
+      connections: (matched.payload.connections as Record<string, ConnectionConfigItem>) || {},
       systemPrompt: matched.payload.systemPrompt || "",
       createdAt: matched.payload.createdAt || new Date().toISOString(),
       updatedAt: matched.payload.updatedAt || new Date().toISOString(),
@@ -843,6 +846,7 @@ export async function saveAppConfig(
     username: string;
     activeRepos: ActiveRepoConfigItem[];
     activeNotionPages?: ActiveNotionPageConfigItem[];
+    connections?: Record<string, ConnectionConfigItem>;
     systemPrompt?: string;
   },
   collectionName: string = APP_CONFIG_COLLECTION,
@@ -881,6 +885,11 @@ export async function saveAppConfig(
     type: n.type === "database" ? "database" : "page",
   }));
 
+  const cleanConnections: Record<string, ConnectionConfigItem> =
+    params.connections !== undefined
+      ? params.connections
+      : existing?.connections || {};
+
   const systemPrompt =
     params.systemPrompt !== undefined
       ? params.systemPrompt
@@ -890,6 +899,7 @@ export async function saveAppConfig(
     username,
     "active-repos": cleanRepos,
     "active-notion-pages": cleanNotionPages,
+    connections: cleanConnections,
     systemPrompt,
     createdAt,
     updatedAt,
@@ -900,7 +910,8 @@ export async function saveAppConfig(
   try {
     const reposSummary = cleanRepos.map((r) => `${r.name} (${r.description})`).join(", ");
     const notionSummary = cleanNotionPages.map((n) => `${n.title} (${n.description})`).join(", ");
-    const summary = `App config for @${username}. Active repos: ${reposSummary || "none"}. Active Notion pages: ${notionSummary || "none"}.`;
+    const connsSummary = Object.keys(cleanConnections).filter((k) => cleanConnections[k]?.enabled !== false).join(", ");
+    const summary = `App config for @${username}. Active repos: ${reposSummary || "none"}. Active Notion pages: ${notionSummary || "none"}. Active connections: ${connsSummary || "none"}.`;
     vector = await generateGeminiEmbedding(summary);
   } catch {
     vector = new Array(GEMINI_VECTOR_SIZE).fill(0);
@@ -934,6 +945,7 @@ export async function saveAppConfig(
       username,
       activeRepos: cleanRepos,
       activeNotionPages: cleanNotionPages,
+      connections: cleanConnections,
       systemPrompt,
       createdAt,
       updatedAt,

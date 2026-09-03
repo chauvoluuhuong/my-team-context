@@ -324,6 +324,7 @@ export function registerConfigTools(server: McpServer): void {
           )
           .optional()
           .describe("Selected active Notion resources (pages and databases)"),
+        connections: z.record(z.any()).optional().describe("Configured service connections and credentials"),
         systemPrompt: z.string().optional().describe("Custom system prompt in Markdown"),
       },
       _meta: { ui: { visibility: ["app"] } },
@@ -333,11 +334,13 @@ export function registerConfigTools(server: McpServer): void {
         username: inputUsername,
         activeRepos,
         activeNotionPages,
+        connections,
         systemPrompt,
       }: {
         username?: string;
         activeRepos?: ActiveRepoConfigItem[];
         activeNotionPages?: ActiveNotionPageConfigItem[];
+        connections?: Record<string, any>;
         systemPrompt?: string;
       }) => {
         const username = await resolveEffectiveUsername(inputUsername);
@@ -345,6 +348,7 @@ export function registerConfigTools(server: McpServer): void {
           username,
           activeRepos: activeRepos || [],
           activeNotionPages: activeNotionPages || [],
+          connections,
           systemPrompt,
         });
 

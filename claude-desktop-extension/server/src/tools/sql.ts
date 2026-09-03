@@ -12,6 +12,7 @@ import {
   saveSqlConnectionString,
   clearSqlConnectionString,
 } from "../utils/store.js";
+import { getAppConfig } from "../services/vector-db.js";
 import { text, guarded, RepoContextError } from "../utils/helpers.js";
 import type { ValidateSqlResult, SqlStatusResult } from "./types.js";
 
@@ -152,13 +153,27 @@ export async function validateSqlConnection(connectionString: string): Promise<V
   };
 }
 
+export async function getEffectiveSqlConnectionString(): Promise<string | null> {
+  const username = process.env.CURRENT_USER_NAME || process.env.USER_NAME;
+  if (username) {
+    try {
+      const cfg = await getAppConfig(username);
+      const conn = cfg?.connections?.sql;
+      if (conn && conn.enabled !== false && conn.credentials?.DATABASE_URL) {
+        return conn.credentials.DATABASE_URL.trim();
+      }
+    } catch {}
+  }
+  return readSqlConnectionString();
+}
+
 /**
  * Check the connection status with the stored or provided SQL connection string.
  */
 export async function sqlCheckConnection(
   connectionStringOverride?: string,
 ): Promise<SqlStatusResult> {
-  const conn = connectionStringOverride?.trim() || (await readSqlConnectionString());
+  const conn = connectionStringOverride?.trim() || (await getEffectiveSqlConnectionString());
   if (!conn) {
     return {
       connected: false,
@@ -571,7 +586,7 @@ export function registerSqlTools(server: McpServer): void {
       },
     },
     guarded(async ({ connectionString, schema, tables }: { connectionString?: string; schema?: string; tables?: string[] }) => {
-      const conn = connectionString?.trim() || (await readSqlConnectionString());
+      const conn = connectionString?.trim() || (await getEffectiveSqlConnectionString());
       if (!conn) {
         throw new RepoContextError(
           "No SQL database connection configured. Please save a database connection in Credentials or provide connectionString.",
@@ -633,7 +648,7 @@ export function registerSqlTools(server: McpServer): void {
       },
     },
     guarded(async ({ query, connectionString, limit = 100 }: { query: string; connectionString?: string; limit?: number }) => {
-      const conn = connectionString?.trim() || (await readSqlConnectionString());
+      const conn = connectionString?.trim() || (await getEffectiveSqlConnectionString());
       if (!conn) {
         throw new RepoContextError(
           "No SQL database connection configured. Please save a database connection in Credentials or provide connectionString.",

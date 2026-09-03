@@ -430,10 +430,18 @@ export interface ActiveNotionPageConfigItem {
   type?: "page" | "database";
 }
 
+export interface ConnectionConfigItem {
+  id?: string;
+  enabled?: boolean;
+  credentials?: Record<string, string>;
+  updatedAt?: string;
+}
+
 export interface AppConfigPayload {
   username: string;
   "active-repos": ActiveRepoConfigItem[];
   "active-notion-pages"?: ActiveNotionPageConfigItem[];
+  connections?: Record<string, ConnectionConfigItem>;
   systemPrompt?: string;
   createdAt: string;
   updatedAt: string;
@@ -444,6 +452,7 @@ export interface AppConfigItem {
   username: string;
   activeRepos: ActiveRepoConfigItem[];
   activeNotionPages: ActiveNotionPageConfigItem[];
+  connections: Record<string, ConnectionConfigItem>;
   systemPrompt: string;
   createdAt: string;
   updatedAt: string;

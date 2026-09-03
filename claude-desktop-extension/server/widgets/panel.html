@@ -490,6 +490,44 @@
     border-top-color: var(--accent);
   }
 
+  /* Reusable Loading Component */
+  .loading-component {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 32px 16px;
+    text-align: center;
+    width: 100%;
+    min-height: 150px;
+    color: var(--muted);
+    animation: fadeIn 0.2s ease-in-out;
+  }
+
+  .loading-spinner-ring {
+    width: 32px;
+    height: 32px;
+    border: 3px solid var(--line);
+    border-top-color: var(--accent);
+    border-right-color: var(--accent);
+    border-radius: 50%;
+    animation: spin 0.75s linear infinite;
+    margin-bottom: 12px;
+  }
+
+  .loading-component-text {
+    font-size: 13.5px;
+    font-weight: 600;
+    color: var(--fg);
+    margin-bottom: 4px;
+  }
+
+  .loading-component-subtext {
+    font-size: 12px;
+    color: var(--muted);
+    max-width: 400px;
+  }
+
   @keyframes spin {
     to {
       transform: rotate(360deg);
@@ -802,6 +840,234 @@
     color: var(--fg);
     margin-top: 6px;
   }
+
+  /* Connections Manager Styles */
+  .section-header-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 14px;
+  }
+
+  .tab-badge {
+    font-size: 10.5px;
+    padding: 1px 6px;
+    border-radius: 999px;
+    background: var(--accent);
+    color: #ffffff;
+    margin-left: 4px;
+    font-weight: 700;
+  }
+
+  .btn-add-connection {
+    background: var(--accent);
+    color: #ffffff;
+    border: 1px solid var(--accent);
+    border-radius: 8px;
+    padding: 6px 12px;
+    font-size: 12.5px;
+    font-weight: 600;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+    transition: all 0.15s ease;
+  }
+
+  .btn-add-connection:hover {
+    background: var(--accent-hover);
+  }
+
+  .connection-card {
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 12px 14px;
+    margin-bottom: 10px;
+    background: var(--card-bg);
+    transition: border-color 0.15s, box-shadow 0.15s;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .connection-card:hover {
+    border-color: var(--accent);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+  }
+
+  .connection-card.disabled {
+    opacity: 0.65;
+    background: var(--code-bg);
+  }
+
+  .card-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .service-meta {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .service-icon-box {
+    width: 36px;
+    height: 36px;
+    border-radius: 8px;
+    background: var(--code-bg);
+    border: 1px solid var(--line);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+    flex-shrink: 0;
+  }
+
+  .service-titles h4 {
+    margin: 0;
+    font-size: 13.5px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .service-titles p {
+    margin: 2px 0 0;
+    font-size: 11.5px;
+    color: var(--muted);
+  }
+
+  .card-actions {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding-top: 2px;
+  }
+
+  .card-action-btns {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .btn-action-sm {
+    font-size: 11.5px;
+    font-weight: 600;
+    padding: 3px 8px;
+    border-radius: 6px;
+    border: 1px solid var(--border);
+    background: var(--card-bg);
+    color: var(--fg);
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    transition: all 0.15s;
+  }
+
+  .btn-action-sm:hover:not(:disabled) {
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+
+  .btn-action-sm.danger:hover:not(:disabled) {
+    border-color: var(--err-fg);
+    color: var(--err-fg);
+    background: var(--err-bg);
+  }
+
+  .toggle-wrap {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 11.5px;
+    color: var(--muted);
+    cursor: pointer;
+    user-select: none;
+  }
+
+  .toggle-switch {
+    position: relative;
+    width: 30px;
+    height: 17px;
+    background: var(--border);
+    border-radius: 999px;
+    transition: background-color 0.2s;
+  }
+
+  .toggle-switch.on {
+    background: var(--accent);
+  }
+
+  .toggle-switch-handle {
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    width: 13px;
+    height: 13px;
+    background: white;
+    border-radius: 50%;
+    transition: transform 0.2s;
+  }
+
+  .toggle-switch.on .toggle-switch-handle {
+    transform: translateX(13px);
+  }
+
+  .empty-state {
+    border: 2px dashed var(--border);
+    border-radius: 12px;
+    padding: 32px 18px;
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    margin: 8px 0;
+    background: var(--code-bg);
+  }
+
+  .empty-icon {
+    font-size: 32px;
+    margin-bottom: 8px;
+  }
+
+  .catalog-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+    margin-top: 10px;
+  }
+
+  .catalog-card {
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 11px;
+    background: var(--card-bg);
+    cursor: pointer;
+    transition: all 0.15s;
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    text-align: left;
+  }
+
+  .catalog-card:hover {
+    border-color: var(--accent);
+    background: var(--card-hover);
+    transform: translateY(-1px);
+    box-shadow: 0 3px 10px rgba(0, 0, 0, 0.05);
+  }
+
+  .catalog-card.already-added {
+    opacity: 0.55;
+    cursor: not-allowed;
+    border-style: dashed;
+  }
 </style>
 
 <script>
@@ -835,6 +1101,9 @@
     skills: [],
     qdrant: { configured: false, connected: false, endpoint: "", error: null },
     credentials: {},
+    connections: {},
+    disabledConnections: new Set(),
+    connectionBadges: {},
     teamStatus: {},
     repos: [],
     reposSearch: "",
@@ -867,6 +1136,16 @@
       .replace(/</g, "&lt;")
       .replace(/>/g, "&gt;")
       .replace(/"/g, "&quot;");
+  }
+
+  function renderLoadingComponent(message = "Loading…", subtext = "Please wait a moment") {
+    return `
+      <div class="loading-component">
+        <div class="loading-spinner-ring"></div>
+        <div class="loading-component-text">${esc(message)}</div>
+        ${subtext ? `<div class="loading-component-subtext">${esc(subtext)}</div>` : ""}
+      </div>
+    `;
   }
 
   function setStatus(type, msg) {
@@ -1003,6 +1282,20 @@ Please confirm you are ready to assist with our team context and give a brief gr
       state.notionPages = appData.notionPages || [];
 
       const appConfig = appData.appConfig || {};
+      state.connections = appConfig.connections || {};
+      state.disabledConnections.clear();
+      Object.keys(state.connections).forEach(serviceId => {
+        const conn = state.connections[serviceId];
+        if (conn) {
+          if (conn.enabled === false) {
+            state.disabledConnections.add(serviceId);
+          }
+          if (conn.credentials) {
+            Object.assign(state.credentials, conn.credentials);
+          }
+        }
+      });
+
       state.selectedRepos.clear();
       (appConfig.activeRepos || []).forEach(r => {
         if (r && r.name) state.selectedRepos.set(r.name, r.description || "");
@@ -1111,13 +1404,13 @@ Please confirm you are ready to assist with our team context and give a brief gr
 
   /* ------------------- View 0: Loading ------------------- */
 
+  /* ------------------- View 0: Loading ------------------- */
+
   function renderLoading() {
-    root.innerHTML = `
-      <div class="loading-screen">
-        <div class="spinner"></div>
-        <div class="loading-text">Connecting to Team Context & Vector Database…</div>
-      </div>
-    `;
+    root.innerHTML = renderLoadingComponent(
+      "Connecting to Team Context & Vector Database…",
+      "Validating cluster status and loading team configurations"
+    );
   }
 
   /* ------------------- View 1: Error & Countdown ------------------- */
@@ -1151,7 +1444,7 @@ Please confirm you are ready to assist with our team context and give a brief gr
 
         <div class="card" style="text-align:center;padding:24px 16px;">
           <p style="margin:0 0 16px;color:var(--muted);font-size:13px;">
-            You can verify and update your Qdrant cluster endpoint URL and API key to restore service.
+            You can verify and update your Qdrant cluster endpoint URL, API key, and Gemini API key to restore service.
           </p>
           <div class="btn-row" style="justify-content:center;gap:10px;">
             <button class="primary" id="btnGoToSettingsNow">⚙️ Configure Settings Now</button>
@@ -1172,11 +1465,12 @@ Please confirm you are ready to assist with our team context and give a brief gr
     });
   }
 
-  /* ------------------- View 2: Step 1 Qdrant Config ------------------- */
+  /* ------------------- View 2: Step 1 Vector DB & Gemini AI Setup ------------------- */
 
   function renderQdrantConfigStep() {
     const qdrantUrl = state.credentials.QDRANT_URL || "";
     const qdrantKey = state.credentials.QDRANT_API_KEY || "";
+    const geminiKey = state.credentials.GEMINI_API_KEY || "";
 
     root.innerHTML = `
       <div class="header">
@@ -1186,13 +1480,15 @@ Please confirm you are ready to assist with our team context and give a brief gr
       <div class="setup-container">
         <span class="setup-step-pill">Step 1 of 2</span>
         <div class="section-intro">
-          <h3>🧠 Vector Database Setup</h3>
-          <p>Provide your Qdrant cluster endpoint and API key. Credentials will be securely stored in <code>server/.env</code>.</p>
+          <h3>🧠 Vector Database & AI Embeddings Setup</h3>
+          <p>Configure your Qdrant vector cluster and Google Gemini API key. Both are required to initialize team memory.</p>
         </div>
 
         <div class="card">
           <div class="field-group">
-            <label class="field-label" for="setupQdrantUrl">Qdrant Cluster Endpoint URL</label>
+            <label class="field-label" for="setupQdrantUrl">
+              Qdrant Cluster Endpoint URL <span style="color:var(--err-fg);font-weight:700;">*</span>
+            </label>
             <input type="text" id="setupQdrantUrl" placeholder="https://xxx.cloud.qdrant.io" value="${esc(qdrantUrl)}" />
             <span style="font-size:11px;color:var(--muted);margin-top:2px;">
               e.g. <code>https://xxx.eu-west-2-0.aws.cloud.qdrant.io</code> or <code>http://localhost:6333</code>
@@ -1204,9 +1500,20 @@ Please confirm you are ready to assist with our team context and give a brief gr
             <input type="password" id="setupQdrantKey" placeholder="Enter API key (optional for local clusters)" value="${esc(qdrantKey)}" />
           </div>
 
+          <div class="field-group" style="margin-top:12px;">
+            <label class="field-label" for="setupGeminiKey" style="display:flex; justify-content:space-between; align-items:center;">
+              <span>✨ Google Gemini API Key <span style="color:var(--err-fg);font-weight:700;">* Obligatory</span></span>
+              <a href="https://aistudio.google.com/app/apikey" target="_blank" style="font-size:11px; color:var(--accent); text-decoration:none;">Get key ↗</a>
+            </label>
+            <input type="password" id="setupGeminiKey" placeholder="AIzaSy…" value="${esc(geminiKey)}" />
+            <span style="font-size:11px;color:var(--muted);margin-top:2px;">
+              Required for <code>text-embedding-004</code>. Generates high-dimensional vectors for semantic search.
+            </span>
+          </div>
+
           <div class="btn-row" style="margin-top:16px;">
             <button class="primary" id="btnConnectQdrant" ${state.isSaving ? "disabled" : ""}>
-              ${state.isSaving ? '<span class="spinner-sm"></span> Testing & Connecting…' : "⚡ Test Connection & Continue →"}
+              ${state.isSaving ? '<span class="spinner-sm"></span> Testing & Connecting…' : "⚡ Test Connections & Continue →"}
             </button>
           </div>
 
@@ -1221,9 +1528,14 @@ Please confirm you are ready to assist with our team context and give a brief gr
   async function handleSaveQdrantConfig() {
     const url = document.getElementById("setupQdrantUrl")?.value.trim();
     const apiKey = document.getElementById("setupQdrantKey")?.value.trim();
+    const geminiKey = document.getElementById("setupGeminiKey")?.value.trim();
 
     if (!url) {
       setStatus("err", "Please enter a Qdrant cluster endpoint URL.");
+      return;
+    }
+    if (!geminiKey) {
+      setStatus("err", "Gemini API Key is obligatory. Please enter your Google AI Studio API key.");
       return;
     }
 
@@ -1234,13 +1546,14 @@ Please confirm you are ready to assist with our team context and give a brief gr
     try {
       const res = await app.callServerTool({
         name: "panel_save_qdrant_config",
-        arguments: { qdrantUrl: url, qdrantApiKey: apiKey || undefined },
+        arguments: { qdrantUrl: url, qdrantApiKey: apiKey || undefined, geminiApiKey: geminiKey },
       });
       const data = JSON.parse(res.content[0].text);
 
       if (data.success) {
         state.credentials.QDRANT_URL = data.endpoint || url;
         state.credentials.QDRANT_API_KEY = apiKey;
+        state.credentials.GEMINI_API_KEY = geminiKey;
         state.qdrant.connected = true;
         state.qdrant.endpoint = data.endpoint || url;
         state.users = data.users || [];
@@ -1250,7 +1563,7 @@ Please confirm you are ready to assist with our team context and give a brief gr
       } else {
         state.isSaving = false;
         render();
-        setStatus("err", data.reason || "Failed to connect to Qdrant.");
+        setStatus("err", data.reason || "Failed to validate configuration.");
       }
     } catch (err) {
       state.isSaving = false;
@@ -1460,6 +1773,7 @@ Please confirm you are ready to assist with our team context and give a brief gr
   function renderMainDashboard() {
     const userName = state.currentUser?.name || "Member";
     const userRole = state.currentUser?.role || "Member";
+    const activeCount = Object.keys(SERVICES_CATALOG).filter(id => SERVICES_CATALOG[id].isConfigured() && !state.disabledConnections.has(id)).length;
 
     root.innerHTML = `
       <div class="header">
@@ -1481,7 +1795,7 @@ Please confirm you are ready to assist with our team context and give a brief gr
       <!-- Top-Level Tabs -->
       <div class="top-tabs">
         <button class="top-tab ${state.activeTopTab === "credentials" ? "active" : ""}" id="tabBtnCredentials">
-          ⚡ Credentials
+          🔗 Connections <span class="tab-badge">${activeCount}</span>
         </button>
         <button class="top-tab ${state.activeTopTab === "config" ? "active" : ""}" id="tabBtnConfig">
           ⚙️ App Configuration
@@ -1517,7 +1831,11 @@ Please confirm you are ready to assist with our team context and give a brief gr
     state.activeTopTab = tab;
     state.statusType = null;
     state.statusMessage = "";
+    const contentArea = document.getElementById("tabContent");
     if (tab === "config" && (state.repos.length === 0 || state.notionPages.length === 0)) {
+      if (contentArea) {
+        contentArea.innerHTML = renderLoadingComponent("Loading Application Configuration…", "Fetching active repositories, Notion resources, and prompt settings");
+      }
       await loadAppConfigData();
     }
     render();
@@ -1542,190 +1860,536 @@ Please confirm you are ready to assist with our team context and give a brief gr
     render();
   }
 
-  /* ------------------- Tab 1: Credentials ------------------- */
+  /* ------------------- Services Catalog & Connection Definitions ------------------- */
+
+  const SERVICES_CATALOG = {
+    github: {
+      id: "github",
+      name: "GitHub",
+      icon: "🐙",
+      category: "Source & Code Context",
+      description: "Index repositories, markdown documentation, PRs, and commit context.",
+      fields: [
+        { key: "GITHUB_TOKEN", label: "Personal Access Token", type: "password", placeholder: "ghp_… or github_pat_…", help: "Classic token with 'repo' scope or fine-grained PAT." }
+      ],
+      isConfigured: () => Boolean(state.connections?.github?.credentials?.GITHUB_TOKEN || state.credentials?.GITHUB_TOKEN),
+      getDetail: () => {
+        const count = state.repos?.length || 0;
+        return count > 0 ? `${count} active repositories indexed` : "Ready to index repositories";
+      }
+    },
+    notion: {
+      id: "notion",
+      name: "Notion",
+      icon: "📝",
+      category: "Knowledge & Docs",
+      description: "Connect workspace pages, engineering wikis, PRDs, and database tables.",
+      fields: [
+        { key: "NOTION_API_KEY", label: "Internal Integration Token", type: "password", placeholder: "secret_…", help: "Create at notion.so/my-integrations and share workspace pages with your integration bot." }
+      ],
+      isConfigured: () => Boolean(state.connections?.notion?.credentials?.NOTION_API_KEY || state.credentials?.NOTION_API_KEY),
+      getDetail: () => {
+        if (state.notionBotName) return `Bot: ${state.notionBotName} (${state.notionPages?.length || 0} resources)`;
+        return state.notionPages?.length ? `${state.notionPages.length} resources synced` : "Workspace connected";
+      }
+    },
+    qdrant: {
+      id: "qdrant",
+      name: "Qdrant Vector DB",
+      icon: "🧠",
+      category: "Vector Storage",
+      description: "Store high-dimensional embeddings for fast semantic retrieval and memory.",
+      fields: [
+        { key: "QDRANT_URL", label: "Cluster Endpoint URL", type: "text", placeholder: "https://xxx.cloud.qdrant.io", help: "Your Qdrant Cloud or local Docker endpoint." },
+        { key: "QDRANT_API_KEY", label: "API Key (Optional for local)", type: "password", placeholder: "Qdrant API Key", help: "Required for Qdrant Cloud clusters." }
+      ],
+      isConfigured: () => Boolean(state.credentials?.QDRANT_URL),
+      getDetail: () => {
+        const url = state.credentials?.QDRANT_URL || "";
+        return url ? url.replace(/^https?:\/\//, "").split(":")[0] : "Vector cluster configured";
+      }
+    },
+    gemini: {
+      id: "gemini",
+      name: "Google Gemini Embeddings",
+      icon: "✨",
+      category: "AI & Embeddings",
+      description: "Generates semantic embeddings for code, documentation, and chat context.",
+      fields: [
+        { key: "GEMINI_API_KEY", label: "Gemini API Key", type: "password", placeholder: "AIzaSy…", help: "Get an API key from Google AI Studio (aistudio.google.com)." }
+      ],
+      isConfigured: () => Boolean(state.credentials?.GEMINI_API_KEY || state.connections?.gemini?.credentials?.GEMINI_API_KEY),
+      getDetail: () => "text-embedding-004 model active"
+    },
+    sql: {
+      id: "sql",
+      name: "SQL Database",
+      icon: "🗄️",
+      category: "Database",
+      description: "Inspect schema structures, tables, and team metadata from Postgres, MySQL, or SQLite.",
+      fields: [
+        { key: "DATABASE_URL", label: "Connection URI", type: "password", placeholder: "postgresql://user:pass@host:5432/dbname", help: "Format: postgresql://... or mysql://..." }
+      ],
+      isConfigured: () => Boolean(state.connections?.sql?.credentials?.DATABASE_URL || state.credentials?.DATABASE_URL),
+      getDetail: () => {
+        const uri = state.connections?.sql?.credentials?.DATABASE_URL || state.credentials?.DATABASE_URL || "";
+        const proto = uri.split("://")[0] || "SQL";
+        return `${proto.toUpperCase()} database connection`;
+      }
+    }
+  };
+
+  /* ------------------- Tab 1: Connections Manager ------------------- */
 
   function renderCredentialsTab(container) {
-    const cfg = state.credentials;
+    const configuredKeys = Object.keys(SERVICES_CATALOG).filter(id => SERVICES_CATALOG[id].isConfigured());
+
+    let cardsHtml = "";
+    if (configuredKeys.length === 0) {
+      cardsHtml = `
+        <div class="empty-state">
+          <div class="empty-icon">🔌</div>
+          <h4 style="margin:0 0 6px;font-size:15px;font-weight:700;">No Connections Configured</h4>
+          <p style="margin:0 0 16px;font-size:12.5px;color:var(--muted);max-width:400px;">
+            You haven't configured any external connections yet. Choose which service you'd like to use:
+          </p>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:center;">
+            <button class="btn-add-connection" onclick="window._openConfigureModal('github')">
+              🐙 Connect GitHub
+            </button>
+            <button class="btn-add-connection" style="background:var(--code-bg);color:var(--fg);border-color:var(--border);" onclick="window._openConfigureModal('notion')">
+              📝 Connect Notion
+            </button>
+            <button class="btn-add-connection" style="background:var(--code-bg);color:var(--fg);border-color:var(--border);" onclick="window._openAddConnectionModal()">
+              ➕ Browse All Integrations
+            </button>
+          </div>
+        </div>
+      `;
+    } else {
+      cardsHtml = configuredKeys.map(id => {
+        const meta = SERVICES_CATALOG[id];
+        const isDisabled = state.disabledConnections.has(id);
+        const badgeInfo = state.connectionBadges[id] || (isDisabled ? { type: "idle", text: "⚪ Disabled" } : { type: "ok", text: "✓ Configured" });
+        const firstFieldKey = meta.fields[0].key;
+        const rawVal = state.connections?.[id]?.credentials?.[firstFieldKey] || state.credentials[firstFieldKey] || "";
+        const previewKey = rawVal ? (rawVal.length > 4 ? `••••••••••••${rawVal.slice(-4)}` : "••••••••") : "Configured";
+
+        return `
+          <div class="connection-card ${isDisabled ? 'disabled' : ''}" id="conn-card-${id}">
+            <div class="card-top">
+              <div class="service-meta">
+                <div class="service-icon-box">${meta.icon}</div>
+                <div class="service-titles">
+                  <h4>
+                    ${meta.name}
+                    <span class="badge ${badgeInfo.type}" id="badge-${id}">${esc(badgeInfo.text)}</span>
+                  </h4>
+                  <p>${meta.category} • ${meta.getDetail()}</p>
+                </div>
+              </div>
+              <div class="toggle-wrap" onclick="window._toggleConnection('${id}')" title="Enable or disable this connection">
+                <span>${isDisabled ? 'Disabled' : 'Enabled'}</span>
+                <div class="toggle-switch ${isDisabled ? '' : 'on'}">
+                  <div class="toggle-switch-handle"></div>
+                </div>
+              </div>
+            </div>
+            <div class="card-actions">
+              <div style="font-size:11.5px;color:var(--muted);">
+                Key: ${esc(previewKey)}
+              </div>
+              <div class="card-action-btns">
+                <button class="btn-action-sm" onclick="window._testSingleConnection('${id}')" ${isDisabled ? 'disabled' : ''}>
+                  🧪 Test
+                </button>
+                <button class="btn-action-sm" onclick="window._openConfigureModal('${id}')">
+                  ⚙️ Configure
+                </button>
+                <button class="btn-action-sm danger" onclick="window._disconnectConnection('${id}')" title="Disconnect & remove credentials">
+                  🗑️ Disconnect
+                </button>
+              </div>
+            </div>
+          </div>
+        `;
+      }).join("");
+    }
+
     container.innerHTML = `
-      <div class="section-intro">
-        <h3>⚡ Service Credentials</h3>
-        <p>Configure API tokens and connection keys for GitHub, Notion, Vector DB, and SQL database.</p>
+      <div class="section-header-row">
+        <div>
+          <h3 style="margin:0 0 4px;font-size:15px;font-weight:700;">⚡ Service Connections</h3>
+          <p style="margin:0;font-size:12px;color:var(--muted);">
+            Connect only the tools your team uses. Everything else remains optional.
+          </p>
+        </div>
+        <button class="btn-add-connection" id="btnAddConnection">
+          <span>➕</span> Add Connection
+        </button>
       </div>
 
-      <!-- GitHub -->
-      <div class="card">
-        <div class="card-header">
-          <span class="card-title">🐙 GitHub</span>
-          <span class="badge idle" id="badge-github">Not tested</span>
-        </div>
-        <div class="field-group">
-          <label class="field-label" for="githubToken">Personal Access Token (classic or fine-grained)</label>
-          <input type="password" id="githubToken" placeholder="ghp_… or github_pat_…" value="${esc(cfg.GITHUB_TOKEN || '')}" />
-        </div>
+      <!-- Connections List Container -->
+      <div id="connectionsListContainer">
+        ${cardsHtml}
       </div>
 
-      <!-- Notion -->
-      <div class="card">
-        <div class="card-header">
-          <span class="card-title">📝 Notion</span>
-          <span class="badge idle" id="badge-notion">Not tested</span>
-        </div>
-        <div class="field-group">
-          <label class="field-label" for="notionKey">Internal Integration Token</label>
-          <input type="password" id="notionKey" placeholder="secret_…" value="${esc(cfg.NOTION_API_KEY || '')}" />
-        </div>
-      </div>
-
-      <!-- Qdrant -->
-      <div class="card">
-        <div class="card-header">
-          <span class="card-title">🧠 Qdrant Vector DB</span>
-          <span class="badge ok" id="badge-qdrant">✓ Connected</span>
-        </div>
-        <div class="field-group">
-          <label class="field-label" for="qdrantUrl">Cluster Endpoint URL</label>
-          <input type="text" id="qdrantUrl" placeholder="https://xxx.cloud.qdrant.io" value="${esc(cfg.QDRANT_URL || '')}" />
-        </div>
-        <div class="field-group" style="margin-top:8px;">
-          <label class="field-label" for="qdrantKey">API Key (optional for local clusters)</label>
-          <input type="password" id="qdrantKey" placeholder="Qdrant API Key" value="${esc(cfg.QDRANT_API_KEY || '')}" />
-        </div>
-      </div>
-
-      <!-- Gemini Embeddings -->
-      <div class="card">
-        <div class="card-header">
-          <span class="card-title">✨ Google Gemini Embedding</span>
-          <span class="badge idle" id="badge-gemini">Not tested</span>
-        </div>
-        <div class="field-group">
-          <label class="field-label" for="geminiKey">Gemini API Key (Google AI Studio)</label>
-          <input type="password" id="geminiKey" placeholder="AIzaSy…" value="${esc(cfg.GEMINI_API_KEY || '')}" />
-        </div>
-      </div>
-
-      <!-- SQL Database -->
-      <div class="card">
-        <div class="card-header">
-          <span class="card-title">🗄️ SQL Database</span>
-          <span class="badge idle" id="badge-sql">Not tested</span>
-        </div>
-        <div class="field-group">
-          <label class="field-label" for="databaseUrl">Connection URI (PostgreSQL, MySQL, SQLite)</label>
-          <input type="password" id="databaseUrl" placeholder="postgresql://user:pass@host:5432/dbname" value="${esc(cfg.DATABASE_URL || '')}" />
-        </div>
-      </div>
-
-      <div class="btn-row">
-        <button class="primary" id="saveCredentialsBtn">💾 Save & Connect</button>
-        <button class="secondary" id="testConnectionsBtn">🧪 Test Connections</button>
+      <!-- Tips Banner -->
+      <div style="margin-top:14px;padding:9px 12px;background:var(--code-bg);border:1px solid var(--line);border-radius:8px;display:flex;align-items:center;gap:8px;font-size:11.5px;color:var(--muted);">
+        <span style="font-size:14px;">💡</span>
+        <span>Optional service connections and credentials are stored securely in your team's application configuration (Qdrant). Only enabled connections load in <strong>App Configuration</strong>.</span>
       </div>
 
       <div id="statusBox" class="${state.statusType ? 'status-box ' + state.statusType : 'status-box'}">${esc(state.statusMessage)}</div>
     `;
 
-    document.getElementById("testConnectionsBtn")?.addEventListener("click", runConnectionTests);
-    document.getElementById("saveCredentialsBtn")?.addEventListener("click", saveAllCredentials);
+    document.getElementById("btnAddConnection")?.addEventListener("click", () => window._openAddConnectionModal());
   }
 
-  function getCredentialsFormValues() {
-    return {
-      GITHUB_TOKEN: document.getElementById("githubToken")?.value.trim() || "",
-      NOTION_API_KEY: document.getElementById("notionKey")?.value.trim() || "",
-      QDRANT_URL: document.getElementById("qdrantUrl")?.value.trim() || "",
-      QDRANT_API_KEY: document.getElementById("qdrantKey")?.value.trim() || "",
-      GEMINI_API_KEY: document.getElementById("geminiKey")?.value.trim() || "",
-      DATABASE_URL: document.getElementById("databaseUrl")?.value.trim() || "",
-    };
-  }
+  /* ------------------- Connection Manager Actions & Modals ------------------- */
 
-  async function runConnectionTests() {
-    const vals = getCredentialsFormValues();
-    setStatus(null, "");
-    setBadge("github", "idle", "Testing…");
-    setBadge("notion", "idle", "Testing…");
-    setBadge("qdrant", "idle", "Testing…");
-    setBadge("gemini", "idle", "Testing…");
-    setBadge("sql", "idle", "Testing…");
+  window._closeConnModal = function() {
+    const modalContainer = document.getElementById("modalContainer");
+    if (modalContainer) modalContainer.innerHTML = "";
+  };
 
-    let errors = [];
+  window._openAddConnectionModal = function(preselectedId) {
+    if (preselectedId) {
+      window._openConfigureModal(preselectedId);
+      return;
+    }
 
-    if (vals.GITHUB_TOKEN) {
-      try {
-        const res = await app.callServerTool({ name: "panel_test_connection", arguments: { service: "github", githubToken: vals.GITHUB_TOKEN } });
-        const d = JSON.parse(res.content[0].text);
-        if (d.ok) setBadge("github", "ok", "✓ " + (d.login || "Connected"));
-        else { setBadge("github", "err", "Failed"); errors.push("GitHub: " + d.reason); }
-      } catch (e) { setBadge("github", "err", "Error"); }
-    } else setBadge("github", "idle", "Empty");
+    const modalContainer = document.getElementById("modalContainer");
+    if (!modalContainer) return;
 
-    if (vals.NOTION_API_KEY) {
-      try {
-        const res = await app.callServerTool({ name: "panel_test_connection", arguments: { service: "notion", notionApiKey: vals.NOTION_API_KEY } });
-        const d = JSON.parse(res.content[0].text);
-        if (d.ok) setBadge("notion", "ok", "✓ " + (d.botName || "Connected"));
-        else { setBadge("notion", "err", "Failed"); errors.push("Notion: " + d.reason); }
-      } catch (e) { setBadge("notion", "err", "Error"); }
-    } else setBadge("notion", "idle", "Empty");
+    let catalogCards = "";
+    Object.keys(SERVICES_CATALOG).forEach(id => {
+      const item = SERVICES_CATALOG[id];
+      const isConfigured = item.isConfigured();
 
-    if (vals.QDRANT_URL) {
-      try {
-        const res = await app.callServerTool({ name: "panel_test_connection", arguments: { service: "qdrant", qdrantUrl: vals.QDRANT_URL, qdrantApiKey: vals.QDRANT_API_KEY } });
-        const d = JSON.parse(res.content[0].text);
-        if (d.ok) setBadge("qdrant", "ok", "✓ Connected (" + (d.collectionsCount || 0) + " col)");
-        else { setBadge("qdrant", "err", "Failed"); errors.push("Qdrant: " + d.reason); }
-      } catch (e) { setBadge("qdrant", "err", "Error"); }
-    } else setBadge("qdrant", "idle", "Empty");
+      catalogCards += `
+        <div class="catalog-card ${isConfigured ? 'already-added' : ''}" onclick="${isConfigured ? '' : `window._openConfigureModal('${id}')`}">
+          <div style="font-size:22px;padding-top:2px;">${item.icon}</div>
+          <div style="flex:1;">
+            <div style="display:flex;justify-content:space-between;align-items:center;">
+              <strong style="font-size:13px;">${item.name}</strong>
+              ${isConfigured ? '<span class="badge ok" style="font-size:9.5px;">Added</span>' : ''}
+            </div>
+            <p style="margin:2px 0 0;font-size:11px;color:var(--muted);line-height:1.4;">
+              ${item.description}
+            </p>
+          </div>
+        </div>
+      `;
+    });
 
-    if (vals.GEMINI_API_KEY) {
-      try {
-        const res = await app.callServerTool({ name: "panel_test_connection", arguments: { service: "gemini", geminiApiKey: vals.GEMINI_API_KEY } });
-        const d = JSON.parse(res.content[0].text);
-        if (d.ok) setBadge("gemini", "ok", "✓ " + (d.model || "Connected"));
-        else { setBadge("gemini", "err", "Failed"); errors.push("Gemini: " + d.reason); }
-      } catch (e) { setBadge("gemini", "err", "Error"); }
-    } else setBadge("gemini", "idle", "Empty");
+    // Coming soon Jira / Linear card
+    catalogCards += `
+      <div class="catalog-card already-added" style="opacity:0.45;">
+        <div style="font-size:22px;padding-top:2px;">🎯</div>
+        <div style="flex:1;">
+          <div style="display:flex;justify-content:space-between;align-items:center;">
+            <strong style="font-size:13px;">Jira / Linear</strong>
+            <span class="badge idle" style="font-size:9.5px;">Soon</span>
+          </div>
+          <p style="margin:2px 0 0;font-size:11px;color:var(--muted);line-height:1.4;">
+            Index active sprint tickets, epics, and team backlogs.
+          </p>
+        </div>
+      </div>
+    `;
 
-    if (vals.DATABASE_URL) {
-      try {
-        const res = await app.callServerTool({ name: "panel_test_connection", arguments: { service: "sql", databaseUrl: vals.DATABASE_URL } });
-        const d = JSON.parse(res.content[0].text);
-        if (d.ok) setBadge("sql", "ok", "✓ " + (d.dialect || "Connected"));
-        else { setBadge("sql", "err", "Failed"); errors.push("SQL: " + d.reason); }
-      } catch (e) { setBadge("sql", "err", "Error"); }
-    } else setBadge("sql", "idle", "Empty");
+    modalContainer.innerHTML = `
+      <div class="modal-overlay" id="connModalOverlay" onclick="if(event.target === this) window._closeConnModal()">
+        <div class="modal-dialog">
+          <div class="modal-header">
+            <h3 class="modal-title">➕ Add a Connection</h3>
+            <button class="btn-close" onclick="window._closeConnModal()">✕</button>
+          </div>
+          <p style="margin:0 0 10px;font-size:12px;color:var(--muted);">
+            Select an integration to connect with your Claude Team Context.
+          </p>
+          <div class="catalog-grid">
+            ${catalogCards}
+          </div>
+          <div class="btn-row" style="margin-top:16px;justify-content:flex-end;">
+            <button class="secondary" onclick="window._closeConnModal()">Close</button>
+          </div>
+        </div>
+      </div>
+    `;
+  };
 
-    if (errors.length > 0) setStatus("err", errors.join(" | "));
-    else setStatus("ok", "✓ All active connections tested successfully!");
-  }
+  window._openConfigureModal = function(serviceId) {
+    const meta = SERVICES_CATALOG[serviceId];
+    if (!meta) return;
 
-  async function saveAllCredentials() {
-    const vals = getCredentialsFormValues();
-    const btn = document.getElementById("saveCredentialsBtn");
-    btn.disabled = true;
-    btn.innerHTML = '<span class="spinner-sm"></span> Saving & Connecting…';
-    setStatus(null, "");
+    const modalContainer = document.getElementById("modalContainer");
+    if (!modalContainer) return;
 
-    await runConnectionTests();
+    const existingVals = Object.assign({}, state.credentials, state.connections?.[serviceId]?.credentials || {});
+    let fieldsHtml = "";
+    meta.fields.forEach(f => {
+      const val = existingVals[f.key] || "";
+      fieldsHtml += `
+        <div class="field-group" style="margin-bottom:10px;">
+          <label class="field-label" for="modal_input_${f.key}">${f.label}</label>
+          <input type="${f.type}" id="modal_input_${f.key}" placeholder="${f.placeholder}" value="${esc(val)}" />
+          <div style="font-size:11px;color:var(--muted);margin-top:2px;">${f.help}</div>
+        </div>
+      `;
+    });
+
+    modalContainer.innerHTML = `
+      <div class="modal-overlay" id="connModalOverlay" onclick="if(event.target === this) window._closeConnModal()">
+        <div class="modal-dialog">
+          <div class="modal-header">
+            <h3 class="modal-title">${meta.icon} Configure ${meta.name}</h3>
+            <button class="btn-close" onclick="window._closeConnModal()">✕</button>
+          </div>
+          <p style="margin:0 0 12px;font-size:12.5px;color:var(--muted);">
+            ${meta.description}
+          </p>
+          <div id="modalFieldsContainer">
+            ${fieldsHtml}
+          </div>
+
+          <div id="modalTestStatus" style="display:none;padding:8px 10px;border-radius:6px;font-size:12px;margin:8px 0;"></div>
+
+          <div class="btn-row" style="margin-top:16px;justify-content:space-between;">
+            <button class="secondary" id="btnModalTestConn" onclick="window._runModalTest('${serviceId}')">
+              🧪 Test Connection
+            </button>
+            <div style="display:flex;gap:6px;">
+              <button class="secondary" onclick="window._closeConnModal()">Cancel</button>
+              <button class="primary" id="btnModalSaveConn" onclick="window._saveConnectionFromModal('${serviceId}')">
+                💾 Save Connection
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+  };
+
+  window._runModalTest = async function(serviceId) {
+    const meta = SERVICES_CATALOG[serviceId];
+    const testBtn = document.getElementById("btnModalTestConn");
+    const statusBox = document.getElementById("modalTestStatus");
+    if (!statusBox) return;
+
+    const values = {};
+    meta.fields.forEach(f => {
+      const el = document.getElementById(`modal_input_${f.key}`);
+      if (el) values[f.key] = el.value.trim();
+    });
+
+    if (testBtn) {
+      testBtn.disabled = true;
+      testBtn.innerHTML = '<span class="spinner-sm"></span> Testing…';
+    }
 
     try {
-      const res = await app.callServerTool({ name: "panel_save_all_credentials", arguments: vals });
-      const data = JSON.parse(res.content[0].text);
-      if (data.status === "ok") {
-        state.credentials = vals;
-        // Pull down GitHub repositories & Notion workspace pages
-        await loadAppConfigData();
-        await switchTopTab("config");
-        return;
+      const d = await testSingleServiceConnection(serviceId, values);
+      statusBox.style.display = "block";
+      if (d.ok) {
+        statusBox.style.background = "var(--ok-bg)";
+        statusBox.style.color = "var(--ok-fg)";
+        statusBox.style.border = "1px solid var(--ok-fg)";
+        statusBox.innerHTML = `✓ Connection verified! Authenticated as <strong>${esc(d.login || d.botName || d.model || d.dialect || "Connected")}</strong>.`;
       } else {
-        setStatus("err", data.message || "Failed to save credentials.");
+        statusBox.style.background = "var(--err-bg)";
+        statusBox.style.color = "var(--err-fg)";
+        statusBox.style.border = "1px solid var(--err-fg)";
+        statusBox.innerHTML = `✕ Verification failed: ${esc(d.reason || "Unable to connect.")}`;
       }
     } catch (err) {
-      setStatus("err", "Error: " + err.message);
+      statusBox.style.display = "block";
+      statusBox.style.background = "var(--err-bg)";
+      statusBox.style.color = "var(--err-fg)";
+      statusBox.style.border = "1px solid var(--err-fg)";
+      statusBox.innerHTML = `✕ Error: ${esc(err.message)}`;
     }
-    btn.disabled = false;
-    btn.innerHTML = "💾 Save & Connect";
+
+    if (testBtn) {
+      testBtn.disabled = false;
+      testBtn.innerHTML = '🧪 Test Connection';
+    }
+  };
+
+  window._saveConnectionFromModal = async function(serviceId) {
+    const meta = SERVICES_CATALOG[serviceId];
+    const saveBtn = document.getElementById("btnModalSaveConn");
+    if (saveBtn) {
+      saveBtn.disabled = true;
+      saveBtn.innerHTML = '<span class="spinner-sm"></span> Saving…';
+    }
+
+    const serviceCreds = {};
+    meta.fields.forEach(f => {
+      const el = document.getElementById(`modal_input_${f.key}`);
+      if (el) serviceCreds[f.key] = el.value.trim();
+    });
+
+    try {
+      let res;
+      if (serviceId === "qdrant" || serviceId === "gemini") {
+        const updatedCreds = { ...state.credentials, ...serviceCreds };
+        res = await app.callServerTool({
+          name: "panel_save_all_credentials",
+          arguments: updatedCreds
+        });
+      } else {
+        // Save to appConfig, NOT .env!
+        res = await app.callServerTool({
+          name: "panel_save_connection",
+          arguments: {
+            service: serviceId,
+            credentials: serviceCreds,
+            enabled: true,
+          }
+        });
+      }
+      const data = JSON.parse(res.content[0].text);
+      if (data.status === "ok") {
+        Object.assign(state.credentials, serviceCreds);
+        if (!state.connections) state.connections = {};
+        state.connections[serviceId] = {
+          id: serviceId,
+          enabled: true,
+          credentials: serviceCreds,
+          updatedAt: new Date().toISOString(),
+        };
+        state.disabledConnections.delete(serviceId);
+        state.connectionBadges[serviceId] = { type: "ok", text: "✓ Connected" };
+        window._closeConnModal();
+        await loadAppConfigData();
+        render();
+        setStatus("ok", `✓ ${meta.name} connection saved to appConfig!`);
+        return;
+      } else {
+        setStatus("err", data.message || `Failed to save ${meta.name} connection.`);
+      }
+    } catch (err) {
+      setStatus("err", "Error saving connection: " + err.message);
+    }
+
+    if (saveBtn) {
+      saveBtn.disabled = false;
+      saveBtn.innerHTML = '💾 Save Connection';
+    }
+  };
+
+  window._toggleConnection = async function(serviceId) {
+    const isDisabled = state.disabledConnections.has(serviceId);
+    const meta = SERVICES_CATALOG[serviceId];
+
+    if (isDisabled) {
+      state.disabledConnections.delete(serviceId);
+      if (state.connections?.[serviceId]) state.connections[serviceId].enabled = true;
+      setStatus("ok", `Enabled ${meta?.name || serviceId}.`);
+    } else {
+      state.disabledConnections.add(serviceId);
+      if (state.connections?.[serviceId]) state.connections[serviceId].enabled = false;
+      setStatus(null, `Disabled ${meta?.name || serviceId}.`);
+    }
+
+    if (state.connections?.[serviceId] && serviceId !== "qdrant" && serviceId !== "gemini") {
+      try {
+        await app.callServerTool({
+          name: "panel_save_connection",
+          arguments: {
+            service: serviceId,
+            credentials: state.connections[serviceId].credentials || {},
+            enabled: !isDisabled,
+          }
+        });
+      } catch (e) {
+        console.warn("Could not sync toggle to appConfig:", e);
+      }
+    }
+    render();
+  };
+
+  window._disconnectConnection = async function(serviceId) {
+    const meta = SERVICES_CATALOG[serviceId];
+    if (!meta) return;
+
+    if (!confirm(`Disconnect ${meta.name}? This will remove its connection and credentials from appConfig.`)) {
+      return;
+    }
+
+    try {
+      if (serviceId === "qdrant" || serviceId === "gemini") {
+        const updatedCreds = { ...state.credentials };
+        meta.fields.forEach(f => { updatedCreds[f.key] = ""; });
+        await app.callServerTool({
+          name: "panel_save_all_credentials",
+          arguments: updatedCreds
+        });
+      } else {
+        // Remove from appConfig
+        await app.callServerTool({
+          name: "panel_remove_connection",
+          arguments: { service: serviceId }
+        });
+      }
+
+      if (state.connections) delete state.connections[serviceId];
+      meta.fields.forEach(f => { delete state.credentials[f.key]; });
+      state.disabledConnections.delete(serviceId);
+      delete state.connectionBadges[serviceId];
+
+      await loadAppConfigData();
+      render();
+      setStatus("ok", `✓ Disconnected ${meta.name} and removed from appConfig.`);
+    } catch (err) {
+      setStatus("err", `Failed to disconnect ${meta.name}: ${err.message}`);
+    }
+  };
+
+  async function testSingleServiceConnection(serviceId, vals) {
+    const connCreds = state.connections?.[serviceId]?.credentials || {};
+    const creds = vals || Object.assign({}, state.credentials, connCreds);
+    let testArgs = { service: serviceId };
+    if (serviceId === "github") testArgs.githubToken = creds.GITHUB_TOKEN || "";
+    else if (serviceId === "notion") testArgs.notionApiKey = creds.NOTION_API_KEY || "";
+    else if (serviceId === "qdrant") {
+      testArgs.qdrantUrl = creds.QDRANT_URL || "";
+      testArgs.qdrantApiKey = creds.QDRANT_API_KEY || "";
+    } else if (serviceId === "gemini") testArgs.geminiApiKey = creds.GEMINI_API_KEY || "";
+    else if (serviceId === "sql") testArgs.databaseUrl = creds.DATABASE_URL || "";
+
+    const res = await app.callServerTool({
+      name: "panel_test_connection",
+      arguments: testArgs
+    });
+    return JSON.parse(res.content[0].text);
   }
+
+  window._testSingleConnection = async function(serviceId) {
+    const meta = SERVICES_CATALOG[serviceId];
+    setBadge(serviceId, "idle", "Testing…");
+    setStatus(null, "");
+
+    try {
+      const d = await testSingleServiceConnection(serviceId);
+      if (d.ok) {
+        const detail = d.login || d.botName || d.model || d.dialect || "Connected";
+        setBadge(serviceId, "ok", "✓ " + detail);
+        state.connectionBadges[serviceId] = { type: "ok", text: "✓ " + detail };
+        setStatus("ok", `✓ ${meta.name} connection test succeeded!`);
+      } else {
+        setBadge(serviceId, "err", "Failed");
+        state.connectionBadges[serviceId] = { type: "err", text: "Failed" };
+        setStatus("err", `${meta.name}: ${d.reason || "Connection failed."}`);
+      }
+    } catch (err) {
+      setBadge(serviceId, "err", "Error");
+      state.connectionBadges[serviceId] = { type: "err", text: "Error" };
+      setStatus("err", `${meta.name} test error: ${err.message}`);
+    }
+  };
 
   /* ------------------- Tab 2: App Configuration ------------------- */
 
@@ -1742,11 +2406,11 @@ Please confirm you are ready to assist with our team context and give a brief gr
 
       <!-- Sub-Session Pills -->
       <div class="sub-pills">
-        <button class="sub-pill ${sub === "github" ? "active" : ""}" id="pillGithub">
-          🐙 GitHub (${selectedRepoCount})
+        <button class="sub-pill ${sub === "github" ? "active" : ""}" id="pillGithub" style="${SERVICES_CATALOG.github.isConfigured() && !state.disabledConnections.has('github') ? '' : 'opacity:0.65;'}">
+          🐙 GitHub (${SERVICES_CATALOG.github.isConfigured() ? selectedRepoCount : 'Inactive'})
         </button>
-        <button class="sub-pill ${sub === "notion" ? "active" : ""}" id="pillNotion">
-          📝 Notion (${selectedNotionCount})
+        <button class="sub-pill ${sub === "notion" ? "active" : ""}" id="pillNotion" style="${SERVICES_CATALOG.notion.isConfigured() && !state.disabledConnections.has('notion') ? '' : 'opacity:0.65;'}">
+          📝 Notion (${SERVICES_CATALOG.notion.isConfigured() ? selectedNotionCount : 'Inactive'})
         </button>
         <button class="sub-pill ${sub === "skills" ? "active" : ""}" id="pillSkills">
           🧠 Team Skills (${(state.skills || []).length})
@@ -1754,7 +2418,7 @@ Please confirm you are ready to assist with our team context and give a brief gr
         <button class="sub-pill ${sub === "prompt" ? "active" : ""}" id="pillPrompt">
           🧠 System Prompt
         </button>
-        <button class="sub-pill ${sub === "database" ? "active" : ""}" id="pillDatabase">
+        <button class="sub-pill ${sub === "database" ? "active" : ""}" id="pillDatabase" style="${SERVICES_CATALOG.sql.isConfigured() && !state.disabledConnections.has('sql') ? '' : 'opacity:0.65;'}">
           🗄️ Database
         </button>
       </div>
@@ -1815,6 +2479,20 @@ Please confirm you are ready to assist with our team context and give a brief gr
 
   /* Sub-session: GitHub */
   function renderGitHubSession(container) {
+    if (!SERVICES_CATALOG.github.isConfigured() || state.disabledConnections.has("github")) {
+      container.innerHTML = `
+        <div class="card" style="text-align:center;padding:32px 16px;">
+          <span style="font-size:32px;">🐙</span>
+          <h4 style="margin:8px 0 4px;font-size:15px;">GitHub Connection Not Configured</h4>
+          <p style="color:var(--muted);font-size:12.5px;max-width:440px;margin:0 auto 16px;">
+            Configure your GitHub Personal Access Token in the Connections tab to select and index active repositories.
+          </p>
+          <button class="primary" onclick="window._goToCredentialsTab()">🔗 Go to Connections Tab</button>
+        </div>
+      `;
+      return;
+    }
+
     const filterText = (state.reposSearch || "").toLowerCase();
     const filteredRepos = state.repos.filter(r => {
       const name = (typeof r === "string" ? r : (r.fullName || r.full_name || r.name || "")).toLowerCase();
@@ -1904,6 +2582,10 @@ Please confirm you are ready to assist with our team context and give a brief gr
     if (refreshBtn) {
       refreshBtn.disabled = true;
       refreshBtn.innerHTML = '<span class="spinner-sm spinner-dark"></span> Refreshing…';
+    }
+    const listEl = document.getElementById("repoListContainer");
+    if (listEl) {
+      listEl.innerHTML = renderLoadingComponent("Refreshing GitHub Repositories…", "Fetching your organization and personal repositories");
     }
     try {
       const res = await app.callServerTool({ name: "config_list_repos", arguments: { limit: 200 } });
@@ -2034,10 +2716,7 @@ Please confirm you are ready to assist with our team context and give a brief gr
             <h3 class="modal-title">📄 Configure & Sync Skill</h3>
             <button class="btn-close" onclick="window._closeMdModal()">✕</button>
           </div>
-          <div class="loading-screen" style="padding:20px 0;">
-            <div class="spinner"></div>
-            <p>Loading file preview and name suggestion…</p>
-          </div>
+          ${renderLoadingComponent("Loading File Preview…", "Fetching content and analyzing skill suggestion")}
         </div>
       </div>
     `;
@@ -2300,15 +2979,15 @@ Please confirm you are ready to assist with our team context and give a brief gr
 
   /* Sub-session: Notion */
   function renderNotionSession(container) {
-    if (!state.isNotionConnected && state.notionPages.length === 0) {
+    if (!SERVICES_CATALOG.notion.isConfigured() || (!state.isNotionConnected && state.notionPages.length === 0) || state.disabledConnections.has("notion")) {
       container.innerHTML = `
         <div class="card" style="text-align:center;padding:32px 16px;">
           <span style="font-size:32px;">📝</span>
           <h4 style="margin:8px 0 4px;font-size:15px;">Notion Workspace Not Connected</h4>
           <p style="color:var(--muted);font-size:12.5px;max-width:440px;margin:0 auto 16px;">
-            Configure your Notion Internal Integration Token in the Credentials tab to load and select active Notion pages and databases.
+            Configure your Notion Internal Integration Token in the Connections tab to load and select active Notion pages and databases.
           </p>
-          <button class="primary" onclick="window._goToCredentialsTab()">⚡ Go to Credentials Tab</button>
+          <button class="primary" onclick="window._goToCredentialsTab()">🔗 Go to Connections Tab</button>
         </div>
       `;
       return;
@@ -2372,7 +3051,7 @@ Please confirm you are ready to assist with our team context and give a brief gr
         </div>
 
         <div class="repo-list" id="notionListContainer">
-          ${filteredPages.length === 0 ? '<div class="loading-screen" style="padding:20px 0;"><p>No Notion resources found matching the criteria. Ensure Notion integration token is configured in Credentials tab and resources are shared.</p></div>' : ''}
+          ${filteredPages.length === 0 ? '<div class="loading-screen" style="padding:20px 0;"><p>No Notion resources found matching the criteria. Ensure Notion integration token is configured in Connections tab and resources are shared.</p></div>' : ''}
           ${filteredPages.map(p => {
             const isSelected = state.selectedNotionPages.has(p.id);
             const selItem = state.selectedNotionPages.get(p.id);
@@ -2484,6 +3163,10 @@ Please confirm you are ready to assist with our team context and give a brief gr
       refreshBtn.disabled = true;
       refreshBtn.innerHTML = '<span class="spinner-sm"></span> Refreshing…';
     }
+    const listEl = document.getElementById("notionListContainer");
+    if (listEl) {
+      listEl.innerHTML = renderLoadingComponent("Refreshing Notion Resources…", "Querying shared pages and databases from Notion");
+    }
     try {
       const res = await app.callServerTool({ name: "config_list_notion_pages", arguments: {} });
       const data = JSON.parse(res.content[0].text);
@@ -2538,6 +3221,7 @@ Please confirm you are ready to assist with our team context and give a brief gr
           username: state.currentUser?.name || "admin",
           activeRepos,
           activeNotionPages,
+          connections: state.connections || {},
           systemPrompt: state.systemPrompt,
         },
       });

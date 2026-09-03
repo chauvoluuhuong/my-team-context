@@ -9,6 +9,7 @@
 import { z } from "zod";
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { readNotionKey } from "../utils/store.js";
+import { getAppConfig } from "../services/vector-db.js";
 import { text, guarded, RepoContextError } from "../utils/helpers.js";
 import type {
   ValidateNotionResult,
@@ -43,11 +44,25 @@ export class NotionError extends Error {
   }
 }
 
+export async function getEffectiveNotionKey(): Promise<string | null> {
+  const username = process.env.CURRENT_USER_NAME || process.env.USER_NAME;
+  if (username) {
+    try {
+      const cfg = await getAppConfig(username);
+      const conn = cfg?.connections?.notion;
+      if (conn && conn.enabled !== false && conn.credentials?.NOTION_API_KEY) {
+        return conn.credentials.NOTION_API_KEY.trim();
+      }
+    } catch {}
+  }
+  return readNotionKey();
+}
+
 /**
  * Retrieve active Notion API key or throw user-friendly error.
  */
 export async function getActiveNotionKey(): Promise<string> {
-  const key = await readNotionKey();
+  const key = await getEffectiveNotionKey();
   if (!key || !key.trim()) {
     throw new RepoContextError(
       "Notion API key is not configured. Please open settings (connect_team_context) to configure your Notion token.",
@@ -2004,7 +2019,7 @@ export async function validateNotionKey(apiKey: string): Promise<ValidateNotionR
 }
 
 export async function notionCheckConnection(apiKeyOverride?: string): Promise<NotionStatusResult> {
-  const key = apiKeyOverride?.trim() || (await readNotionKey());
+  const key = apiKeyOverride?.trim() || (await getEffectiveNotionKey());
   if (!key) {
     return {
       connected: false,
