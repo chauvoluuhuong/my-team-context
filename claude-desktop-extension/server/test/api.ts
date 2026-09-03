@@ -252,11 +252,40 @@ registerNotionTools(fakeMcpServer);
 assert.ok(fakeMcpServer.registeredTools.has("notion_check_connection"), "registers notion_check_connection");
 assert.ok(fakeMcpServer.registeredTools.has("notion_list_resources"), "registers notion_list_resources");
 assert.ok(fakeMcpServer.registeredTools.has("notion_list_resource"), "registers notion_list_resource alias");
-assert.ok(fakeMcpServer.registeredTools.has("notion_filter_instructions"), "registers notion_filter_instructions");
-assert.ok(fakeMcpServer.registeredTools.has("notion_filter_instruction"), "registers notion_filter_instruction alias");
+assert.equal(fakeMcpServer.registeredTools.has("notion_filter_instructions"), false, "does not expose notion_filter_instructions tool");
+assert.equal(fakeMcpServer.registeredTools.has("notion_filter_instruction"), false, "does not expose notion_filter_instruction tool");
 assert.ok(fakeMcpServer.registeredTools.has("notion_get_page"), "registers notion_get_page");
 assert.ok(fakeMcpServer.registeredTools.has("notion_get_resource_content"), "registers notion_get_resource_content alias");
 assert.ok(fakeMcpServer.registeredTools.has("notion_search"), "registers notion_search");
+
+// Notion Guide Skill tests
+const { getNotionGuideSkillPointId } = await import("../src/services/vector-db.js");
+const guidePointId1 = getNotionGuideSkillPointId("alice");
+const guidePointId2 = getNotionGuideSkillPointId("ALICE");
+assert.equal(guidePointId1, guidePointId2, "notion guide point ID is deterministic and case-insensitive");
+assert.match(guidePointId1, /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/);
+
+const { buildNotionGuideSkillContent } = await import("../src/utils/notion-guide.js");
+const sampleSkillContent = await buildNotionGuideSkillContent([
+  {
+    id: "db-12345",
+    title: "Engineering Roadmap",
+    type: "database",
+    description: "Quarterly initiatives and status",
+  },
+  {
+    id: "page-67890",
+    title: "Architecture RFC",
+    type: "page",
+    description: "System design specs",
+  },
+]);
+assert.ok(sampleSkillContent.includes("# How to use Notion tools"), "skill title present");
+assert.ok(sampleSkillContent.includes("notion_get_page"), "references notion_get_page");
+assert.ok(sampleSkillContent.includes("notion_search"), "references notion_search");
+assert.ok(sampleSkillContent.includes("Architecture RFC"), "includes active page");
+assert.ok(sampleSkillContent.includes("Engineering Roadmap"), "includes active database");
+assert.ok(sampleSkillContent.includes("Filter Instructions for \"Engineering Roadmap\""), "includes filter instructions section");
 
 // Verify activeNotionPages with type, description, id in save_app_config schema
 const { registerConfigTools } = await import("../src/tools/config.js");

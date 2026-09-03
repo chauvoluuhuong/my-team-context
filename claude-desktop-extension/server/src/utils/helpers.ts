@@ -180,3 +180,5 @@ export function getDefaultSystemPrompt(options?: SystemPromptContextOptions): st
   return buildTeamContextSystemPrompt(options);
 }
 
+export * from "./notion-guide.js";
+

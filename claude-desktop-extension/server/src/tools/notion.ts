@@ -2131,55 +2131,7 @@ export function registerNotionTools(server: McpServer): void {
     listResourcesHandler,
   );
 
-  // 3. Schema and filter instructions for a database
-  const filterInstructionsHandler = guarded(async ({ databaseId, refresh }: { databaseId?: string; refresh?: boolean }) => {
-    const instructions = await filterInstructions({ databaseId, refresh });
-    return text(instructions);
-  });
-
-  server.registerTool(
-    "notion_filter_instructions",
-    {
-      title: "Get Notion Filter Instructions",
-      description:
-        "Fetch self-describing filter capability document, accepted field values (select, status, people, relations), and search examples for any Notion database.",
-      annotations: { title: "Get Notion Filter Instructions", readOnlyHint: true },
-      inputSchema: {
-        databaseId: z
-          .string()
-          .optional()
-          .describe("Notion Database ID, title, or URL (defaults to first database in workspace)"),
-        refresh: z
-          .boolean()
-          .optional()
-          .describe("Force reload schema and options bypassing cache"),
-      },
-    },
-    filterInstructionsHandler,
-  );
-
-  server.registerTool(
-    "notion_filter_instruction",
-    {
-      title: "Get Notion Filter Instruction",
-      description:
-        "Fetch self-describing filter capability document, accepted field values, and search examples for any Notion database (alias for notion_filter_instructions).",
-      annotations: { title: "Get Notion Filter Instruction", readOnlyHint: true },
-      inputSchema: {
-        databaseId: z
-          .string()
-          .optional()
-          .describe("Notion Database ID, title, or URL (defaults to first database in workspace)"),
-        refresh: z
-          .boolean()
-          .optional()
-          .describe("Force reload schema and options bypassing cache"),
-      },
-    },
-    filterInstructionsHandler,
-  );
-
-  // 4. Get full content of a page or database
+  // 3. Get full content of a page or database
   const getPageHandler = guarded(async ({ pageId, resourceId }: { pageId?: string; resourceId?: string }) => {
     const id = (pageId || resourceId || "").trim();
     if (!id) {

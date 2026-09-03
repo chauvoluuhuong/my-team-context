@@ -105,10 +105,6 @@
       "description": "Discover and list accessible pages and databases in the connected Notion workspace"
     },
     {
-      "name": "notion_filter_instructions",
-      "description": "Get self-describing filter instructions and schema for any Notion database"
-    },
-    {
       "name": "notion_get_page",
       "description": "Fetch full Markdown content and metadata for a Notion page or database"
     },

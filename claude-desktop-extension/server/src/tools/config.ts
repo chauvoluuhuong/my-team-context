@@ -20,6 +20,7 @@ import {
 } from "./notion.js";
 import { getAuthState, getSessionUser } from "./init.js";
 import { readEnvConfig } from "../utils/env.js";
+import { syncNotionGuideSkill } from "../utils/notion-guide.js";
 import {
   getAppConfig,
   saveAppConfig,
@@ -367,6 +368,12 @@ export function registerConfigTools(server: McpServer): void {
           connections,
           systemPrompt,
         });
+
+        // Automatically sync the "How to use Notion tools" skill into Qdrant
+        await syncNotionGuideSkill({
+          username,
+          activeNotionPages: saved.activeNotionPages,
+        }).catch((err) => console.warn("Failed to sync Notion guide skill:", err));
 
         return text({
           status: "ok",
@@ -938,6 +945,13 @@ export function registerConfigTools(server: McpServer): void {
           activeNotionPages: activeNotionPages || [],
           systemPrompt,
         });
+
+        // Automatically sync the "How to use Notion tools" skill into Qdrant
+        await syncNotionGuideSkill({
+          username,
+          activeNotionPages: saved.activeNotionPages,
+        }).catch((err) => console.warn("Failed to sync Notion guide skill:", err));
+
         return text({
           status: "ok",
           message: `Configuration saved for @${username}`,
