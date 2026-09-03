@@ -96,6 +96,9 @@ export class SkillsComponent {
 
   render() {
     if (!this.container) return;
+    if (this.container.id === "subSessionContent" && typeof state !== "undefined" && state.activeSubSession !== "skills") {
+      return;
+    }
     this.container.innerHTML = `
       ${this.showHeader ? `
         <div class="skills-header" style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:16px; padding-bottom:14px; border-bottom:1px solid var(--line);">

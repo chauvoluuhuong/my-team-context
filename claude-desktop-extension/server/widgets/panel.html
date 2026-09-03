@@ -246,6 +246,14 @@
     border-color: var(--accent);
   }
 
+  .tab-disabled,
+  .sub-pill:disabled,
+  .top-tab:disabled {
+    opacity: 0.45 !important;
+    pointer-events: none !important;
+    cursor: not-allowed !important;
+  }
+
   .section-intro {
     margin-bottom: 14px;
   }
@@ -1125,7 +1133,24 @@
     countdownTimer: null,
     errorMessage: "",
     isSaving: false,
+    isProcessing: false,
   };
+
+  function setTabsProcessing(isProcessing) {
+    state.isProcessing = Boolean(isProcessing);
+    const elements = document.querySelectorAll(
+      ".top-tab, .sub-pill, #tabBtnCredentials, #tabBtnConfig, #saveAppConfigBtn, #startAssistantBtn, #refreshNotionBtn, #refreshReposBtn, #selectAllNotionBtn, #clearAllNotionBtn, #selectAllReposBtn, #clearAllReposBtn"
+    );
+    elements.forEach(el => {
+      if (isProcessing) {
+        el.setAttribute("disabled", "true");
+        el.classList.add("tab-disabled");
+      } else {
+        el.removeAttribute("disabled");
+        el.classList.remove("tab-disabled");
+      }
+    });
+  }
 
   const root = document.getElementById("root");
 
@@ -1834,29 +1859,35 @@ Please confirm you are ready to assist with our team context and give a brief gr
   }
 
   async function switchTopTab(tab) {
-    state.activeTopTab = tab;
-    state.statusType = null;
-    state.statusMessage = "";
-    const contentArea = document.getElementById("tabContent");
-    if (tab === "config") {
-      if (contentArea) {
-        contentArea.innerHTML = renderLoadingComponent("Loading Application Configuration…", "Fetching active repositories, Notion resources, and prompt settings");
+    if (state.isProcessing) return;
+    setTabsProcessing(true);
+    try {
+      state.activeTopTab = tab;
+      state.statusType = null;
+      state.statusMessage = "";
+      const contentArea = document.getElementById("tabContent");
+      if (tab === "config") {
+        if (contentArea) {
+          contentArea.innerHTML = renderLoadingComponent("Loading Application Configuration…", "Fetching active repositories, Notion resources, and prompt settings");
+        }
+        await loadAppConfigData();
+        if (skillsComponent) {
+          await skillsComponent.loadSkills().catch(() => {});
+        }
+      } else if (tab === "credentials") {
+        if (contentArea) {
+          contentArea.innerHTML = renderLoadingComponent("Loading Connections & Credentials…", "Checking service statuses");
+        }
+        try {
+          const configRes = await app.callServerTool({ name: "panel_load_config", arguments: {} });
+          const cfg = JSON.parse(configRes.content[0].text);
+          state.credentials = cfg.config || {};
+        } catch {}
       }
-      await loadAppConfigData();
-      if (skillsComponent) {
-        await skillsComponent.loadSkills().catch(() => {});
-      }
-    } else if (tab === "credentials") {
-      if (contentArea) {
-        contentArea.innerHTML = renderLoadingComponent("Loading Connections & Credentials…", "Checking service statuses");
-      }
-      try {
-        const configRes = await app.callServerTool({ name: "panel_load_config", arguments: {} });
-        const cfg = JSON.parse(configRes.content[0].text);
-        state.credentials = cfg.config || {};
-      } catch {}
+      render();
+    } finally {
+      setTabsProcessing(false);
     }
-    render();
   }
 
   async function handleLogout() {
@@ -2516,34 +2547,45 @@ Please confirm you are ready to assist with our team context and give a brief gr
   }
 
   async function switchSubSession(sub) {
-    state.activeSubSession = sub;
-    ["github", "notion", "skills", "prompt", "database"].forEach(s => {
-      const el = document.getElementById("pill" + s.charAt(0).toUpperCase() + s.slice(1));
-      if (el) el.className = "sub-pill " + (s === sub ? "active" : "");
-    });
-    const subContent = document.getElementById("subSessionContent");
-    if (!subContent) return;
+    if (state.isProcessing) return;
+    setTabsProcessing(true);
+    try {
+      state.activeSubSession = sub;
+      ["github", "notion", "skills", "prompt", "database"].forEach(s => {
+        const el = document.getElementById("pill" + s.charAt(0).toUpperCase() + s.slice(1));
+        if (el) el.className = "sub-pill " + (s === sub ? "active" : "");
+      });
+      const subContent = document.getElementById("subSessionContent");
+      if (!subContent) return;
 
-    if (sub === "github") {
-      renderGitHubSession(subContent);
-    } else if (sub === "notion") {
-      await window._refreshNotionPages(true);
-    } else if (sub === "skills") {
-      await skillsComponent.mount(subContent, true);
-    } else if (sub === "prompt") {
-      renderPromptSession(subContent);
-    } else if (sub === "database") {
-      renderDatabaseSession(subContent);
+      if (sub === "github") {
+        renderGitHubSession(subContent);
+      } else if (sub === "notion") {
+        renderNotionSession(subContent);
+        if (state.notionPages.length === 0 && SERVICES_CATALOG.notion.isConfigured() && !state.disabledConnections.has("notion")) {
+          window._refreshNotionPages();
+        }
+      } else if (sub === "skills") {
+        renderSkillsSession(subContent);
+      } else if (sub === "prompt") {
+        renderPromptSession(subContent);
+      } else if (sub === "database") {
+        renderDatabaseSession(subContent);
+      }
+    } finally {
+      setTabsProcessing(false);
     }
   }
 
   /* Sub-session: Skills & Knowledge Base (Component Mounted) */
   function renderSkillsSession(container) {
+    if (state.activeSubSession !== "skills") return;
     skillsComponent.mount(container);
   }
 
   /* Sub-session: GitHub */
   function renderGitHubSession(container) {
+    if (state.activeSubSession !== "github") return;
     if (!SERVICES_CATALOG.github.isConfigured() || state.disabledConnections.has("github")) {
       container.innerHTML = `
         <div class="card" style="text-align:center;padding:32px 16px;">
@@ -2643,6 +2685,9 @@ Please confirm you are ready to assist with our team context and give a brief gr
   }
 
   window._refreshGitHubRepos = async function() {
+    if (state.isProcessing && !state.refreshingGithub) return;
+    state.refreshingGithub = true;
+    setTabsProcessing(true);
     const refreshBtn = document.getElementById("refreshReposBtn");
     if (refreshBtn) {
       refreshBtn.disabled = true;
@@ -2658,9 +2703,14 @@ Please confirm you are ready to assist with our team context and give a brief gr
       state.repos = data.repos || [];
     } catch (err) {
       console.error("Failed to refresh GitHub repos:", err);
+    } finally {
+      state.refreshingGithub = false;
+      setTabsProcessing(false);
+      const subContent = document.getElementById("subSessionContent");
+      if (subContent && state.activeSubSession === "github") {
+        renderGitHubSession(subContent);
+      }
     }
-    const subContent = document.getElementById("subSessionContent");
-    if (subContent) renderGitHubSession(subContent);
   };
 
   /* ------------------- Centralized Skill Name & Modal Flow ------------------- */
@@ -3004,7 +3054,7 @@ Please confirm you are ready to assist with our team context and give a brief gr
       state.selectedRepos.set(name, "");
     }
     const subContent = document.getElementById("subSessionContent");
-    if (subContent) renderGitHubSession(subContent);
+    if (subContent && state.activeSubSession === "github") renderGitHubSession(subContent);
   };
 
   window._updateRepoDesc = function (name, desc) {
@@ -3013,6 +3063,7 @@ Please confirm you are ready to assist with our team context and give a brief gr
 
   /* Sub-session: System Prompt */
   function renderPromptSession(container) {
+    if (state.activeSubSession !== "prompt") return;
     if (!state.systemPrompt || !state.systemPrompt.trim()) {
       state.systemPrompt = buildDefaultSystemPrompt();
     }
@@ -3044,11 +3095,12 @@ Please confirm you are ready to assist with our team context and give a brief gr
 
   /* Sub-session: Notion */
   function renderNotionSession(container) {
-    if (!SERVICES_CATALOG.notion.isConfigured() || (!state.isNotionConnected && state.notionPages.length === 0) || state.disabledConnections.has("notion")) {
+    if (state.activeSubSession !== "notion") return;
+    if (!SERVICES_CATALOG.notion.isConfigured() || state.disabledConnections.has("notion")) {
       container.innerHTML = `
         <div class="card" style="text-align:center;padding:32px 16px;">
           <span style="font-size:32px;">📝</span>
-          <h4 style="margin:8px 0 4px;font-size:15px;">Notion Workspace Not Connected</h4>
+          <h4 style="margin:8px 0 4px;font-size:15px;">Notion Connection Not Configured</h4>
           <p style="color:var(--muted);font-size:12.5px;max-width:440px;margin:0 auto 16px;">
             Configure your Notion Internal Integration Token in the Connections tab to load and select active Notion pages and databases.
           </p>
@@ -3204,7 +3256,7 @@ Please confirm you are ready to assist with our team context and give a brief gr
   window._setNotionTypeFilter = function(filter) {
     state.notionResourceTypeFilter = filter;
     const subContent = document.getElementById("subSessionContent");
-    if (subContent) renderNotionSession(subContent);
+    if (subContent && state.activeSubSession === "notion") renderNotionSession(subContent);
   };
 
   window._goToCredentialsTab = function() {
@@ -3230,7 +3282,7 @@ Please confirm you are ready to assist with our team context and give a brief gr
       }
     }
     const subContent = document.getElementById("subSessionContent");
-    if (subContent) renderNotionSession(subContent);
+    if (subContent && state.activeSubSession === "notion") renderNotionSession(subContent);
   };
 
   window._updateNotionDesc = function(pageId, desc) {
@@ -3242,6 +3294,9 @@ Please confirm you are ready to assist with our team context and give a brief gr
   };
 
   window._refreshNotionPages = async function() {
+    if (state.isProcessing && !state.refreshingNotion) return;
+    state.refreshingNotion = true;
+    setTabsProcessing(true);
     const refreshBtn = document.getElementById("refreshNotionBtn");
     if (refreshBtn) {
       refreshBtn.disabled = true;
@@ -3258,13 +3313,19 @@ Please confirm you are ready to assist with our team context and give a brief gr
       state.isNotionConnected = true;
     } catch (err) {
       console.error("Failed to refresh Notion pages:", err);
+    } finally {
+      state.refreshingNotion = false;
+      setTabsProcessing(false);
+      const subContent = document.getElementById("subSessionContent");
+      if (subContent && state.activeSubSession === "notion") {
+        renderNotionSession(subContent);
+      }
     }
-    const subContent = document.getElementById("subSessionContent");
-    if (subContent) renderNotionSession(subContent);
   };
 
   /* Sub-session: Database */
   function renderDatabaseSession(container) {
+    if (state.activeSubSession !== "database") return;
     container.innerHTML = `
       <div class="card" style="text-align:center;padding:32px 16px;">
         <span style="font-size:32px;">🗄️</span>
@@ -3278,9 +3339,13 @@ Please confirm you are ready to assist with our team context and give a brief gr
   }
 
   async function saveAppConfig() {
+    if (state.isProcessing) return;
+    setTabsProcessing(true);
     const btn = document.getElementById("saveAppConfigBtn");
-    btn.disabled = true;
-    btn.innerHTML = '<span class="spinner-sm"></span> Saving…';
+    if (btn) {
+      btn.disabled = true;
+      btn.innerHTML = '<span class="spinner-sm"></span> Saving…';
+    }
     setStatus(null, "");
 
     const activeRepos = Array.from(state.selectedRepos.entries()).map(([name, description]) => ({
@@ -3343,9 +3408,13 @@ Please confirm you are ready to assist with our team context and give a brief gr
       }
     } catch (err) {
       setStatus("err", "Error: " + err.message);
+    } finally {
+      if (btn) {
+        btn.disabled = false;
+        btn.innerHTML = "💾 Save Application Configuration";
+      }
+      setTabsProcessing(false);
     }
-    btn.disabled = false;
-    btn.innerHTML = "💾 Save Application Configuration";
   }
 
   async function startAssistantSession() {
