@@ -459,11 +459,43 @@ assert.equal(envWithUser.CURRENT_USER_NAME, "huong");
 assert.equal(envWithUser.CURRENT_USER_ROLE, "Full Stack Engineer");
 
 // Panel & Skills Component Builder tests
-const { buildPanel, buildSkillsPanel, buildTeamContextSystemPrompt, getDefaultSystemPrompt } = await import("../src/utils/helpers.js");
+const {
+  buildPanel,
+  buildSkillsPanel,
+  buildTeamContextSystemPrompt,
+  getDefaultSystemPrompt,
+  resolveSkillOfConnection,
+  resolveConnectionSkills,
+} = await import("../src/utils/helpers.js");
+
+// Connection Skills Resolver tests
+assert.equal(resolveSkillOfConnection("github")?.skillName, "How to use GitHub tools");
+assert.equal(resolveSkillOfConnection("notion")?.skillName, "How to use Notion tools");
+assert.equal(resolveSkillOfConnection("sql")?.skillName, "How to use SQL Database tools");
+assert.equal(resolveSkillOfConnection("unknown_service"), null);
+
+const skillsFromOptions = resolveConnectionSkills(undefined, {
+  activeRepos: [{ name: "my-org/core-api" }],
+  activeNotionPages: [{ id: "db-1", title: "Roadmap" }],
+});
+assert.equal(skillsFromOptions.length, 2);
+assert.equal(skillsFromOptions[0].skillName, "How to use GitHub tools");
+assert.equal(skillsFromOptions[1].skillName, "How to use Notion tools");
+
+const skillsFromConns = resolveConnectionSkills({
+  github: { enabled: true, credentials: { GITHUB_TOKEN: "tok" } },
+  sql: { enabled: true, credentials: { DATABASE_URL: "postgres://..." } },
+  notion: { enabled: false },
+});
+assert.equal(skillsFromConns.length, 2);
+assert.equal(skillsFromConns[0].skillName, "How to use GitHub tools");
+assert.equal(skillsFromConns[1].skillName, "How to use SQL Database tools");
+
 const panelHtml = buildPanel("config");
 assert.ok(panelHtml.includes("SkillsComponent"), "buildPanel injects reusable SkillsComponent");
 assert.ok(panelHtml.includes("ExtApps"), "buildPanel inlines ExtApps bundle");
 assert.ok(panelHtml.includes("buildDefaultSystemPrompt"), "buildPanel includes buildDefaultSystemPrompt");
+assert.ok(panelHtml.includes("resolveConnectionSkills"), "buildPanel includes resolveConnectionSkills");
 
 const skillsPanelHtml = buildSkillsPanel();
 assert.ok(skillsPanelHtml.includes("SkillsComponent"), "buildSkillsPanel injects reusable SkillsComponent");
@@ -482,10 +514,16 @@ const generatedPrompt = buildTeamContextSystemPrompt({
 assert.ok(generatedPrompt.includes("Current User: Alice (Staff Engineer)"));
 assert.ok(generatedPrompt.includes("Active Repositories: my-org/core-api (Core backend)"));
 assert.ok(generatedPrompt.includes("Active Notion Resources: 📄 Architecture RFC (RFC Doc), 🗄️ Sprint Tasks [Database] (Task Tracker)"));
+assert.ok(generatedPrompt.includes("Required Connection Skills to Read:"));
+assert.ok(generatedPrompt.includes("How to use GitHub tools"));
+assert.ok(generatedPrompt.includes("How to use Notion tools"));
 assert.ok(generatedPrompt.includes("SQL Database Querying: Use `sql_get_schema` and `sql_execute_query`"));
 assert.ok(generatedPrompt.includes("Always ask for explicit user approval before executing any actions that edit or modify data"));
 assert.ok(generatedPrompt.includes("my-team-context-mcp-server"));
 assert.equal(getDefaultSystemPrompt({ userName: "Alice" }), buildTeamContextSystemPrompt({ userName: "Alice" }));
+
+const emptyPrompt = buildTeamContextSystemPrompt({ userName: "Bob" });
+assert.ok(!emptyPrompt.includes("Required Connection Skills to Read:"));
 
 // SQL Tools Tests (SQLite file/memory test)
 const testDbPath = path.join(dir, "test.sqlite");

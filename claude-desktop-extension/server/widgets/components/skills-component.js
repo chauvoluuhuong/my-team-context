@@ -17,6 +17,7 @@ export class SkillsComponent {
     this.isSearching = false;
     this.isSaving = false;
     this.deletingSkillId = null;
+    this.isActive = Boolean(options.container);
   }
 
   esc(s) {
@@ -46,6 +47,7 @@ export class SkillsComponent {
 
   async mount(container, forceReload = true) {
     this.container = container;
+    this.isActive = true;
     if (forceReload || !this.skills || this.skills.length === 0) {
       await this.loadSkills();
     } else {
@@ -53,9 +55,16 @@ export class SkillsComponent {
     }
   }
 
+  unmount() {
+    this.container = null;
+    this.isActive = false;
+  }
+
   async loadSkills() {
     this.isLoading = true;
-    this.render();
+    if (this.isActive && this.container) {
+      this.render();
+    }
 
     try {
       const res = await this.app.callServerTool({
@@ -66,11 +75,15 @@ export class SkillsComponent {
       this.skills = data.skills || [];
       if (this.onUpdate) this.onUpdate(this.skills);
       this.isLoading = false;
-      this.render();
+      if (this.isActive && this.container) {
+        this.render();
+      }
     } catch (err) {
       this.isLoading = false;
-      this.showStatus("err", `Failed to load skills: ${err.message}`);
-      this.render();
+      if (this.isActive && this.container) {
+        this.showStatus("err", `Failed to load skills: ${err.message}`);
+        this.render();
+      }
     }
   }
 
@@ -86,7 +99,7 @@ export class SkillsComponent {
           this.statusMessage = null;
           this.render();
         }
-      }, 4000);
+      }, 3500);
     }
   }
 
@@ -95,8 +108,9 @@ export class SkillsComponent {
   }
 
   render() {
-    if (!this.container) return;
-    if (this.container.id === "subSessionContent" && typeof state !== "undefined" && state.activeSubSession !== "skills") {
+    if (!this.container || !this.isActive) return;
+    const activeSub = window.state?.activeSubSession || (typeof state !== "undefined" ? state.activeSubSession : null);
+    if (this.container.id === "subSessionContent" && activeSub && activeSub !== "skills") {
       return;
     }
     this.container.innerHTML = `

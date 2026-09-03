@@ -1135,6 +1135,7 @@
     isSaving: false,
     isProcessing: false,
   };
+  window.state = state;
 
   function setTabsProcessing(isProcessing) {
     state.isProcessing = Boolean(isProcessing);
@@ -1248,6 +1249,83 @@
     }
   }
 
+  function resolveSkillOfConnection(connectionId) {
+    const id = String(connectionId).trim().toLowerCase();
+    switch (id) {
+      case "github":
+        return {
+          connectionId: "github",
+          serviceName: "GitHub",
+          skillName: "How to use GitHub tools",
+          description: "Usage guidelines, repository architecture, and code navigation rules",
+          readInstruction:
+            'Before interacting with our codebases or searching code, read the skill "How to use GitHub tools" by calling skills_search({ query: "How to use GitHub tools" }) or get_skills to learn our active repositories, file structures, and code search rules.',
+        };
+      case "notion":
+        return {
+          connectionId: "notion",
+          serviceName: "Notion",
+          skillName: "How to use Notion tools",
+          description: "Active pages, databases, and database filter specifications",
+          readInstruction:
+            'Before querying Notion or looking up project documentation, read the skill "How to use Notion tools" by calling skills_search({ query: "How to use Notion tools" }) or get_skills to learn our active documentation resources and exact database filter schemas.',
+        };
+      case "sql":
+        return {
+          connectionId: "sql",
+          serviceName: "SQL Database",
+          skillName: "How to use SQL Database tools",
+          description: "Database querying, schema inspection, and safety guidelines",
+          readInstruction:
+            'Before writing or executing database queries, consult the database schema and guidelines using sql_get_schema to inspect table definitions, foreign keys, and query limits.',
+        };
+      default:
+        return null;
+    }
+  }
+
+  function resolveConnectionSkills(connections, options) {
+    const activeIds = new Set();
+    if (Array.isArray(connections)) {
+      connections.forEach(id => {
+        if (typeof id === "string" && id.trim()) activeIds.add(id.trim().toLowerCase());
+      });
+    } else if (connections && typeof connections === "object") {
+      Object.entries(connections).forEach(([key, conn]) => {
+        if (!conn) return;
+        const id = key.trim().toLowerCase();
+        if (conn.enabled !== false) {
+          const hasCreds = conn.credentials && typeof conn.credentials === "object" && Object.values(conn.credentials).some(v => Boolean(v && String(v).trim()));
+          if (hasCreds || conn.enabled === true) activeIds.add(id);
+        }
+      });
+    }
+
+    if (typeof SERVICES_CATALOG !== "undefined") {
+      if (SERVICES_CATALOG.github?.isConfigured() && !state.disabledConnections.has("github")) activeIds.add("github");
+      if (SERVICES_CATALOG.notion?.isConfigured() && !state.disabledConnections.has("notion")) activeIds.add("notion");
+      if (SERVICES_CATALOG.sql?.isConfigured() && !state.disabledConnections.has("sql")) activeIds.add("sql");
+    }
+
+    if (options?.activeRepos && options.activeRepos.length > 0) activeIds.add("github");
+    if (options?.activeNotionPages && options.activeNotionPages.length > 0) activeIds.add("notion");
+
+    const result = [];
+    ["github", "notion", "sql"].forEach(id => {
+      if (activeIds.has(id)) {
+        const item = resolveSkillOfConnection(id);
+        if (item) result.push(item);
+      }
+    });
+    for (const id of activeIds) {
+      if (!["github", "notion", "sql"].includes(id)) {
+        const item = resolveSkillOfConnection(id);
+        if (item) result.push(item);
+      }
+    }
+    return result;
+  }
+
   function buildDefaultSystemPrompt(context) {
     const userName = (context && context.userName) || state.currentUser?.name || "Team Member";
     const userRole = (context && context.userRole) || (state.currentUser?.role ? ` (${state.currentUser.role})` : "");
@@ -1277,12 +1355,27 @@
       }
     }
 
+    const activeConnections = (context && context.connections) || state.connections || {};
+    const connectionSkills = resolveConnectionSkills(activeConnections, {
+      activeRepos: activeRepoList,
+      activeNotionPages: activePages,
+    });
+
+    let skillsSection = "";
+    if (connectionSkills.length > 0) {
+      const list = connectionSkills
+        .map(s => `- **${s.skillName}** (${s.serviceName}): ${s.readInstruction}`)
+        .join("\n");
+
+      skillsSection = `\nRequired Connection Skills to Read:\nBased on the connections configured for our team, you MUST read and consult these guide skills in our vector knowledge base before invoking tools for these services:\n${list}\n`;
+    }
+
     return `You are my Team Assistant and Engineering Co-Pilot helping me understand and navigate the context of our team's work.
 
 Current User: ${userName}${userRole}
 Active Repositories: ${activeReposStr}
 Active Notion Resources: ${activeNotionStr}
-
+${skillsSection}
 Please assist me throughout our work by using the \`my-team-context-mcp-server\` tools:
 1. Team Knowledge & Skills: Query our vector knowledge base with \`skills_search\` and \`get_skills\` to retrieve relevant engineering procedures, guidelines, and playbooks.
 2. Codebase Context: Consult our configured GitHub repositories for codebase architecture, style conventions, and implementation patterns.
@@ -2539,6 +2632,9 @@ Please confirm you are ready to assist with our team context and give a brief gr
     document.getElementById("startAssistantBtn")?.addEventListener("click", startAssistantSession);
 
     const subContent = document.getElementById("subSessionContent");
+    if (sub !== "skills" && skillsComponent) {
+      skillsComponent.unmount();
+    }
     if (sub === "github") renderGitHubSession(subContent);
     else if (sub === "notion") renderNotionSession(subContent);
     else if (sub === "skills") renderSkillsSession(subContent);
@@ -2557,6 +2653,10 @@ Please confirm you are ready to assist with our team context and give a brief gr
       });
       const subContent = document.getElementById("subSessionContent");
       if (!subContent) return;
+
+      if (sub !== "skills" && skillsComponent) {
+        skillsComponent.unmount();
+      }
 
       if (sub === "github") {
         renderGitHubSession(subContent);
@@ -3064,6 +3164,9 @@ Please confirm you are ready to assist with our team context and give a brief gr
   /* Sub-session: System Prompt */
   function renderPromptSession(container) {
     if (state.activeSubSession !== "prompt") return;
+    if (skillsComponent) {
+      skillsComponent.unmount();
+    }
     if (!state.systemPrompt || !state.systemPrompt.trim()) {
       state.systemPrompt = buildDefaultSystemPrompt();
     }
