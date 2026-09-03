@@ -101,12 +101,16 @@
       "description": "Test connectivity to Notion workspace"
     },
     {
-      "name": "save_notion_key",
-      "description": "Validate and store Notion internal integration token"
+      "name": "notion_list_resources",
+      "description": "Discover and list accessible pages and databases in the connected Notion workspace"
     },
     {
-      "name": "notion_disconnect",
-      "description": "Remove stored Notion API key from keychain"
+      "name": "notion_get_page",
+      "description": "Fetch full Markdown content and metadata for a Notion page or database"
+    },
+    {
+      "name": "notion_search",
+      "description": "Deep search across Notion database properties, page bodies, and comments"
     },
     {
       "name": "sql_check_connection",

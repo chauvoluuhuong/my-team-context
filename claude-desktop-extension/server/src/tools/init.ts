@@ -20,6 +20,11 @@ import {
   saveQdrantConfig,
   saveSqlConnectionString,
   saveGeminiKey,
+  clearToken,
+  clearNotionKey,
+  clearQdrantConfig,
+  clearSqlConnectionString,
+  clearGeminiKey,
   clearAllCredentials,
 } from "../utils/store.js";
 import { readEnvConfig, writeEnvConfig, clearEnvConfig } from "../utils/env.js";
@@ -33,6 +38,9 @@ import {
   createUser,
   getUser,
   ensureUsersCollection,
+  getAppConfig,
+  saveAppConfig,
+  deleteSkillsBySource,
 } from "../services/vector-db.js";
 import { sqlCheckConnection, validateSqlConnection } from "./sql.js";
 import { validateGeminiKey, geminiCheckConnection } from "../services/embedding.js";
@@ -126,7 +134,28 @@ export async function checkTeamContextSetup(): Promise<SetupStatusResult> {
     };
   }
 
-  // 3. Qdrant is connected. Fetch users from Qdrant 'users' collection
+  // 3. Check Gemini API key (obligatory for vector embeddings)
+  const geminiKey = envConfig.GEMINI_API_KEY || (await readGeminiKey());
+  if (!geminiKey || !geminiKey.trim()) {
+    return {
+      isSetupComplete: false,
+      step: "qdrant_config",
+      qdrant: {
+        configured: true,
+        connected: true,
+        endpoint: qdrantCheck.endpoint || endpoint,
+        error: "Gemini API key is required. Google Gemini is obligatory for embeddings.",
+      },
+      currentUser: {
+        name: currentUserName,
+        role: currentUserRole,
+      },
+      users: [],
+      error: "Gemini API key is not configured. Google Gemini is obligatory for embeddings.",
+    };
+  }
+
+  // 4. Qdrant is connected. Fetch users from Qdrant 'users' collection
   let users: TeamUserItem[] = [];
   try {
     users = await listUsers();
@@ -134,7 +163,7 @@ export async function checkTeamContextSetup(): Promise<SetupStatusResult> {
     users = [];
   }
 
-  // 4. Check if active user identity is selected in .env
+  // 5. Check if active user identity is selected in .env
   if (!currentUserName || !currentUserName.trim()) {
     return {
       isSetupComplete: false,
@@ -305,20 +334,28 @@ export function registerInitTools(server: McpServer): void {
         getAuthState(),
       ]);
 
+      const username = envConfig.CURRENT_USER_NAME || envConfig.USER_NAME || auth.username || currentSessionUser || "";
+      let appConfig = null;
+      if (username) {
+        appConfig = await getAppConfig(username).catch(() => null);
+      }
+      const connections = appConfig?.connections || {};
+
       return text({
         status: "ok",
         auth,
+        connections,
         config: {
           CURRENT_USER_NAME: envConfig.CURRENT_USER_NAME || envConfig.USER_NAME || auth.username || "",
           CURRENT_USER_ROLE: envConfig.CURRENT_USER_ROLE || envConfig.USER_ROLE || auth.role || "Member",
           USER_NAME: envConfig.CURRENT_USER_NAME || envConfig.USER_NAME || auth.username || "",
           USER_ROLE: envConfig.CURRENT_USER_ROLE || envConfig.USER_ROLE || auth.role || "Member",
           AUTH_USERNAME: envConfig.CURRENT_USER_NAME || envConfig.USER_NAME || auth.username || "",
-          GITHUB_TOKEN: envConfig.GITHUB_TOKEN || ghToken || "",
-          NOTION_API_KEY: envConfig.NOTION_API_KEY || notionKey || "",
+          GITHUB_TOKEN: connections.github?.credentials?.GITHUB_TOKEN || envConfig.GITHUB_TOKEN || ghToken || "",
+          NOTION_API_KEY: connections.notion?.credentials?.NOTION_API_KEY || envConfig.NOTION_API_KEY || notionKey || "",
           QDRANT_URL: envConfig.QDRANT_URL || qdrantConfig.endpoint || "",
           QDRANT_API_KEY: envConfig.QDRANT_API_KEY || qdrantConfig.apiKey || "",
-          DATABASE_URL: envConfig.DATABASE_URL || sqlConn || "",
+          DATABASE_URL: connections.sql?.credentials?.DATABASE_URL || envConfig.DATABASE_URL || sqlConn || "",
           GEMINI_API_KEY: envConfig.GEMINI_API_KEY || geminiKey || "",
           activeRepo: state.repo || "",
         },
@@ -349,15 +386,20 @@ export function registerInitTools(server: McpServer): void {
       inputSchema: {
         qdrantUrl: z.string().min(1).describe("Qdrant Cluster Endpoint URL"),
         qdrantApiKey: z.string().optional().describe("Qdrant API Key"),
+        geminiApiKey: z.string().min(1).describe("Google Gemini API Key (obligatory)"),
       },
       _meta: { ui: { visibility: ["app"] } },
     },
-    guarded(async (args: { qdrantUrl: string; qdrantApiKey?: string }) => {
+    guarded(async (args: { qdrantUrl: string; qdrantApiKey?: string; geminiApiKey: string }) => {
       const url = args.qdrantUrl?.trim();
       const apiKey = args.qdrantApiKey?.trim() || "";
+      const geminiApiKey = args.geminiApiKey?.trim();
 
       if (!url) {
         return text({ success: false, reason: "Qdrant endpoint URL cannot be empty." });
+      }
+      if (!geminiApiKey) {
+        return text({ success: false, reason: "Gemini API key is obligatory. Please provide your Google AI Studio API key." });
       }
 
       const check = await validateQdrantConnection(url, apiKey);
@@ -368,12 +410,22 @@ export function registerInitTools(server: McpServer): void {
         });
       }
 
+      const geminiCheck = await validateGeminiKey(geminiApiKey);
+      if (!geminiCheck.valid) {
+        return text({
+          success: false,
+          reason: geminiCheck.reason || "Invalid Gemini API key. Please check your API key at Google AI Studio.",
+        });
+      }
+
       // Save to .env and keychain
       await writeEnvConfig({
         QDRANT_URL: check.endpoint || url,
         QDRANT_API_KEY: apiKey || undefined,
+        GEMINI_API_KEY: geminiApiKey,
       });
       await saveQdrantConfig(check.endpoint || url, apiKey || undefined);
+      await saveGeminiKey(geminiApiKey);
 
       // Ensure users collection is ready and retrieve existing users
       await ensureUsersCollection().catch(() => {});
@@ -388,7 +440,7 @@ export function registerInitTools(server: McpServer): void {
         success: true,
         endpoint: check.endpoint || url,
         users,
-        message: "Qdrant endpoint successfully configured and connected.",
+        message: "Qdrant and Gemini successfully configured and connected.",
       });
     }),
   );
@@ -442,6 +494,46 @@ export function registerInitTools(server: McpServer): void {
 
       setSessionUser(name, role);
 
+      // Seed bootstrap connections into appConfig.connections
+      try {
+        const existingConfig = await getAppConfig(name).catch(() => null);
+        const connections = existingConfig?.connections || {};
+        const env = await readEnvConfig();
+        let changed = false;
+        if (env.QDRANT_URL && !connections.qdrant) {
+          connections.qdrant = {
+            id: "qdrant",
+            enabled: true,
+            credentials: {
+              QDRANT_URL: env.QDRANT_URL,
+              QDRANT_API_KEY: env.QDRANT_API_KEY || "",
+            },
+            updatedAt: new Date().toISOString(),
+          };
+          changed = true;
+        }
+        if (env.GEMINI_API_KEY && !connections.gemini) {
+          connections.gemini = {
+            id: "gemini",
+            enabled: true,
+            credentials: {
+              GEMINI_API_KEY: env.GEMINI_API_KEY,
+            },
+            updatedAt: new Date().toISOString(),
+          };
+          changed = true;
+        }
+        if (changed || !existingConfig) {
+          await saveAppConfig({
+            username: name,
+            activeRepos: existingConfig?.activeRepos || [],
+            activeNotionPages: existingConfig?.activeNotionPages || [],
+            systemPrompt: existingConfig?.systemPrompt,
+            connections,
+          });
+        }
+      } catch {}
+
       return text({
         success: true,
         user: { name, role },
@@ -481,6 +573,46 @@ export function registerInitTools(server: McpServer): void {
       });
 
       setSessionUser(name, role);
+
+      // Seed bootstrap connections into appConfig.connections
+      try {
+        const existingConfig = await getAppConfig(name).catch(() => null);
+        const connections = existingConfig?.connections || {};
+        const env = await readEnvConfig();
+        let changed = false;
+        if (env.QDRANT_URL && !connections.qdrant) {
+          connections.qdrant = {
+            id: "qdrant",
+            enabled: true,
+            credentials: {
+              QDRANT_URL: env.QDRANT_URL,
+              QDRANT_API_KEY: env.QDRANT_API_KEY || "",
+            },
+            updatedAt: new Date().toISOString(),
+          };
+          changed = true;
+        }
+        if (env.GEMINI_API_KEY && !connections.gemini) {
+          connections.gemini = {
+            id: "gemini",
+            enabled: true,
+            credentials: {
+              GEMINI_API_KEY: env.GEMINI_API_KEY,
+            },
+            updatedAt: new Date().toISOString(),
+          };
+          changed = true;
+        }
+        if (changed || !existingConfig) {
+          await saveAppConfig({
+            username: name,
+            activeRepos: existingConfig?.activeRepos || [],
+            activeNotionPages: existingConfig?.activeNotionPages || [],
+            systemPrompt: existingConfig?.systemPrompt,
+            connections,
+          });
+        }
+      } catch {}
 
       return text({
         success: true,
@@ -612,36 +744,160 @@ export function registerInitTools(server: McpServer): void {
       DATABASE_URL?: string;
       GEMINI_API_KEY?: string;
     }) => {
-      // 1. Write to server/.env
-      await writeEnvConfig({
-        GITHUB_TOKEN: args.GITHUB_TOKEN?.trim() || undefined,
-        NOTION_API_KEY: args.NOTION_API_KEY?.trim() || undefined,
-        QDRANT_URL: args.QDRANT_URL?.trim() || undefined,
-        QDRANT_API_KEY: args.QDRANT_API_KEY?.trim() || undefined,
-        DATABASE_URL: args.DATABASE_URL?.trim() || undefined,
-        GEMINI_API_KEY: args.GEMINI_API_KEY?.trim() || undefined,
-      });
+      // 1. Write to server/.env (if key is empty string, clear it from process.env and .env)
+      const envUpdate: Record<string, string | undefined> = {};
+      if (args.GITHUB_TOKEN !== undefined) envUpdate.GITHUB_TOKEN = args.GITHUB_TOKEN.trim();
+      if (args.NOTION_API_KEY !== undefined) envUpdate.NOTION_API_KEY = args.NOTION_API_KEY.trim();
+      if (args.QDRANT_URL !== undefined) envUpdate.QDRANT_URL = args.QDRANT_URL.trim();
+      if (args.QDRANT_API_KEY !== undefined) envUpdate.QDRANT_API_KEY = args.QDRANT_API_KEY.trim();
+      if (args.DATABASE_URL !== undefined) envUpdate.DATABASE_URL = args.DATABASE_URL.trim();
+      if (args.GEMINI_API_KEY !== undefined) envUpdate.GEMINI_API_KEY = args.GEMINI_API_KEY.trim();
+
+      await writeEnvConfig(envUpdate);
 
       // 2. Sync with keychain storage
       if (args.GITHUB_TOKEN?.trim()) {
         await saveToken(args.GITHUB_TOKEN.trim());
+      } else if (args.GITHUB_TOKEN === "") {
+        await clearToken();
       }
+
       if (args.NOTION_API_KEY?.trim()) {
         await saveNotionKey(args.NOTION_API_KEY.trim());
+      } else if (args.NOTION_API_KEY === "") {
+        await clearNotionKey();
       }
+
       if (args.QDRANT_URL?.trim()) {
         await saveQdrantConfig(args.QDRANT_URL.trim(), args.QDRANT_API_KEY?.trim());
+      } else if (args.QDRANT_URL === "") {
+        await clearQdrantConfig();
       }
+
       if (args.DATABASE_URL?.trim()) {
         await saveSqlConnectionString(args.DATABASE_URL.trim());
+      } else if (args.DATABASE_URL === "") {
+        await clearSqlConnectionString();
       }
+
       if (args.GEMINI_API_KEY?.trim()) {
         await saveGeminiKey(args.GEMINI_API_KEY.trim());
+      } else if (args.GEMINI_API_KEY === "") {
+        await clearGeminiKey();
       }
 
       return text({
         status: "ok",
         message: "Credentials successfully validated and saved to server/.env",
+      });
+    }),
+  );
+
+  registerAppTool(
+    server,
+    "panel_save_connection",
+    {
+      title: "Save Connection to App Config",
+      description: "Internal: save or update a connection and its credentials in appConfig (not in environment variables).",
+      annotations: { title: "Save Connection", readOnlyHint: false },
+      inputSchema: {
+        username: z.string().optional().describe("Target username"),
+        service: z.string().describe("Target service name (e.g. github, notion, sql)"),
+        credentials: z.record(z.string(), z.string()).describe("Service credentials"),
+        enabled: z.boolean().optional().default(true).describe("Whether connection is enabled"),
+      },
+      _meta: { ui: { visibility: ["app"] } },
+    },
+    guarded(async (args: { username?: string; service: string; credentials: Record<string, string>; enabled?: boolean }) => {
+      const envConfig = await readEnvConfig();
+      const username = args.username?.trim() || envConfig.CURRENT_USER_NAME || envConfig.USER_NAME || getSessionUser() || "admin";
+      const existing = await getAppConfig(username).catch(() => null);
+      const connections = existing?.connections || {};
+
+      connections[args.service] = {
+        id: args.service,
+        enabled: args.enabled !== false,
+        credentials: args.credentials || {},
+        updatedAt: new Date().toISOString(),
+      };
+
+      await saveAppConfig({
+        username,
+        activeRepos: existing?.activeRepos || [],
+        activeNotionPages: existing?.activeNotionPages || [],
+        systemPrompt: existing?.systemPrompt,
+        connections,
+      });
+
+      return text({
+        status: "ok",
+        message: `Connection for ${args.service} saved to appConfig successfully.`,
+        connections,
+      });
+    }),
+  );
+
+  registerAppTool(
+    server,
+    "panel_remove_connection",
+    {
+      title: "Remove Connection from App Config",
+      description: "Internal: remove a connection from appConfig and clean up its credentials.",
+      annotations: { title: "Remove Connection", readOnlyHint: false },
+      inputSchema: {
+        username: z.string().optional().describe("Target username"),
+        service: z.string().describe("Target service name (e.g. github, notion, sql)"),
+      },
+      _meta: { ui: { visibility: ["app"] } },
+    },
+    guarded(async (args: { username?: string; service: string }) => {
+      const envConfig = await readEnvConfig();
+      const username = args.username?.trim() || envConfig.CURRENT_USER_NAME || envConfig.USER_NAME || getSessionUser() || "admin";
+      const existing = await getAppConfig(username).catch(() => null);
+      const connections = existing?.connections || {};
+
+      // 1. Remove service from appConfig connections
+      delete connections[args.service];
+
+      // 2. Remove associated service data in database and appConfig
+      let activeRepos = existing?.activeRepos || [];
+      let activeNotionPages = existing?.activeNotionPages || [];
+
+      if (args.service === "github") {
+        activeRepos = [];
+        await deleteSkillsBySource("repo").catch(() => {});
+        await deleteSkillsBySource("github").catch(() => {});
+        await clearToken();
+        await writeEnvConfig({ GITHUB_TOKEN: "" });
+      } else if (args.service === "notion") {
+        activeNotionPages = [];
+        await deleteSkillsBySource("notion").catch(() => {});
+        await clearNotionKey();
+        await writeEnvConfig({ NOTION_API_KEY: "" });
+      } else if (args.service === "sql") {
+        await clearSqlConnectionString();
+        await writeEnvConfig({ DATABASE_URL: "" });
+      } else if (args.service === "qdrant") {
+        await clearQdrantConfig();
+        await writeEnvConfig({ QDRANT_URL: "", QDRANT_API_KEY: "" });
+      } else if (args.service === "gemini") {
+        await clearGeminiKey();
+        await writeEnvConfig({ GEMINI_API_KEY: "" });
+      }
+
+      // 3. Persist cleaned appConfig to Qdrant
+      await saveAppConfig({
+        username,
+        activeRepos,
+        activeNotionPages,
+        systemPrompt: existing?.systemPrompt,
+        connections,
+      });
+
+      return text({
+        status: "ok",
+        message: `Connection ${args.service} and its data removed from appConfig and database successfully.`,
+        connections,
       });
     }),
   );

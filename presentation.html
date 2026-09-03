@@ -1,0 +1,876 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>My Team Context - Presentation Slide Deck</title>
+  <style>
+    :root {
+      --primary: #2563eb;
+      --primary-dark: #1d4ed8;
+      --primary-light: #dbeafe;
+      --accent: #8b5cf6;
+      --success: #10b981;
+      --warning: #f59e0b;
+      --danger: #ef4444;
+      --bg: #0f172a;
+      --card-bg: rgba(30, 41, 59, 0.85);
+      --card-border: rgba(255, 255, 255, 0.1);
+      --text-main: #f8fafc;
+      --text-muted: #94a3b8;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    }
+
+    body {
+      background-color: var(--bg);
+      color: var(--text-main);
+      overflow: hidden;
+      height: 100vh;
+      width: 100vw;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* Top Progress & Header */
+    .top-bar {
+      height: 48px;
+      padding: 0 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid var(--card-border);
+      background: rgba(15, 23, 42, 0.95);
+      z-index: 50;
+    }
+
+    .project-badge {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-weight: 700;
+      font-size: 0.95rem;
+      background: linear-gradient(135deg, #60a5fa, #a78bfa);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .open-source-tag {
+      background: rgba(16, 185, 129, 0.2);
+      color: #34d399;
+      border: 1px solid rgba(16, 185, 129, 0.4);
+      padding: 2px 10px;
+      border-radius: 9999px;
+      font-size: 0.75rem;
+      font-weight: 600;
+    }
+
+    .nav-controls {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .btn {
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid var(--card-border);
+      color: var(--text-main);
+      padding: 6px 14px;
+      border-radius: 8px;
+      font-size: 0.85rem;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.2s ease;
+    }
+
+    .btn:hover {
+      background: rgba(255, 255, 255, 0.15);
+      border-color: rgba(255, 255, 255, 0.3);
+    }
+
+    .btn-primary {
+      background: var(--primary);
+      border-color: var(--primary-dark);
+    }
+    .btn-primary:hover {
+      background: var(--primary-dark);
+    }
+
+    .progress-bar-container {
+      width: 100%;
+      height: 3px;
+      background: rgba(255, 255, 255, 0.05);
+    }
+
+    .progress-bar {
+      height: 100%;
+      background: linear-gradient(90deg, #3b82f6, #8b5cf6, #10b981);
+      width: 12.5%;
+      transition: width 0.3s ease;
+    }
+
+    /* Slide Container */
+    .deck-container {
+      flex: 1;
+      position: relative;
+      overflow: hidden;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+    }
+
+    .slide {
+      position: absolute;
+      width: min(1200px, 94vw);
+      height: min(680px, 86vh);
+      background: var(--card-bg);
+      backdrop-filter: blur(16px);
+      border: 1px solid var(--card-border);
+      border-radius: 20px;
+      padding: 40px 50px;
+      display: flex;
+      flex-direction: column;
+      opacity: 0;
+      transform: translateX(60px) scale(0.96);
+      pointer-events: none;
+      transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+    }
+
+    .slide.active {
+      opacity: 1;
+      transform: translateX(0) scale(1);
+      pointer-events: auto;
+      z-index: 10;
+    }
+
+    .slide.prev {
+      opacity: 0;
+      transform: translateX(-60px) scale(0.96);
+    }
+
+    /* Slide Typography & Content */
+    .slide-header {
+      margin-bottom: 24px;
+    }
+
+    .slide-category {
+      font-size: 0.85rem;
+      font-weight: 700;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      color: #60a5fa;
+      margin-bottom: 6px;
+    }
+
+    .slide-title {
+      font-size: 2rem;
+      font-weight: 800;
+      line-height: 1.2;
+      color: #ffffff;
+    }
+
+    .slide-subtitle {
+      font-size: 1.05rem;
+      color: var(--text-muted);
+      margin-top: 6px;
+    }
+
+    .slide-body {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      gap: 20px;
+    }
+
+    /* Cards & Grids */
+    .grid-2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+    }
+
+    .grid-3 {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 18px;
+    }
+
+    .card {
+      background: rgba(15, 23, 42, 0.6);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 14px;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      transition: transform 0.2s ease, border-color 0.2s ease;
+    }
+
+    .card:hover {
+      border-color: rgba(96, 165, 250, 0.4);
+      transform: translateY(-2px);
+    }
+
+    .card-icon {
+      font-size: 1.8rem;
+    }
+
+    .card-title {
+      font-size: 1.15rem;
+      font-weight: 700;
+      color: #f1f5f9;
+    }
+
+    .card-desc {
+      font-size: 0.9rem;
+      color: #94a3b8;
+      line-height: 1.5;
+    }
+
+    .card-highlight {
+      background: linear-gradient(145deg, rgba(37, 99, 235, 0.15), rgba(139, 92, 246, 0.15));
+      border: 1px solid rgba(96, 165, 250, 0.3);
+    }
+
+    /* Level Progression */
+    .level-step {
+      display: flex;
+      align-items: flex-start;
+      gap: 16px;
+      background: rgba(15, 23, 42, 0.6);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 12px;
+      padding: 16px 20px;
+    }
+
+    .level-num {
+      width: 38px;
+      height: 38px;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 800;
+      font-size: 1rem;
+      flex-shrink: 0;
+    }
+
+    .level-1 { background: rgba(148, 163, 184, 0.2); color: #cbd5e1; }
+    .level-2 { background: rgba(59, 130, 246, 0.2); color: #60a5fa; }
+    .level-3 { background: rgba(139, 92, 246, 0.2); color: #a78bfa; }
+    .level-target {
+      background: linear-gradient(135deg, rgba(16, 185, 129, 0.2), rgba(59, 130, 246, 0.2));
+      border: 1px solid rgba(52, 211, 153, 0.4);
+    }
+
+    /* Architecture diagram */
+    .arch-flow {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      background: rgba(15, 23, 42, 0.7);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 14px;
+      padding: 18px 24px;
+    }
+
+    .arch-node {
+      background: rgba(30, 41, 59, 0.9);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      border-radius: 10px;
+      padding: 12px 18px;
+      text-align: center;
+      flex: 1;
+    }
+
+    .arch-node.active {
+      border-color: #60a5fa;
+      background: linear-gradient(135deg, rgba(37, 99, 235, 0.2), rgba(30, 41, 59, 0.9));
+    }
+
+    .arch-arrow {
+      color: #64748b;
+      font-size: 1.4rem;
+      font-weight: bold;
+    }
+
+    /* Speaker Notes Panel */
+    .speaker-drawer {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      height: 220px;
+      background: #090d16;
+      border-top: 2px solid var(--primary);
+      box-shadow: 0 -10px 25px rgba(0, 0, 0, 0.6);
+      transform: translateY(100%);
+      transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+      z-index: 100;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .speaker-drawer.open {
+      transform: translateY(0);
+    }
+
+    .speaker-header {
+      padding: 10px 24px;
+      background: #111827;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    .speaker-title {
+      font-size: 0.85rem;
+      font-weight: 700;
+      color: #38bdf8;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .speaker-content {
+      padding: 16px 24px;
+      overflow-y: auto;
+      font-size: 1rem;
+      line-height: 1.6;
+      color: #e2e8f0;
+    }
+
+    .speaker-content p {
+      margin-bottom: 8px;
+    }
+
+    .speaker-content strong {
+      color: #60a5fa;
+    }
+
+    /* Slide Footer Controls */
+    .slide-footer {
+      height: 48px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 24px;
+      background: rgba(15, 23, 42, 0.95);
+      border-top: 1px solid var(--card-border);
+      font-size: 0.85rem;
+      color: var(--text-muted);
+    }
+
+    .keyboard-hints {
+      display: flex;
+      gap: 16px;
+    }
+
+    .key-badge {
+      background: rgba(255, 255, 255, 0.1);
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-family: monospace;
+      color: #cbd5e1;
+      font-size: 0.75rem;
+    }
+
+    /* Print styles for PDF export */
+    @media print {
+      body {
+        overflow: visible;
+        background: white;
+        color: black;
+      }
+      .top-bar, .slide-footer, .speaker-drawer {
+        display: none !important;
+      }
+      .deck-container {
+        display: block;
+        padding: 0;
+      }
+      .slide {
+        position: relative !important;
+        opacity: 1 !important;
+        transform: none !important;
+        page-break-after: always;
+        width: 100vw;
+        height: 100vh;
+        border: none;
+        border-radius: 0;
+        background: white;
+        color: #1e293b;
+        box-shadow: none;
+      }
+      .slide-title { color: #0f172a !important; }
+      .card { background: #f8fafc !important; border: 1px solid #e2e8f0 !important; }
+      .card-title { color: #1e293b !important; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Top Navigation Bar -->
+  <div class="top-bar">
+    <div class="project-badge">
+      <span>🚀 My Team Context</span>
+      <span class="open-source-tag">100% Free & Open Source</span>
+    </div>
+    <div class="nav-controls">
+      <button class="btn" id="btn-notes" onclick="toggleSpeakerNotes()">
+        🎙️ Kịch bản thuyết trình (S)
+      </button>
+      <button class="btn" onclick="prevSlide()">◀ Trước</button>
+      <span id="slide-number" style="font-size: 0.9rem; font-weight: 600; min-width: 45px; text-align: center;">1 / 8</span>
+      <button class="btn btn-primary" onclick="nextSlide()">Tiếp ▶</button>
+      <button class="btn" onclick="toggleFullScreen()">⛶ Toàn màn hình</button>
+    </div>
+  </div>
+
+  <div class="progress-bar-container">
+    <div class="progress-bar" id="progress-bar"></div>
+  </div>
+
+  <!-- Main Slide Deck Area -->
+  <div class="deck-container">
+
+    <!-- SLIDE 1: Title & Hook -->
+    <div class="slide active" data-slide="1">
+      <div class="slide-header">
+        <div class="slide-category">BẮT ĐẦU & DẪN NHẬP</div>
+        <h1 class="slide-title">Cách Chúng Ta Đang Sử Dụng AI Trong Công Việc?</h1>
+        <p class="slide-subtitle">Từ hỗ trợ thảo luận cá nhân đến trao quyền cho AI tự động hóa và nắm trọn vẹn ngữ cảnh dự án</p>
+      </div>
+      <div class="slide-body">
+        <div class="grid-3">
+          <div class="card card-highlight">
+            <div class="card-icon">💬</div>
+            <div class="card-title">Hỗ trợ Thảo luận</div>
+            <div class="card-desc">Tóm tắt ý kiến, brainstorm giải pháp, giải thích khái niệm kỹ thuật trong các phiên họp.</div>
+          </div>
+          <div class="card card-highlight">
+            <div class="card-icon">🧠</div>
+            <div class="card-title">Nắm bắt Công việc</div>
+            <div class="card-desc">Đọc tài liệu specs, hiểu mô hình dữ liệu, phân tích các tác vụ và phân luồng công việc.</div>
+          </div>
+          <div class="card card-highlight">
+            <div class="card-icon">⚡</div>
+            <div class="card-title">Tự động Hóa Tác vụ</div>
+            <div class="card-desc">Thay bạn thực thi các bước lặp lại: viết code mẫu, tạo mockup UI, truy vấn database.</div>
+          </div>
+        </div>
+        <div style="background: rgba(37, 99, 235, 0.1); border: 1px solid rgba(59, 130, 246, 0.3); border-radius: 12px; padding: 14px 20px; display: flex; align-items: center; justify-content: space-between;">
+          <span style="font-size: 0.95rem; color: #bfdbfe;">🎯 <b>Mục tiêu buổi thuyết trình:</b> Khám phá cách nâng tầm AI từ "người ngoài cuộc" thành "thành viên cốt lõi am hiểu toàn bộ context của team".</span>
+          <span class="open-source-tag">MIT Open Source</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- SLIDE 2: Spectrum of AI Adoption -->
+    <div class="slide" data-slide="2">
+      <div class="slide-header">
+        <div class="slide-category">QUÁ TRÌNH TIẾN HÓA</div>
+        <h1 class="slide-title">Các Cấp Độ Trao Quyền Cho AI</h1>
+        <p class="slide-subtitle">Bạn và đội ngũ của mình hiện đang ở cấp độ nào trên thang tiến hóa này?</p>
+      </div>
+      <div class="slide-body">
+        <div style="display: flex; flex-direction: column; gap: 12px;">
+          <div class="level-step">
+            <div class="level-num level-1">1</div>
+            <div>
+              <div style="font-weight: 700; color: #f1f5f9; margin-bottom: 2px;">Cấp độ 1: Đính kèm File thủ công (Excel, PDF, Docs)</div>
+              <div style="font-size: 0.88rem; color: #94a3b8;">Đơn giản nhất nhưng rời rạc, tốn thời gian upload mỗi lần chat, dữ liệu nhanh lỗi thời và dễ tràn token.</div>
+            </div>
+          </div>
+          <div class="level-step">
+            <div class="level-num level-2">2</div>
+            <div>
+              <div style="font-weight: 700; color: #f1f5f9; margin-bottom: 2px;">Cấp độ 2: Sử dụng Connectors tích hợp sẵn (Claude Connectors)</div>
+              <div style="font-size: 0.88rem; color: #94a3b8;">Kết nối trực tiếp dịch vụ đám mây nhưng vẫn đóng kín (Black-box), khó can thiệp sâu vào cách AI xử lý dữ liệu.</div>
+            </div>
+          </div>
+          <div class="level-step level-target">
+            <div class="level-num level-3">3</div>
+            <div>
+              <div style="font-weight: 700; color: #a78bfa; margin-bottom: 2px;">Cấp độ 3: Xây dựng MCP Server (Model Context Protocol) 🚀</div>
+              <div style="font-size: 0.88rem; color: #cbd5e1;">Trao cho AI các <b>công cụ (Tools)</b> chuyên biệt để AI chủ động gọi hàm, lấy dữ liệu và hành động mạnh mẽ hơn.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SLIDE 3: The Missing Link (Beyond Simple Connectors) -->
+    <div class="slide" data-slide="3">
+      <div class="slide-header">
+        <div class="slide-category">BƯỚC ĐỘT PHÁ CỦA DỰ ÁN</div>
+        <h1 class="slide-title">Nhưng Chỉ Có "Công Cụ" Là Chưa Đủ!</h1>
+        <p class="slide-subtitle">Không để AI "toàn quyền quyết định mù quáng" — Chúng ta cần Grounded Context & Kiểm soát suy luận</p>
+      </div>
+      <div class="slide-body">
+        <div class="grid-2">
+          <div class="card" style="border-left: 4px solid #ef4444;">
+            <div style="color: #f87171; font-weight: 700; font-size: 1rem; display: flex; align-items: center; gap: 6px;">
+              <span>❌</span> Hạn chế của việc chỉ kết nối Tools đơn thuần
+            </div>
+            <ul style="font-size: 0.88rem; color: #94a3b8; line-height: 1.6; padding-left: 18px;">
+              <li>AI có công cụ nhưng <b>không hiểu bản chất</b> các bảng dữ liệu hay quan hệ giữa các component.</li>
+              <li>Dễ gọi nhầm API, sinh ra code/mockup không khớp với codebase thực tế.</li>
+              <li>Mỗi phiên chat là một "bộ não trống", không có định hướng suy luận nhất quán.</li>
+            </ul>
+          </div>
+
+          <div class="card" style="border-left: 4px solid #10b981;">
+            <div style="color: #34d399; font-weight: 700; font-size: 1rem; display: flex; align-items: center; gap: 6px;">
+              <span>✅</span> Cách tiếp cận tối ưu của My Team Context
+            </div>
+            <ul style="font-size: 0.88rem; color: #cbd5e1; line-height: 1.6; padding-left: 18px;">
+              <li><b>Mô tả rõ ràng ý nghĩa Resource:</b> Cung cấp metadata, ngữ cảnh liên kết giữa GitHub, Notion và Database.</li>
+              <li><b>Tự do thiết lập phương thức suy luận:</b> Định hình System Prompt và quy trình phân tích logic trước khi AI hành động.</li>
+              <li>AI nắm trọn vẹn <b>bản chất bài toán</b> thay vì đoán mò.</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SLIDE 4: Collaborative Team Skills -->
+    <div class="slide" data-slide="4">
+      <div class="slide-header">
+        <div class="slide-category">GÓC ĐỘ TEAMWORK</div>
+        <h1 class="slide-title">Cùng Nhau Quản Trị Kỹ Năng & Trí Tuệ Nhóm</h1>
+        <p class="slide-subtitle">Biến kinh nghiệm của từng cá nhân thành tài sản tri thức chung cho AI của toàn đội ngũ</p>
+      </div>
+      <div class="slide-body">
+        <div class="grid-3">
+          <div class="card">
+            <div class="card-icon">📜</div>
+            <div class="card-title">Phương Thức Vận Hành</div>
+            <div class="card-desc">Dạy AI biết quy trình làm việc chuẩn (SOP), quy chuẩn coding conventions, cách review PR của công ty.</div>
+          </div>
+          <div class="card">
+            <div class="card-icon">🤝</div>
+            <div class="card-title">Quyết Định Thống Nhất</div>
+            <div class="card-desc">Lưu trữ các quyết định kiến trúc (ADRs), công nghệ đã chọn để AI không bao giờ đề xuất lệch hướng.</div>
+          </div>
+          <div class="card">
+            <div class="card-icon">🔍</div>
+            <div class="card-title">Tìm Kiếm Ngữ Nghĩa (Vector RAG)</div>
+            <div class="card-desc">Tự động kích hoạt đúng kỹ năng/hướng dẫn phù hợp với ngữ cảnh câu hỏi thông qua Qdrant Vector Search.</div>
+          </div>
+        </div>
+        <div style="text-align: center; font-size: 0.95rem; color: #a78bfa; background: rgba(139, 92, 246, 0.1); padding: 10px; border-radius: 10px; border: 1px solid rgba(139, 92, 246, 0.3);">
+          ✨ <b>Khi 1 thành viên cập nhật skill mới ➔ Toàn bộ AI của team lập tức trở nên thông minh hơn!</b>
+        </div>
+      </div>
+    </div>
+
+    <!-- SLIDE 5: Architecture & IT Ecosystem Demo -->
+    <div class="slide" data-slide="5">
+      <div class="slide-header">
+        <div class="slide-category">KIẾN TRÚC & HỆ SINH THÁI IT</div>
+        <h1 class="slide-title">Hợp Nhất GitHub, Notion & SQL Database</h1>
+        <p class="slide-subtitle">Cầu nối thời gian thực giữa Claude Desktop và hạ tầng quản lý dự án công ty công nghệ</p>
+      </div>
+      <div class="slide-body">
+        <div class="arch-flow">
+          <div class="arch-node active">
+            <div style="font-size: 1.3rem;">💻</div>
+            <div style="font-weight: 700; color: #fff; font-size: 0.9rem;">Claude Desktop</div>
+            <div style="font-size: 0.75rem; color: #94a3b8;">Chat + UI Widgets</div>
+          </div>
+          <div class="arch-arrow">⟷</div>
+          <div class="arch-node" style="border-color: #a78bfa;">
+            <div style="font-size: 1.3rem;">⚡</div>
+            <div style="font-weight: 700; color: #fff; font-size: 0.9rem;">MCP Server</div>
+            <div style="font-size: 0.75rem; color: #a78bfa;">TypeScript / Node</div>
+          </div>
+          <div class="arch-arrow">⟷</div>
+          <div class="arch-node" style="border-color: #34d399;">
+            <div style="font-size: 1.3rem;">🧠</div>
+            <div style="font-weight: 700; color: #fff; font-size: 0.9rem;">Qdrant + Gemini</div>
+            <div style="font-size: 0.75rem; color: #34d399;">Vector Embeddings</div>
+          </div>
+        </div>
+
+        <div class="grid-3" style="margin-top: 6px;">
+          <div class="card">
+            <div style="font-weight: 700; color: #60a5fa;">🐙 GitHub Context</div>
+            <div style="font-size: 0.82rem; color: #94a3b8;">Đọc file code slicing, khám phá file tree, search repo, nắm rõ UI components có sẵn.</div>
+          </div>
+          <div class="card">
+            <div style="font-weight: 700; color: #f472b6;">📝 Notion Specs</div>
+            <div style="font-size: 0.82rem; color: #94a3b8;">Tìm kiếm PRD, user stories, truy vấn sprint backlog và tiến độ công việc trực tiếp.</div>
+          </div>
+          <div class="card">
+            <div style="font-weight: 700; color: #34d399;">🗄️ SQL Database</div>
+            <div style="font-size: 0.82rem; color: #94a3b8;">Khám phá cấu trúc bảng (schema inspection) và thực thi truy vấn an toàn (safe bounds).</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SLIDE 6: Interactive In-Chat UI Widgets -->
+    <div class="slide" data-slide="6">
+      <div class="slide-header">
+        <div class="slide-category">TRẢI NGHIỆM TRỰC QUAN</div>
+        <h1 class="slide-title">Interactive UI Widgets: Cấu Hình Trực Quan</h1>
+        <p class="slide-subtitle">Không cần gõ lệnh CLI hay sửa file JSON phức tạp — Mọi thành viên đều dùng được ngay</p>
+      </div>
+      <div class="slide-body">
+        <div class="grid-3">
+          <div class="card">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+              <span class="card-icon">🔑</span>
+              <span style="font-size: 0.75rem; background: rgba(59, 130, 246, 0.2); color: #60a5fa; padding: 2px 8px; border-radius: 4px;">panel.html</span>
+            </div>
+            <div class="card-title">Credential Hub</div>
+            <div class="card-desc">Quản lý API Keys & Token (GitHub, Notion, Qdrant, Gemini). Kiểm tra kết nối tức thì và bảo mật qua Keychain.</div>
+          </div>
+          <div class="card">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+              <span class="card-icon">🧠</span>
+              <span style="font-size: 0.75rem; background: rgba(16, 185, 129, 0.2); color: #34d399; padding: 2px 8px; border-radius: 4px;">skills.html</span>
+            </div>
+            <div class="card-title">Skill Management</div>
+            <div class="card-desc">Giao diện thêm, sửa, phân loại và test độ tương đồng của các guidelines và coding conventions cho team.</div>
+          </div>
+          <div class="card">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+              <span class="card-icon">⚙️</span>
+              <span style="font-size: 0.75rem; background: rgba(245, 158, 11, 0.2); color: #fbbf24; padding: 2px 8px; border-radius: 4px;">config.html</span>
+            </div>
+            <div class="card-title">App & Repo Config</div>
+            <div class="card-desc">Chọn nhiều active repositories cùng lúc, gán mô tả bối cảnh và tùy chỉnh System Prompt định hướng cho AI.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SLIDE 7: Live Demo Walkthrough Flow -->
+    <div class="slide" data-slide="7">
+      <div class="slide-header">
+        <div class="slide-category">KỊCH BẢN MINH HỌA</div>
+        <h1 class="slide-title">Kịch Bản Demo: Từ Yêu Cầu Đến Thực Thi</h1>
+        <p class="slide-subtitle">Cách Claude xử lý một yêu cầu tính năng mới với đầy đủ ngữ cảnh của team IT</p>
+      </div>
+      <div class="slide-body">
+        <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px;">
+          <div class="card" style="border-top: 4px solid #f472b6;">
+            <div style="font-weight: 800; font-size: 1.1rem; color: #f472b6;">BƯỚC 1</div>
+            <div style="font-weight: 700; color: #fff; font-size: 0.95rem;">Đọc Spec Notion</div>
+            <div style="font-size: 0.8rem; color: #94a3b8;">Claude lấy PRD tính năng và acceptance criteria từ Notion.</div>
+          </div>
+          <div class="card" style="border-top: 4px solid #34d399;">
+            <div style="font-weight: 800; font-size: 1.1rem; color: #34d399;">BƯỚC 2</div>
+            <div style="font-weight: 700; color: #fff; font-size: 0.95rem;">Kiểm tra Database</div>
+            <div style="font-size: 0.8rem; color: #94a3b8;">Khám phá schema bảng dữ liệu để đối chiếu model fields.</div>
+          </div>
+          <div class="card" style="border-top: 4px solid #60a5fa;">
+            <div style="font-weight: 800; font-size: 1.1rem; color: #60a5fa;">BƯỚC 3</div>
+            <div style="font-weight: 700; color: #fff; font-size: 0.95rem;">Soi Code GitHub</div>
+            <div style="font-size: 0.8rem; color: #94a3b8;">Tìm các UI component có sẵn để tái sử dụng, không viết lại từ đầu.</div>
+          </div>
+          <div class="card" style="border-top: 4px solid #a78bfa;">
+            <div style="font-weight: 800; font-size: 1.1rem; color: #a78bfa;">BƯỚC 4</div>
+            <div style="font-weight: 700; color: #fff; font-size: 0.95rem;">Áp dụng Skill & Tạo Plan</div>
+            <div style="font-size: 0.8rem; color: #94a3b8;">Kích hoạt coding standard của team để sinh mockup và plan chuẩn xác.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SLIDE 8: Open Source & Extensibility -->
+    <div class="slide" data-slide="8">
+      <div class="slide-header">
+        <div class="slide-category">TƯƠNG LAI & CỘNG ĐỒNG</div>
+        <h1 class="slide-title">100% Free & Open Source: Tự Do Mở Rộng</h1>
+        <p class="slide-subtitle">Tùy biến không giới hạn theo bất kỳ công cụ và quy trình nào công ty bạn đang sử dụng</p>
+      </div>
+      <div class="slide-body">
+        <div class="grid-2">
+          <div class="card card-highlight">
+            <div class="card-title" style="color: #60a5fa;">🔌 Dễ Dàng Tích Hợp Nền Tảng Khác</div>
+            <ul style="font-size: 0.88rem; color: #cbd5e1; line-height: 1.6; padding-left: 18px;">
+              <li>Mở rộng thêm connectors: <b>Jira, Linear, Slack, Figma, GitLab, ClickUp...</b></li>
+              <li>Tự xây dựng Dynamic Tools theo API nội bộ của doanh nghiệp.</li>
+              <li>Tùy chọn Self-host Qdrant và mô hình Embedding riêng (Ollama, HuggingFace...).</li>
+            </ul>
+          </div>
+          <div class="card card-highlight">
+            <div class="card-title" style="color: #34d399;">🌟 Bắt Đầu Ngay Hôm Nay</div>
+            <ul style="font-size: 0.88rem; color: #cbd5e1; line-height: 1.6; padding-left: 18px;">
+              <li>Dự án hoàn toàn <b>Miễn Phí (MIT License)</b>.</li>
+              <li>Đóng gói nhanh chóng dạng MCP extension cho Claude Desktop.</li>
+              <li>Chào đón mọi ý tưởng đóng góp và mở rộng từ cộng đồng!</li>
+            </ul>
+          </div>
+        </div>
+        <div style="text-align: center; margin-top: 10px;">
+          <h3 style="color: #fff; font-size: 1.2rem;">🤝 Cảm ơn mọi người! Hãy cùng thảo luận và trải nghiệm!</h3>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Bottom Navigation & Status -->
+  <div class="slide-footer">
+    <div class="keyboard-hints">
+      <span>Điều hướng: <span class="key-badge">◀</span> <span class="key-badge">▶</span> hoặc <span class="key-badge">Space</span></span>
+      <span>Ghi chú: <span class="key-badge">S</span></span>
+      <span>Toàn màn hình: <span class="key-badge">F</span></span>
+    </div>
+    <div>My Team Context &bull; Interactive Slide Deck</div>
+  </div>
+
+  <!-- Speaker Notes Drawer -->
+  <div class="speaker-drawer" id="speaker-drawer">
+    <div class="speaker-header">
+      <div class="speaker-title">
+        <span>🎙️ KỊCH BẢN THUYẾT TRÌNH (SPEAKER NOTES)</span>
+        <span id="notes-slide-indicator" style="color: #94a3b8; font-weight: normal;">— Slide 1</span>
+      </div>
+      <button class="btn" style="padding: 2px 8px; font-size: 0.75rem;" onclick="toggleSpeakerNotes()">Đóng ✕</button>
+    </div>
+    <div class="speaker-content" id="speaker-content">
+      <!-- Injected dynamically via JS -->
+    </div>
+  </div>
+
+  <script>
+    // Speaker notes corresponding to user's exact narrative
+    const speakerNotes = {
+      1: `
+        <p><strong>[Mở đầu & Đặt vấn đề]:</strong></p>
+        <p>"Chào mọi người, hôm nay mình muốn bắt đầu bằng một câu hỏi: Các bạn đang sử dụng AI như thế nào hàng ngày để nắm bắt công việc và hỗ trợ các bạn trong các cuộc thảo luận?"</p>
+        <p>"Và xa hơn nữa, các bạn đã từng nghĩ đến việc để AI có thể thay bạn tự động thực hiện hoàn toàn một tác vụ phức tạp nào đó trong dự án chưa?"</p>
+      `,
+      2: `
+        <p><strong>[Phân tích 3 cấp độ]:</strong></p>
+        <p>"Có lẽ cách dễ nhất mà đa số chúng ta thường làm là: Bỏ các file excel, file word, PDF liên quan đến dự án vào cửa sổ chat để hỏi."</p>
+        <p>"Hoặc nếu bạn dùng Claude, bạn có thể sử dụng các Connectors có sẵn của nó để kéo dữ liệu về."</p>
+        <p>"Hoặc ở mức độ kỹ thuật hơn, bạn có thể tự xây dựng các MCP Server (Model Context Protocol) — nơi các bạn trao cho AI các công cụ (tools) để nó làm được nhiều hơn nữa."</p>
+      `,
+      3: `
+        <p><strong>[Vấn đề cốt lõi & Sự khác biệt]:</strong></p>
+        <p>"Được rồi, trao công cụ cho AI cơ bản chính là mục tiêu ban đầu của ứng dụng này. Nhưng chúng mình muốn nó <strong>tối ưu hơn nữa</strong>!"</p>
+        <p>"Chúng mình muốn: Thay vì đơn giản chỉ là cắm công cụ vào rồi để AI toàn quyền quyết định theo kiểu 'hộp đen'..."</p>
+        <p>"...Thì bạn có thể <strong>mô tả rõ hơn ý nghĩa của từng resource</strong>, để AI thực sự nắm được toàn bộ bản chất vấn đề. Và quan trọng nhất: Bạn có thể tự do thiết lập phương thức để AI suy luận theo đúng logic bạn mong muốn."</p>
+      `,
+      4: `
+        <p><strong>[Góc độ Teamwork & Quản trị tri thức]:</strong></p>
+        <p>"Và ở một góc độ cao hơn nữa: Ở khía cạnh <strong>Teamwork</strong>..."</p>
+        <p>"Các bạn có thể cùng nhau quản lý kỹ năng của AI. Các bạn có thể 'dạy' cho nó biết về phương thức vận hành của công ty bạn, các quy chuẩn coding, quy trình review, và những quyết định kiến trúc mà cả team đã thống nhất với nhau từ trước."</p>
+      `,
+      5: `
+        <p><strong>[Giới thiệu Demo & Hệ sinh thái IT]:</strong></p>
+        <p>"Ở phần demo ngày hôm nay, mình sẽ cho các bạn thấy phần mềm này giúp Claude kết nối trực tiếp vào các nền tảng quản lý dự án quen thuộc ở một công ty IT:"</p>
+        <p>"• <strong>Notion:</strong> Nơi lưu trữ PRD, specs và sprint tickets.<br>• <strong>GitHub:</strong> Nơi lưu trữ toàn bộ code, branch và components giao diện.<br>• <strong>SQL Database:</strong> Nơi định nghĩa schemas và dữ liệu thực tế."</p>
+      `,
+      6: `
+        <p><strong>[Trải nghiệm Trực quan In-Chat]:</strong></p>
+        <p>"Đặc biệt, người dùng không cần phải gõ dòng lệnh hay sửa các file cấu hình JSON phức tạp."</p>
+        <p>"Hệ thống cung cấp sẵn các Interactive Widgets nhúng ngay trong Chat để bất kỳ ai — từ Dev, PM đến Designer — đều có thể cấu hình token, chọn repo và quản lý skills của team một cách trực quan."</p>
+      `,
+      7: `
+        <p><strong>[Thực thi Kịch bản Demo]:</strong></p>
+        <p>"Hãy xem Claude phối hợp 4 bước: Đọc yêu cầu từ Notion ➔ Đối chiếu schema database ➔ Soi component có sẵn trên GitHub ➔ Áp dụng coding skill của team để sinh ra bản thiết kế/mockup chuẩn xác 100% với codebase."</p>
+      `,
+      8: `
+        <p><strong>[Open Source & Lời kết]:</strong></p>
+        <p>"Và điểm tuyệt vời nhất: Phần mềm này là <strong>100% Free & Open Source</strong>!"</p>
+        <p>"Do đó, các bạn hoàn toàn có thể tự do mở rộng thêm các connectors khác tùy vào các nền tảng công ty bạn đang sử dụng — ví dụ như Jira, Linear, Slack, Figma hay các API nội bộ."</p>
+        <p>"Cảm ơn các bạn và mời mọi người cùng trải nghiệm demo!"</p>
+      `
+    };
+
+    let currentSlide = 1;
+    const totalSlides = 8;
+
+    function updateSlideUI() {
+      document.querySelectorAll('.slide').forEach((slide, index) => {
+        const slideNum = index + 1;
+        slide.classList.remove('active', 'prev');
+        if (slideNum === currentSlide) {
+          slide.classList.add('active');
+        } else if (slideNum < currentSlide) {
+          slide.classList.add('prev');
+        }
+      });
+
+      document.getElementById('slide-number').textContent = `${currentSlide} / ${totalSlides}`;
+      document.getElementById('progress-bar').style.width = `${(currentSlide / totalSlides) * 100}%`;
+      
+      // Update speaker notes
+      document.getElementById('speaker-content').innerHTML = speakerNotes[currentSlide] || '<p>Chưa có ghi chú cho slide này.</p>';
+      document.getElementById('notes-slide-indicator').textContent = `— Slide ${currentSlide}`;
+    }
+
+    function nextSlide() {
+      if (currentSlide < totalSlides) {
+        currentSlide++;
+        updateSlideUI();
+      }
+    }
+
+    function prevSlide() {
+      if (currentSlide > 1) {
+        currentSlide--;
+        updateSlideUI();
+      }
+    }
+
+    function toggleSpeakerNotes() {
+      const drawer = document.getElementById('speaker-drawer');
+      drawer.classList.toggle('open');
+      const btn = document.getElementById('btn-notes');
+      btn.classList.toggle('btn-primary', drawer.classList.contains('open'));
+    }
+
+    function toggleFullScreen() {
+      if (!document.fullscreenElement) {
+        document.documentElement.requestFullscreen().catch(err => {
+          console.error(err);
+        });
+      } else {
+        if (document.exitFullscreen) {
+          document.exitFullscreen();
+        }
+      }
+    }
+
+    // Keyboard navigation
+    window.addEventListener('keydown', (e) => {
+      if (e.key === 'ArrowRight' || e.key === ' ' || e.key === 'PageDown') {
+        e.preventDefault();
+        nextSlide();
+      } else if (e.key === 'ArrowLeft' || e.key === 'PageUp') {
+        e.preventDefault();
+        prevSlide();
+      } else if (e.key === 's' || e.key === 'S') {
+        e.preventDefault();
+        toggleSpeakerNotes();
+      } else if (e.key === 'f' || e.key === 'F') {
+        e.preventDefault();
+        toggleFullScreen();
+      }
+    });
+
+    // Initialize UI
+    updateSlideUI();
+  </script>
+</body>
+</html>

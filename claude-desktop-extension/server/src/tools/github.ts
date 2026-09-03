@@ -19,6 +19,7 @@ import {
   clearActiveRepo,
 } from "../utils/store.js";
 import { RepoContextError, text, guarded } from "../utils/helpers.js";
+import { readEnvConfig } from "../utils/env.js";
 import type {
   ValidateTokenResult,
   WhoamiResult,
@@ -48,8 +49,23 @@ const NO_REPO =
   "No active repo selected yet. Call connect_github_repo to open the panel and let " +
   "the user pick one, or set_active_repo if they already named it.";
 
+async function getEffectiveGitHubToken(): Promise<string | null> {
+  const env = await readEnvConfig().catch(() => ({} as Record<string, string>));
+  const username = env.CURRENT_USER_NAME || env.USER_NAME || process.env.CURRENT_USER_NAME || process.env.USER_NAME;
+  if (username) {
+    try {
+      const cfg = await getAppConfig(username);
+      const conn = cfg?.connections?.github;
+      if (conn && conn.enabled !== false && conn.credentials?.GITHUB_TOKEN) {
+        return conn.credentials.GITHUB_TOKEN.trim();
+      }
+    } catch {}
+  }
+  return readToken();
+}
+
 async function tokenOrThrow(): Promise<string> {
-  const token = await readToken();
+  const token = await getEffectiveGitHubToken();
   if (!token) throw new RepoContextError(NOT_SIGNED_IN);
   return token;
 }
@@ -136,7 +152,7 @@ export async function validateToken(token: string): Promise<ValidateTokenResult>
 }
 
 export async function whoami(): Promise<WhoamiResult> {
-  const token = await readToken();
+  const token = await getEffectiveGitHubToken();
   if (!token) return { authenticated: false, reason: "No token stored yet." };
 
   const check = await validateToken(token);

@@ -14,10 +14,14 @@ import { text, guarded, getDefaultSystemPrompt, RepoContextError } from "../util
 import { whoami, listRepos, listFiles, readFile } from "./github.js";
 import {
   searchNotionPages,
+  listResources,
   fetchNotionPageContent,
   notionCheckConnection,
 } from "./notion.js";
 import { getAuthState, getSessionUser } from "./init.js";
+import { readEnvConfig } from "../utils/env.js";
+import { syncNotionGuideSkill } from "../utils/notion-guide.js";
+import { syncGitHubGuideSkill } from "../utils/github-guide.js";
 import {
   getAppConfig,
   saveAppConfig,
@@ -40,6 +44,12 @@ async function resolveEffectiveUsername(providedUsername?: string): Promise<stri
   const sessionUser = getSessionUser();
   if (sessionUser && sessionUser.trim()) {
     return sessionUser.trim();
+  }
+
+  const env = await readEnvConfig().catch(() => ({} as Record<string, string>));
+  const envUser = env.CURRENT_USER_NAME || env.USER_NAME || process.env.CURRENT_USER_NAME || process.env.USER_NAME;
+  if (envUser && envUser.trim()) {
+    return envUser.trim();
   }
 
   const gh = await whoami().catch(() => ({ authenticated: false, login: undefined }));
@@ -97,7 +107,8 @@ export function registerConfigTools(server: McpServer): void {
           botName: check.botName,
         };
         if (check.connected) {
-          notionPages = await searchNotionPages({ limit: 100 }).catch(() => []);
+          const res = await listResources().catch(() => ({ resources: [] }));
+          notionPages = res.resources || [];
         }
       } catch (err: unknown) {
         notionError = err instanceof Error ? err.message : String(err);
@@ -120,12 +131,14 @@ export function registerConfigTools(server: McpServer): void {
           username,
           activeRepos: [],
           activeNotionPages: [],
+          connections: {},
           systemPrompt: defaultPrompt,
         }).catch(() => ({
           id: "",
           username,
           activeRepos: [],
           activeNotionPages: [],
+          connections: {},
           systemPrompt: defaultPrompt,
           createdAt: new Date().toISOString(),
           updatedAt: new Date().toISOString(),
@@ -136,6 +149,7 @@ export function registerConfigTools(server: McpServer): void {
           username,
           activeRepos: appConfig.activeRepos,
           activeNotionPages: appConfig.activeNotionPages,
+          connections: appConfig.connections || {},
           systemPrompt: defaultPrompt,
         }).catch(() => {});
       }
@@ -153,7 +167,7 @@ export function registerConfigTools(server: McpServer): void {
         auth,
         appConfig: {
           ...appConfig,
-          systemPrompt: appConfig.systemPrompt || defaultPrompt,
+          systemPrompt: appConfig?.systemPrompt || defaultPrompt,
         },
         defaultSystemPrompt: defaultPrompt,
         repos,
@@ -204,7 +218,8 @@ export function registerConfigTools(server: McpServer): void {
           botName: check.botName,
         };
         if (check.connected) {
-          notionPages = await searchNotionPages({ limit: 100 }).catch(() => []);
+          const res = await listResources().catch(() => ({ resources: [] }));
+          notionPages = res.resources || [];
         }
       } catch (err: unknown) {
         notionError = err instanceof Error ? err.message : String(err);
@@ -219,7 +234,7 @@ export function registerConfigTools(server: McpServer): void {
         userName: username,
         userRole: auth.role || undefined,
         activeRepos: appConfig?.activeRepos,
-        // activeNotionPages: appConfig?.activeNotionPages, // Will implement selective Notion pages later, all pages accessible for now
+        activeNotionPages: appConfig?.activeNotionPages,
       });
 
       if (!appConfig) {
@@ -227,12 +242,14 @@ export function registerConfigTools(server: McpServer): void {
           username,
           activeRepos: [],
           activeNotionPages: [],
+          connections: {},
           systemPrompt: defaultPrompt,
         }).catch(() => ({
           id: "",
           username,
           activeRepos: [],
           activeNotionPages: [],
+          connections: {},
           systemPrompt: defaultPrompt,
           createdAt: new Date().toISOString(),
           updatedAt: new Date().toISOString(),
@@ -243,6 +260,7 @@ export function registerConfigTools(server: McpServer): void {
           username,
           activeRepos: appConfig.activeRepos,
           activeNotionPages: appConfig.activeNotionPages,
+          connections: appConfig.connections || {},
           systemPrompt: defaultPrompt,
         }).catch(() => {});
       }
@@ -260,7 +278,7 @@ export function registerConfigTools(server: McpServer): void {
         auth,
         appConfig: {
           ...appConfig,
-          systemPrompt: appConfig.systemPrompt || defaultPrompt,
+          systemPrompt: appConfig?.systemPrompt || defaultPrompt,
         },
         defaultSystemPrompt: defaultPrompt,
         repos,
@@ -313,16 +331,18 @@ export function registerConfigTools(server: McpServer): void {
         activeNotionPages: z
           .array(
             z.object({
-              id: z.string().min(1).describe("Notion page ID"),
-              title: z.string().min(1).describe("Notion page title"),
-              url: z.string().optional().default("").describe("Page URL"),
-              description: z.string().optional().default("").describe("Description or context for this page"),
+              id: z.string().min(1).describe("Notion page or database ID"),
+              title: z.string().optional().default("Untitled").describe("Notion resource title"),
+              url: z.string().optional().default("").describe("Resource URL"),
+              description: z.string().optional().default("").describe("Description or context for this resource"),
               lastEditedTime: z.string().optional().default("").describe("Last edited timestamp"),
-              icon: z.string().optional().default("📄").describe("Page icon"),
+              icon: z.string().optional().default("📄").describe("Resource icon"),
+              type: z.enum(["page", "database"]).optional().default("page").describe("Resource type (page | database)"),
             }),
           )
           .optional()
-          .describe("Selected active Notion pages"),
+          .describe("Selected active Notion resources (pages and databases)"),
+        connections: z.record(z.string(), z.any()).optional().describe("Configured service connections and credentials"),
         systemPrompt: z.string().optional().describe("Custom system prompt in Markdown"),
       },
       _meta: { ui: { visibility: ["app"] } },
@@ -332,11 +352,13 @@ export function registerConfigTools(server: McpServer): void {
         username: inputUsername,
         activeRepos,
         activeNotionPages,
+        connections,
         systemPrompt,
       }: {
         username?: string;
         activeRepos?: ActiveRepoConfigItem[];
         activeNotionPages?: ActiveNotionPageConfigItem[];
+        connections?: Record<string, any>;
         systemPrompt?: string;
       }) => {
         const username = await resolveEffectiveUsername(inputUsername);
@@ -344,8 +366,21 @@ export function registerConfigTools(server: McpServer): void {
           username,
           activeRepos: activeRepos || [],
           activeNotionPages: activeNotionPages || [],
+          connections,
           systemPrompt,
         });
+
+        // Automatically sync the "How to use Notion tools" and "How to use GitHub tools" skills into Qdrant
+        await Promise.all([
+          syncNotionGuideSkill({
+            username,
+            activeNotionPages: saved.activeNotionPages,
+          }).catch((err) => console.warn("Failed to sync Notion guide skill:", err)),
+          syncGitHubGuideSkill({
+            username,
+            activeRepos: saved.activeRepos,
+          }).catch((err) => console.warn("Failed to sync GitHub guide skill:", err)),
+        ]);
 
         return text({
           status: "ok",
@@ -618,7 +653,11 @@ export function registerConfigTools(server: McpServer): void {
       _meta: { ui: { visibility: ["app"] } },
     },
     guarded(async ({ query, limit }: { query?: string; limit?: number }) => {
-      const pages = await searchNotionPages({ query, limit: limit || 500 });
+      const res = await listResources({ query });
+      let pages = res.resources || [];
+      if (limit !== undefined && limit > 0) {
+        pages = pages.slice(0, limit);
+      }
       const pagesWithStatus = await Promise.all(
         pages.map(async (p) => {
           const pointId = getNotionSkillPointId(p.id);
@@ -880,16 +919,17 @@ export function registerConfigTools(server: McpServer): void {
         activeNotionPages: z
           .array(
             z.object({
-              id: z.string().describe("Notion Page ID"),
-              title: z.string().describe("Notion Page Title"),
+              id: z.string().describe("Notion Page or Database ID"),
+              title: z.string().optional().default("Untitled").describe("Notion Resource Title"),
               url: z.string().optional().describe("Page URL"),
-              description: z.string().optional().describe("Description/context notes for this page"),
+              description: z.string().optional().default("").describe("Description/context notes for this resource"),
               lastEditedTime: z.string().optional().describe("Last edited timestamp"),
-              icon: z.string().optional().describe("Page icon"),
+              icon: z.string().optional().describe("Resource icon"),
+              type: z.enum(["page", "database"]).optional().default("page").describe("Resource type: 'page' or 'database'"),
             }),
           )
           .optional()
-          .describe("List of active Notion pages"),
+          .describe("List of active Notion resources (pages and databases) with descriptions and types"),
         systemPrompt: z.string().optional().describe("Markdown system prompt"),
       },
     },
@@ -912,6 +952,19 @@ export function registerConfigTools(server: McpServer): void {
           activeNotionPages: activeNotionPages || [],
           systemPrompt,
         });
+
+        // Automatically sync the "How to use Notion tools" and "How to use GitHub tools" skills into Qdrant
+        await Promise.all([
+          syncNotionGuideSkill({
+            username,
+            activeNotionPages: saved.activeNotionPages,
+          }).catch((err) => console.warn("Failed to sync Notion guide skill:", err)),
+          syncGitHubGuideSkill({
+            username,
+            activeRepos: saved.activeRepos,
+          }).catch((err) => console.warn("Failed to sync GitHub guide skill:", err)),
+        ]);
+
         return text({
           status: "ok",
           message: `Configuration saved for @${username}`,

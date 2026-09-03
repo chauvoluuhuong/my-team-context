@@ -19,6 +19,7 @@ import type {
   ListSkillsResult,
   ActiveRepoConfigItem,
   ActiveNotionPageConfigItem,
+  ConnectionConfigItem,
   AppConfigItem,
   AppConfigPayload,
   TeamUserItem,
@@ -512,6 +513,42 @@ export async function deleteSkill(
 }
 
 /**
+ * Delete all skills/documents in Qdrant knowledge-base originating from a specific source.
+ */
+export async function deleteSkillsBySource(
+  source: string,
+  collectionName: string = KNOWLEDGE_BASE_COLLECTION,
+): Promise<boolean> {
+  if (!source || !source.trim()) return false;
+
+  const { endpoint, apiKey } = await getActiveQdrantConfig();
+  const headers = qdrantHeaders(apiKey);
+
+  try {
+    const res = await fetch(`${endpoint}/collections/${collectionName}/points/delete?wait=true`, {
+      method: "POST",
+      headers,
+      body: JSON.stringify({
+        filter: {
+          must: [
+            {
+              key: "metadata.source",
+              match: {
+                value: source.trim(),
+              },
+            },
+          ],
+        },
+      }),
+    });
+
+    return res.ok;
+  } catch {
+    return false;
+  }
+}
+
+/**
  * Semantic search skills in Qdrant knowledge-base collection using Gemini query embeddings.
  */
 export async function searchSkills(
@@ -619,6 +656,28 @@ export function getNotionSkillPointId(pageId: string): string {
 }
 
 /**
+ * Generate deterministic UUID for the "How to use Notion tools" guide skill in Qdrant.
+ */
+export function getNotionGuideSkillPointId(username: string = "default"): string {
+  const hash = crypto
+    .createHash("md5")
+    .update(`notion-guide-skill:${username.trim().toLowerCase()}`)
+    .digest("hex");
+  return `${hash.slice(0, 8)}-${hash.slice(8, 12)}-${hash.slice(12, 16)}-${hash.slice(16, 20)}-${hash.slice(20, 32)}`;
+}
+
+/**
+ * Generate deterministic UUID for the "How to use GitHub tools" guide skill in Qdrant.
+ */
+export function getGitHubGuideSkillPointId(username: string = "default"): string {
+  const hash = crypto
+    .createHash("md5")
+    .update(`github-guide-skill:${username.trim().toLowerCase()}`)
+    .digest("hex");
+  return `${hash.slice(0, 8)}-${hash.slice(8, 12)}-${hash.slice(12, 16)}-${hash.slice(16, 20)}-${hash.slice(20, 32)}`;
+}
+
+/**
  * Generate deterministic UUID for a user document in Qdrant users collection.
  */
 export function getUserPointId(name: string): string {
@@ -691,6 +750,7 @@ export async function getAppConfig(
                 description?: string;
                 lastEditedTime?: string;
                 icon?: string;
+                type?: string;
               }>;
               activeNotionPages?: Array<{
                 id?: string;
@@ -699,7 +759,9 @@ export async function getAppConfig(
                 description?: string;
                 lastEditedTime?: string;
                 icon?: string;
+                type?: string;
               }>;
+              connections?: Record<string, ConnectionConfigItem>;
               systemPrompt?: string;
               createdAt?: string;
               updatedAt?: string;
@@ -723,6 +785,7 @@ export async function getAppConfig(
             description: n.description || "",
             lastEditedTime: n.lastEditedTime || "",
             icon: n.icon || "📄",
+            type: n.type === "database" ? "database" : "page",
           }));
 
           return {
@@ -730,6 +793,7 @@ export async function getAppConfig(
             username: p.username || username,
             activeRepos,
             activeNotionPages,
+            connections: (p.connections as Record<string, ConnectionConfigItem>) || {},
             systemPrompt: p.systemPrompt || "",
             createdAt: p.createdAt || new Date().toISOString(),
             updatedAt: p.updatedAt || new Date().toISOString(),
@@ -770,6 +834,7 @@ export async function getAppConfig(
               description?: string;
               lastEditedTime?: string;
               icon?: string;
+              type?: string;
             }>;
             activeNotionPages?: Array<{
               id?: string;
@@ -778,7 +843,9 @@ export async function getAppConfig(
               description?: string;
               lastEditedTime?: string;
               icon?: string;
+              type?: string;
             }>;
+            connections?: Record<string, ConnectionConfigItem>;
             systemPrompt?: string;
             createdAt?: string;
             updatedAt?: string;
@@ -812,6 +879,7 @@ export async function getAppConfig(
       description: n.description || "",
       lastEditedTime: n.lastEditedTime || "",
       icon: n.icon || "📄",
+      type: n.type === "database" ? "database" : "page",
     }));
 
     return {
@@ -819,6 +887,7 @@ export async function getAppConfig(
       username: matched.payload.username || username || "",
       activeRepos,
       activeNotionPages,
+      connections: (matched.payload.connections as Record<string, ConnectionConfigItem>) || {},
       systemPrompt: matched.payload.systemPrompt || "",
       createdAt: matched.payload.createdAt || new Date().toISOString(),
       updatedAt: matched.payload.updatedAt || new Date().toISOString(),
@@ -837,6 +906,7 @@ export async function saveAppConfig(
     username: string;
     activeRepos: ActiveRepoConfigItem[];
     activeNotionPages?: ActiveNotionPageConfigItem[];
+    connections?: Record<string, ConnectionConfigItem>;
     systemPrompt?: string;
   },
   collectionName: string = APP_CONFIG_COLLECTION,
@@ -867,12 +937,18 @@ export async function saveAppConfig(
       : existing?.activeNotionPages || []
   ).map((n) => ({
     id: (n.id || "").trim(),
-    title: (n.title || "").trim(),
+    title: (n.title || "Untitled").trim(),
     url: (n.url || "").trim(),
     description: (n.description || "").trim(),
     lastEditedTime: (n.lastEditedTime || "").trim(),
-    icon: (n.icon || "📄").trim(),
+    icon: (n.icon || (n.type === "database" ? "🗄️" : "📄")).trim(),
+    type: n.type === "database" ? "database" : "page",
   }));
+
+  const cleanConnections: Record<string, ConnectionConfigItem> =
+    params.connections !== undefined
+      ? params.connections
+      : existing?.connections || {};
 
   const systemPrompt =
     params.systemPrompt !== undefined
@@ -883,6 +959,7 @@ export async function saveAppConfig(
     username,
     "active-repos": cleanRepos,
     "active-notion-pages": cleanNotionPages,
+    connections: cleanConnections,
     systemPrompt,
     createdAt,
     updatedAt,
@@ -892,8 +969,9 @@ export async function saveAppConfig(
   let vector: number[];
   try {
     const reposSummary = cleanRepos.map((r) => `${r.name} (${r.description})`).join(", ");
-    const notionSummary = cleanNotionPages.map((n) => `${n.title} (${n.description})`).join(", ");
-    const summary = `App config for @${username}. Active repos: ${reposSummary || "none"}. Active Notion pages: ${notionSummary || "none"}.`;
+    const notionSummary = cleanNotionPages.map((n) => `${n.title} [${n.type || "page"}] (${n.description})`).join(", ");
+    const connsSummary = Object.keys(cleanConnections).filter((k) => cleanConnections[k]?.enabled !== false).join(", ");
+    const summary = `App config for @${username}. Active repos: ${reposSummary || "none"}. Active Notion pages: ${notionSummary || "none"}. Active connections: ${connsSummary || "none"}.`;
     vector = await generateGeminiEmbedding(summary);
   } catch {
     vector = new Array(GEMINI_VECTOR_SIZE).fill(0);
@@ -927,6 +1005,7 @@ export async function saveAppConfig(
       username,
       activeRepos: cleanRepos,
       activeNotionPages: cleanNotionPages,
+      connections: cleanConnections,
       systemPrompt,
       createdAt,
       updatedAt,

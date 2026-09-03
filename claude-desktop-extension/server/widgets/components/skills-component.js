@@ -44,9 +44,9 @@ export class SkillsComponent {
     };
   }
 
-  async mount(container) {
+  async mount(container, forceReload = true) {
     this.container = container;
-    if (!this.skills || this.skills.length === 0) {
+    if (forceReload || !this.skills || this.skills.length === 0) {
       await this.loadSkills();
     } else {
       this.render();
@@ -96,6 +96,9 @@ export class SkillsComponent {
 
   render() {
     if (!this.container) return;
+    if (this.container.id === "subSessionContent" && typeof state !== "undefined" && state.activeSubSession !== "skills") {
+      return;
+    }
     this.container.innerHTML = `
       ${this.showHeader ? `
         <div class="skills-header" style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:16px; padding-bottom:14px; border-bottom:1px solid var(--line);">

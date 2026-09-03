@@ -204,6 +204,8 @@ const {
   richTextToMarkdown,
   extractPageTitle,
   extractPageIcon,
+  dashedUuid,
+  isUuid,
 } = await import("../src/tools/notion.js");
 assert.equal((await validateNotionKey("")).valid, false, "empty Notion key fails");
 assert.equal((await notionCheckConnection()).connected, false, "unconfigured Notion reports disconnected");
@@ -231,6 +233,118 @@ assert.equal(
   "🎯",
   "extractPageIcon extracts emoji icon",
 );
+assert.equal(
+  dashedUuid("c1f7b889123456789abcdef012345678"),
+  "c1f7b889-1234-5678-9abc-def012345678",
+  "dashedUuid converts raw 32 hex to dashed format",
+);
+assert.equal(isUuid("c1f7b889-1234-5678-9abc-def012345678"), true, "isUuid detects valid UUID");
+
+// Tool registration verification
+const { registerNotionTools } = await import("../src/tools/notion.js");
+const fakeMcpServer: any = {
+  registeredTools: new Map<string, any>(),
+  registerTool(name: string, def: any, handler: any) {
+    this.registeredTools.set(name, { def, handler });
+  },
+};
+registerNotionTools(fakeMcpServer);
+assert.ok(fakeMcpServer.registeredTools.has("notion_check_connection"), "registers notion_check_connection");
+assert.ok(fakeMcpServer.registeredTools.has("notion_list_resources"), "registers notion_list_resources");
+assert.ok(fakeMcpServer.registeredTools.has("notion_list_resource"), "registers notion_list_resource alias");
+assert.equal(fakeMcpServer.registeredTools.has("notion_filter_instructions"), false, "does not expose notion_filter_instructions tool");
+assert.equal(fakeMcpServer.registeredTools.has("notion_filter_instruction"), false, "does not expose notion_filter_instruction tool");
+assert.ok(fakeMcpServer.registeredTools.has("notion_get_page"), "registers notion_get_page");
+assert.ok(fakeMcpServer.registeredTools.has("notion_get_resource_content"), "registers notion_get_resource_content alias");
+assert.ok(fakeMcpServer.registeredTools.has("notion_search"), "registers notion_search");
+
+// Notion Guide Skill tests
+const { getNotionGuideSkillPointId } = await import("../src/services/vector-db.js");
+const guidePointId1 = getNotionGuideSkillPointId("alice");
+const guidePointId2 = getNotionGuideSkillPointId("ALICE");
+assert.equal(guidePointId1, guidePointId2, "notion guide point ID is deterministic and case-insensitive");
+assert.match(guidePointId1, /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/);
+
+const { buildNotionGuideSkillContent } = await import("../src/utils/notion-guide.js");
+const sampleSkillContent = await buildNotionGuideSkillContent([
+  {
+    id: "db-12345",
+    title: "Engineering Roadmap",
+    type: "database",
+    description: "Quarterly initiatives and status",
+  },
+  {
+    id: "page-67890",
+    title: "Architecture RFC",
+    type: "page",
+    description: "System design specs",
+  },
+]);
+assert.ok(sampleSkillContent.includes("# How to use Notion tools"), "skill title present");
+assert.ok(sampleSkillContent.includes("notion_get_page"), "references notion_get_page");
+assert.ok(sampleSkillContent.includes("notion_search"), "references notion_search");
+assert.ok(sampleSkillContent.includes("Architecture RFC"), "includes active page");
+assert.ok(sampleSkillContent.includes("Engineering Roadmap"), "includes active database");
+assert.ok(sampleSkillContent.includes("Filter Instructions for \"Engineering Roadmap\""), "includes filter instructions section");
+
+// GitHub Guide Skill tests
+const { getGitHubGuideSkillPointId } = await import("../src/services/vector-db.js");
+const ghPointId1 = getGitHubGuideSkillPointId("alice");
+const ghPointId2 = getGitHubGuideSkillPointId("ALICE");
+assert.equal(ghPointId1, ghPointId2, "github guide point ID is deterministic and case-insensitive");
+assert.match(ghPointId1, /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/);
+
+const { buildGitHubGuideSkillContent } = await import("../src/utils/github-guide.js");
+const sampleGhSkillContent = await buildGitHubGuideSkillContent([
+  {
+    name: "acme/web-frontend",
+    description: "Core React and TypeScript web app",
+  },
+  {
+    name: "acme/backend-api",
+    description: "Go REST microservices",
+  },
+]);
+assert.ok(sampleGhSkillContent.includes("# How to use GitHub tools"), "github skill title present");
+assert.ok(sampleGhSkillContent.includes("repo_overview"), "references repo_overview");
+assert.ok(sampleGhSkillContent.includes("list_repo_files"), "references list_repo_files");
+assert.ok(sampleGhSkillContent.includes("read_repo_file"), "references read_repo_file");
+assert.ok(sampleGhSkillContent.includes("search_repo_code"), "references search_repo_code");
+assert.ok(sampleGhSkillContent.includes("acme/web-frontend"), "includes active frontend repo");
+assert.ok(sampleGhSkillContent.includes("acme/backend-api"), "includes active backend repo");
+
+// Verify activeNotionPages with type, description, id in save_app_config schema
+const { registerConfigTools } = await import("../src/tools/config.js");
+const configServer: any = {
+  registeredTools: new Map<string, any>(),
+  registerTool(name: string, def: any, handler: any) {
+    this.registeredTools.set(name, { def, handler });
+  },
+};
+registerConfigTools(configServer);
+const saveAppTool = configServer.registeredTools.get("save_app_config");
+assert.ok(saveAppTool, "save_app_config tool registered");
+const parsedActivePages = saveAppTool.def.inputSchema.activeNotionPages.parse([
+  {
+    id: "12345678-1234-1234-1234-123456789abc",
+    type: "database",
+    description: "Active sprint database",
+  },
+  {
+    id: "87654321-4321-4321-4321-cba987654321",
+    title: "Product Specs",
+    type: "page",
+    description: "Core product specification page",
+  },
+]);
+assert.equal(parsedActivePages.length, 2);
+assert.equal(parsedActivePages[0].id, "12345678-1234-1234-1234-123456789abc");
+assert.equal(parsedActivePages[0].type, "database");
+assert.equal(parsedActivePages[0].description, "Active sprint database");
+assert.equal(parsedActivePages[0].title, "Untitled");
+assert.equal(parsedActivePages[1].id, "87654321-4321-4321-4321-cba987654321");
+assert.equal(parsedActivePages[1].type, "page");
+assert.equal(parsedActivePages[1].description, "Core product specification page");
 
 const { getNotionSkillPointId, formatNotionSkillName } = await import(
   "../src/services/vector-db.js"
@@ -360,11 +474,14 @@ const generatedPrompt = buildTeamContextSystemPrompt({
   userName: "Alice",
   userRole: "Staff Engineer",
   activeRepos: [{ name: "my-org/core-api", description: "Core backend" }],
-  activeNotionPages: [{ id: "p-1", title: "Architecture RFC" }],
+  activeNotionPages: [
+    { id: "p-1", title: "Architecture RFC", description: "RFC Doc" },
+    { id: "db-1", title: "Sprint Tasks", type: "database", description: "Task Tracker" },
+  ],
 });
 assert.ok(generatedPrompt.includes("Current User: Alice (Staff Engineer)"));
-assert.ok(generatedPrompt.includes("Active Repositories: my-org/core-api"));
-assert.ok(generatedPrompt.includes("Notion Workspace: All workspace documentation accessible"));
+assert.ok(generatedPrompt.includes("Active Repositories: my-org/core-api (Core backend)"));
+assert.ok(generatedPrompt.includes("Active Notion Resources: 📄 Architecture RFC (RFC Doc), 🗄️ Sprint Tasks [Database] (Task Tracker)"));
 assert.ok(generatedPrompt.includes("SQL Database Querying: Use `sql_get_schema` and `sql_execute_query`"));
 assert.ok(generatedPrompt.includes("Always ask for explicit user approval before executing any actions that edit or modify data"));
 assert.ok(generatedPrompt.includes("my-team-context-mcp-server"));

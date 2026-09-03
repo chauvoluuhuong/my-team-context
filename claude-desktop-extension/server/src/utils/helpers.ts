@@ -112,7 +112,16 @@ export interface SystemPromptContextOptions {
   userName?: string;
   userRole?: string;
   activeRepos?: (string | { name: string; description?: string })[];
-  activeNotionPages?: (string | { title?: string; id?: string })[];
+  activeNotionPages?: (
+    | string
+    | {
+        title?: string;
+        id?: string;
+        description?: string;
+        icon?: string;
+        type?: "page" | "database";
+      }
+  )[];
 }
 
 export function buildTeamContextSystemPrompt(options?: SystemPromptContextOptions): string {
@@ -122,31 +131,35 @@ export function buildTeamContextSystemPrompt(options?: SystemPromptContextOption
   let activeReposStr = "None configured";
   if (options?.activeRepos && options.activeRepos.length > 0) {
     const names = options.activeRepos
-      .map((r) => (typeof r === "string" ? r : r.name))
+      .map((r) => (typeof r === "string" ? r : r.description ? `${r.name} (${r.description})` : r.name))
       .filter(Boolean);
     if (names.length > 0) {
       activeReposStr = names.join(", ");
     }
   }
 
-  // Selective active Notion pages will be implemented later; for now all Notion workspace docs are available
-  /*
-  let activeNotionStr = "None configured";
+  let activeNotionStr = "All workspace documentation accessible";
   if (options?.activeNotionPages && options.activeNotionPages.length > 0) {
-    const titles = options.activeNotionPages
-      .map((p) => (typeof p === "string" ? p : p.title || p.id))
+    const formatted = options.activeNotionPages
+      .map((p) => {
+        if (typeof p === "string") return p;
+        const icon = p.icon || (p.type === "database" ? "🗄️" : "📄");
+        const title = p.title || p.id || "Untitled";
+        const desc = p.description ? ` (${p.description})` : "";
+        const typeBadge = p.type === "database" ? " [Database]" : "";
+        return `${icon} ${title}${typeBadge}${desc}`;
+      })
       .filter(Boolean);
-    if (titles.length > 0) {
-      activeNotionStr = titles.join(", ");
+    if (formatted.length > 0) {
+      activeNotionStr = formatted.join(", ");
     }
   }
-  */
 
   return `You are my Team Assistant and Engineering Co-Pilot helping me understand and navigate the context of our team's work.
 
 Current User: ${userName}${userRole}
 Active Repositories: ${activeReposStr}
-Notion Workspace: All workspace documentation accessible (selective active Notion pages will be implemented later)
+Active Notion Resources: ${activeNotionStr}
 
 Please assist me throughout our work by using the \`my-team-context-mcp-server\` tools:
 1. Team Knowledge & Skills: Query our vector knowledge base with \`skills_search\` and \`get_skills\` to retrieve relevant engineering procedures, guidelines, and playbooks.
@@ -166,4 +179,7 @@ export const buildDefaultSystemPrompt = buildTeamContextSystemPrompt;
 export function getDefaultSystemPrompt(options?: SystemPromptContextOptions): string {
   return buildTeamContextSystemPrompt(options);
 }
+
+export * from "./notion-guide.js";
+export * from "./github-guide.js";
 
