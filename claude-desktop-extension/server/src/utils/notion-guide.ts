@@ -5,6 +5,7 @@
 import type { ActiveNotionPageConfigItem, SkillItem } from "../tools/types.js";
 import { filterInstructions } from "../tools/notion.js";
 import { upsertSkill, getNotionGuideSkillPointId } from "../services/vector-db.js";
+import { buildConnectionSkillName } from "./helpers.js";
 
 /**
  * Build the structured Markdown guide for using Notion tools with active resources.
@@ -16,8 +17,9 @@ export async function buildNotionGuideSkillContent(
   const pages = activeNotionPages.filter((p) => p.type !== "database");
   const databases = activeNotionPages.filter((p) => p.type === "database");
 
+  const skillName = buildConnectionSkillName("notion");
   const lines: string[] = [
-    "# How to use Notion tools",
+    `# ${skillName}`,
     "",
     "This guide explains how to access, read, and query our team's active Notion workspace resources using the available Notion MCP tools.",
     "",
@@ -170,7 +172,7 @@ export async function syncNotionGuideSkill(options: {
 
     const skill = await upsertSkill({
       id: pointId,
-      name: "How to use Notion tools",
+      name: buildConnectionSkillName("notion"),
       description: "Instructions, active pages/databases guide, and filter instructions for Notion workspace",
       content,
       metadata: {
