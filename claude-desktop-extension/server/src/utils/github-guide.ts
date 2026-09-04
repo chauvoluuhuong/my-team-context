@@ -4,6 +4,7 @@
 
 import type { ActiveRepoConfigItem, SkillItem } from "../tools/types.js";
 import { upsertSkill, getGitHubGuideSkillPointId } from "../services/vector-db.js";
+import { buildConnectionSkillName } from "./helpers.js";
 
 /**
  * Build the structured Markdown guide for using GitHub tools with active repositories.
@@ -11,8 +12,9 @@ import { upsertSkill, getGitHubGuideSkillPointId } from "../services/vector-db.j
 export async function buildGitHubGuideSkillContent(
   activeRepos: ActiveRepoConfigItem[] = [],
 ): Promise<string> {
+  const skillName = buildConnectionSkillName("github");
   const lines: string[] = [
-    "# How to use GitHub tools",
+    `# ${skillName}`,
     "",
     "This guide explains how to navigate, inspect, and search our team's active GitHub repositories using the available GitHub MCP tools.",
     "",
@@ -102,7 +104,7 @@ export async function syncGitHubGuideSkill(options: {
 
     const skill = await upsertSkill({
       id: pointId,
-      name: "How to use GitHub tools",
+      name: buildConnectionSkillName("github"),
       description: "Instructions and code navigation guide for active team GitHub repositories",
       content,
       metadata: {

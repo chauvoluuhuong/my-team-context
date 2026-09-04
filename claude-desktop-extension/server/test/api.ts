@@ -466,13 +466,39 @@ const {
   getDefaultSystemPrompt,
   resolveSkillOfConnection,
   resolveConnectionSkills,
+  buildConnectionSkillName,
+  getConnectionServiceName,
+  isSystemConnection,
+  buildSqlGuideSkillContent,
 } = await import("../src/utils/helpers.js");
+
+// Centralized Connection Skill Name tests
+assert.equal(buildConnectionSkillName("github"), "How to use GitHub tools");
+assert.equal(buildConnectionSkillName("notion"), "How to use Notion tools");
+assert.equal(buildConnectionSkillName("sql"), "How to use SQL Database tools");
+assert.equal(buildConnectionSkillName("slack"), "How to use Slack tools");
+assert.equal(buildConnectionSkillName("custom_crm"), "How to use Custom Crm tools");
+assert.equal(getConnectionServiceName("sql"), "SQL Database");
+assert.equal(getConnectionServiceName("github"), "GitHub");
+assert.equal(getConnectionServiceName("custom_crm"), "Custom Crm");
+
+// System Connection check tests
+assert.equal(isSystemConnection("qdrant"), true);
+assert.equal(isSystemConnection("gemini"), true);
+assert.equal(isSystemConnection("github"), false);
+assert.equal(isSystemConnection("sql"), false);
 
 // Connection Skills Resolver tests
 assert.equal(resolveSkillOfConnection("github")?.skillName, "How to use GitHub tools");
 assert.equal(resolveSkillOfConnection("notion")?.skillName, "How to use Notion tools");
 assert.equal(resolveSkillOfConnection("sql")?.skillName, "How to use SQL Database tools");
+assert.equal(resolveSkillOfConnection("qdrant"), null, "qdrant is system connection");
+assert.equal(resolveSkillOfConnection("gemini"), null, "gemini is system connection");
 assert.equal(resolveSkillOfConnection("unknown_service"), null);
+
+const sqlGuideContent = buildSqlGuideSkillContent();
+assert.ok(sqlGuideContent.includes("# How to use SQL Database tools"));
+assert.ok(sqlGuideContent.includes("sql_get_schema"));
 
 const skillsFromOptions = resolveConnectionSkills(undefined, {
   activeRepos: [{ name: "my-org/core-api" }],
@@ -486,8 +512,10 @@ const skillsFromConns = resolveConnectionSkills({
   github: { enabled: true, credentials: { GITHUB_TOKEN: "tok" } },
   sql: { enabled: true, credentials: { DATABASE_URL: "postgres://..." } },
   notion: { enabled: false },
+  qdrant: { enabled: true },
+  gemini: { enabled: true },
 });
-assert.equal(skillsFromConns.length, 2);
+assert.equal(skillsFromConns.length, 2, "Should exclude system connections qdrant and gemini");
 assert.equal(skillsFromConns[0].skillName, "How to use GitHub tools");
 assert.equal(skillsFromConns[1].skillName, "How to use SQL Database tools");
 
@@ -496,6 +524,7 @@ assert.ok(panelHtml.includes("SkillsComponent"), "buildPanel injects reusable Sk
 assert.ok(panelHtml.includes("ExtApps"), "buildPanel inlines ExtApps bundle");
 assert.ok(panelHtml.includes("buildDefaultSystemPrompt"), "buildPanel includes buildDefaultSystemPrompt");
 assert.ok(panelHtml.includes("resolveConnectionSkills"), "buildPanel includes resolveConnectionSkills");
+assert.ok(panelHtml.includes("buildConnectionSkillName"), "buildPanel includes buildConnectionSkillName");
 
 const skillsPanelHtml = buildSkillsPanel();
 assert.ok(skillsPanelHtml.includes("SkillsComponent"), "buildSkillsPanel injects reusable SkillsComponent");
@@ -511,19 +540,44 @@ const generatedPrompt = buildTeamContextSystemPrompt({
     { id: "db-1", title: "Sprint Tasks", type: "database", description: "Task Tracker" },
   ],
 });
+assert.ok(generatedPrompt.includes("You are my assistant helping me automate my work."));
 assert.ok(generatedPrompt.includes("Current User: Alice (Staff Engineer)"));
-assert.ok(generatedPrompt.includes("Active Repositories: my-org/core-api (Core backend)"));
-assert.ok(generatedPrompt.includes("Active Notion Resources: 📄 Architecture RFC (RFC Doc), 🗄️ Sprint Tasks [Database] (Task Tracker)"));
-assert.ok(generatedPrompt.includes("Required Connection Skills to Read:"));
-assert.ok(generatedPrompt.includes("How to use GitHub tools"));
-assert.ok(generatedPrompt.includes("How to use Notion tools"));
-assert.ok(generatedPrompt.includes("SQL Database Querying: Use `sql_get_schema` and `sql_execute_query`"));
-assert.ok(generatedPrompt.includes("Always ask for explicit user approval before executing any actions that edit or modify data"));
-assert.ok(generatedPrompt.includes("my-team-context-mcp-server"));
+assert.ok(!generatedPrompt.includes("Active Repositories:"), "Should not render active repositories");
+assert.ok(!generatedPrompt.includes("Active Notion Resources:"), "Should not render active notion resources");
+assert.ok(generatedPrompt.includes("Active Connections:"));
+assert.ok(generatedPrompt.includes("- **GitHub**: How to use GitHub tools (use get_skill to get it)"));
+assert.ok(generatedPrompt.includes("- **Notion**: How to use Notion tools (use get_skill to get it)"));
+assert.ok(generatedPrompt.includes("Read through the skill (using `get_skill`) and find the relevant workflow before doing your work."));
 assert.equal(getDefaultSystemPrompt({ userName: "Alice" }), buildTeamContextSystemPrompt({ userName: "Alice" }));
 
 const emptyPrompt = buildTeamContextSystemPrompt({ userName: "Bob" });
-assert.ok(!emptyPrompt.includes("Required Connection Skills to Read:"));
+assert.ok(!emptyPrompt.includes("Active Connections:"));
+
+// Test custom connection without a skill, and verify system connections (Qdrant, Gemini) are ignored
+const promptWithCustomAndSystemConns = buildTeamContextSystemPrompt({
+  userName: "Charlie",
+  connections: {
+    github: { enabled: true },
+    qdrant: { enabled: true, credentials: { QDRANT_URL: "http://localhost:6333" } },
+    gemini: { enabled: true, credentials: { GEMINI_API_KEY: "gm-xyz" } },
+    custom_crm: { enabled: true, credentials: { API_KEY: "xyz" } },
+  },
+});
+assert.ok(promptWithCustomAndSystemConns.includes("- **GitHub**: How to use GitHub tools (use get_skill to get it)"));
+assert.ok(promptWithCustomAndSystemConns.includes("- **Custom Crm**"));
+assert.ok(!promptWithCustomAndSystemConns.includes("Custom Crm: How to use"));
+assert.ok(!promptWithCustomAndSystemConns.toLowerCase().includes("qdrant"), "Should ignore Qdrant system connection");
+assert.ok(!promptWithCustomAndSystemConns.toLowerCase().includes("gemini"), "Should ignore Gemini system connection");
+
+// Test prompt with ONLY system connections (Qdrant & Gemini)
+const promptOnlySystemConns = buildTeamContextSystemPrompt({
+  userName: "David",
+  connections: {
+    qdrant: { enabled: true },
+    gemini: { enabled: true },
+  },
+});
+assert.ok(!promptOnlySystemConns.includes("Active Connections:"), "Should keep connections blank when only system connections exist");
 
 // SQL Tools Tests (SQLite file/memory test)
 const testDbPath = path.join(dir, "test.sqlite");

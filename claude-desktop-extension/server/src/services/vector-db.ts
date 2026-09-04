@@ -25,6 +25,8 @@ import type {
   TeamUserItem,
 } from "../tools/types.js";
 
+export type { SkillItem };
+
 export const KNOWLEDGE_BASE_COLLECTION = "knowledge-base";
 export const APP_CONFIG_COLLECTION = "app-config";
 export const USERS_COLLECTION = "users";
@@ -673,6 +675,20 @@ export function getGitHubGuideSkillPointId(username: string = "default"): string
   const hash = crypto
     .createHash("md5")
     .update(`github-guide-skill:${username.trim().toLowerCase()}`)
+    .digest("hex");
+  return `${hash.slice(0, 8)}-${hash.slice(8, 12)}-${hash.slice(12, 16)}-${hash.slice(16, 20)}-${hash.slice(20, 32)}`;
+}
+
+/**
+ * Generate deterministic UUID for any connection guide skill in Qdrant.
+ */
+export function getConnectionGuideSkillPointId(connectionId: string, username: string = "default"): string {
+  const id = connectionId.trim().toLowerCase();
+  if (id === "notion") return getNotionGuideSkillPointId(username);
+  if (id === "github") return getGitHubGuideSkillPointId(username);
+  const hash = crypto
+    .createHash("md5")
+    .update(`connection-guide-skill:${id}:${username.trim().toLowerCase()}`)
     .digest("hex");
   return `${hash.slice(0, 8)}-${hash.slice(8, 12)}-${hash.slice(12, 16)}-${hash.slice(16, 20)}-${hash.slice(20, 32)}`;
 }

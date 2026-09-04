@@ -22,6 +22,7 @@ import { getAuthState, getSessionUser } from "./init.js";
 import { readEnvConfig } from "../utils/env.js";
 import { syncNotionGuideSkill } from "../utils/notion-guide.js";
 import { syncGitHubGuideSkill } from "../utils/github-guide.js";
+import { syncAllConnectionSkills } from "../utils/helpers.js";
 import { refineContentWithGemini } from "../services/refine.js";
 import { resolveMentions, formatSkillToolHint } from "../utils/mention.js";
 import {
@@ -374,17 +375,13 @@ export function registerConfigTools(server: McpServer): void {
           systemPrompt,
         });
 
-        // Automatically sync the "How to use Notion tools" and "How to use GitHub tools" skills into Qdrant
-        await Promise.all([
-          syncNotionGuideSkill({
-            username,
-            activeNotionPages: saved.activeNotionPages,
-          }).catch((err) => console.warn("Failed to sync Notion guide skill:", err)),
-          syncGitHubGuideSkill({
-            username,
-            activeRepos: saved.activeRepos,
-          }).catch((err) => console.warn("Failed to sync GitHub guide skill:", err)),
-        ]);
+        // Automatically sync guide skills for active connections into Qdrant
+        await syncAllConnectionSkills({
+          username,
+          connections: saved.connections,
+          activeRepos: saved.activeRepos,
+          activeNotionPages: saved.activeNotionPages,
+        }).catch((err) => console.warn("Failed to sync connection skills:", err));
 
         return text({
           status: "ok",
@@ -962,17 +959,13 @@ export function registerConfigTools(server: McpServer): void {
           systemPrompt,
         });
 
-        // Automatically sync the "How to use Notion tools" and "How to use GitHub tools" skills into Qdrant
-        await Promise.all([
-          syncNotionGuideSkill({
-            username,
-            activeNotionPages: saved.activeNotionPages,
-          }).catch((err) => console.warn("Failed to sync Notion guide skill:", err)),
-          syncGitHubGuideSkill({
-            username,
-            activeRepos: saved.activeRepos,
-          }).catch((err) => console.warn("Failed to sync GitHub guide skill:", err)),
-        ]);
+        // Automatically sync guide skills for active connections into Qdrant
+        await syncAllConnectionSkills({
+          username,
+          connections: saved.connections,
+          activeRepos: saved.activeRepos,
+          activeNotionPages: saved.activeNotionPages,
+        }).catch((err) => console.warn("Failed to sync connection skills:", err));
 
         return text({
           status: "ok",
