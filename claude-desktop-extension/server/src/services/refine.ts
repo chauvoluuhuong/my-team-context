@@ -205,7 +205,7 @@ if (type === 'system_prompt') {
       "- Do NOT wrap the entire response in a top-level code fence. Output ONLY the refined raw system prompt directly.";
   } else if (type === 'skill') {
     systemContext =
-      "Help me to refine and polish the provided skill markdown content for clarity, grammatical precision, and formatting while preserving all original meaning.\n" 
+      "You will help me to refine skill. Write it in markdown format. fix typo, gramma, make it more readable\n" 
   } else {
     systemContext =
       "You are an expert technical editor. Refine the provided text for clarity, grammatical precision, and formatting while preserving all original meaning.\n" +
@@ -220,13 +220,11 @@ if (type === 'system_prompt') {
 
   // Print full message sent to Gemini
   console.log(`\n================== FULL MESSAGE SENT TO GEMINI ==================`);
-  console.log(`[Target Model]: ${targetModel}`);
   console.log(`[System Instruction]:\n${systemContext}`);
   console.log(`-----------------------------------------------------------------`);
   console.log(`[User Content (Resolved with Mentions)]:\n${userContent}`);
   console.log(`=================================================================\n`);
 
-  console.log(`[GeminiRefine] Instantiating GoogleGenAI SDK client...`);
   const ai = new GoogleGenAI({ apiKey });
 
   console.log(`[GeminiRefine] Calling ai.models.generateContent({ model: "${targetModel}" })...`);
@@ -241,6 +239,7 @@ if (type === 'system_prompt') {
         systemInstruction: systemContext,
         temperature: 0.2,
         maxOutputTokens: 8192,
+        tools: [], // No tools needed for refinement
       },
     });
     const elapsed = Date.now() - startTime;
