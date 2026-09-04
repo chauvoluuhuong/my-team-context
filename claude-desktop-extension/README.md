@@ -1,4 +1,4 @@
-# My Team Context
+# Automate Work
 
 > **Bridging the gap between engineering context, product ideation, and collaborative team intelligence in Claude Desktop.**
 
@@ -28,7 +28,7 @@ In modern software teams, critical project context is fragmented across disconne
 
 ## 🚀 The Solution: A Unified Team Context for AI
 
-**My Team Context** transforms Claude Desktop into a fully context-aware team member that bridges engineering reality with product vision.
+**Automate Work** transforms Claude Desktop into a fully context-aware team member that bridges engineering reality with product vision.
 
 ```
        ┌─────────────────────────────────────────────────────────────┐
@@ -144,4 +144,4 @@ npm test
 npm run build
 ```
 
-The output bundle is generated at `dist/repo-context.mcpb`.
+The output bundle is generated at `dist/automate-work.mcpb`.

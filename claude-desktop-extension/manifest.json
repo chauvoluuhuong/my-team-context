@@ -1,8 +1,8 @@
 {
   "$schema": "https://raw.githubusercontent.com/anthropics/mcpb/main/schemas/mcpb-manifest-v0.4.schema.json",
   "manifest_version": "0.4",
-  "name": "my-team-context",
-  "display_name": "My Team Context",
+  "name": "automate-work",
+  "display_name": "Automate Work",
   "version": "0.1.0",
   "description": "Unified team context for Claude: GitHub code, Notion workspace, Qdrant vector knowledge base, SQL databases, and active app configuration.",
   "long_description": "Gives Claude full access to your team's live context: browse and search GitHub code, query Notion documentation and tasks, search and manage shared team skills in Qdrant vector database, execute SQL queries, and configure active repositories and AI system prompt with interactive widgets.\n\nCredentials are authenticated and securely stored in your machine's OS keychain and never exposed in conversations.",
@@ -11,7 +11,7 @@
     "email": "lucas.luu@innostaas.com"
   },
   "keywords": [
-    "team-context",
+    "automate-work",
     "github",
     "notion",
     "qdrant",
