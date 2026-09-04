@@ -17,7 +17,11 @@ export class SkillsComponent {
     this.isSearching = false;
     this.isSaving = false;
     this.deletingSkillId = null;
-    this.isActive = Boolean(options.container);
+    this.mentionController = null;
+    this.mentionCleanupContent = null;
+    this.mentionCleanupDesc = null;
+    this.getCurrentUsername = options.getCurrentUsername || (() => null);
+    this.getApiKey = options.getApiKey || (() => null);
   }
 
   esc(s) {
@@ -73,6 +77,9 @@ export class SkillsComponent {
       });
       const data = JSON.parse(res.content[0].text);
       this.skills = data.skills || [];
+      if (this.mentionController) {
+        this.mentionController.setSkills(this.skills);
+      }
       if (this.onUpdate) this.onUpdate(this.skills);
       this.isLoading = false;
       if (this.isActive && this.container) {
@@ -178,9 +185,20 @@ export class SkillsComponent {
 
         <!-- 3. Mandatory Content -->
         <div class="form-group" style="margin-bottom:14px;">
-          <label class="form-label" for="compSkillContent" style="display:block; font-size:12px; font-weight:700; margin-bottom:4px; color:var(--fg);">Skill Content (Markdown) *</label>
-          <textarea id="compSkillContent" style="min-height:140px;" placeholder="Enter detailed guidelines, procedures, instructions, or code snippets…" required>${this.esc(contentVal)}</textarea>
-          <div class="form-hint" style="font-size:11px;color:var(--muted);margin-top:3px;">Comprehensive instructions injected into agent context.</div>
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+            <label class="form-label" for="compSkillContent" style="display:block; font-size:12px; font-weight:700; margin:0; color:var(--fg);">Skill Content (Markdown) *</label>
+            <div style="display:flex; align-items:center; gap:6px;">
+              <button type="button" class="secondary sm" id="compMentionSkillBtn" title="Mention another skill (@)" style="display:inline-flex; align-items:center; gap:4px; font-size:11.5px; padding:3px 8px;">
+                <span>@</span> Mention
+              </button>
+              <button type="button" class="secondary sm btn-refine" id="compRefineSkillContentBtn" title="Refine content using Gemini 3.6 Flash" style="display:inline-flex; align-items:center; gap:4px; font-size:11.5px; padding:3px 8px;">
+                <span class="refine-icon">✨</span> Refine
+              </button>
+            </div>
+          </div>
+          <div id="compRefineInlineStatus" style="display:none;margin-bottom:6px;font-size:11.5px;padding:6px 10px;border-radius:6px;line-height:1.4;"></div>
+          <textarea id="compSkillContent" style="min-height:140px;" placeholder="Enter detailed guidelines, procedures, instructions, or code snippets… (Type @ to mention another skill)" required>${this.esc(contentVal)}</textarea>
+          <div class="form-hint" style="font-size:11px;color:var(--muted);margin-top:3px;">Comprehensive instructions injected into agent context. Type <code>@</code> to mention other skills.</div>
         </div>
 
         <hr style="border:none; border-top:1px dashed var(--line); margin:16px 0;" />
@@ -299,7 +317,7 @@ export class SkillsComponent {
           </div>
         ` : ''}
 
-        <div class="skill-content-preview" title="Click to expand/collapse" id="comp-preview-${this.esc(skill.id)}" style="background:var(--code-bg); border:1px solid var(--line); border-radius:6px; padding:8px 10px; font-family:ui-monospace, SFMono-Regular, monospace; font-size:11.5px; white-space:pre-wrap; max-height:80px; overflow:hidden; cursor:pointer;">${this.esc(skill.content)}</div>
+        <div class="skill-content-preview" title="Click to expand/collapse" id="comp-preview-${this.esc(skill.id)}" style="background:var(--code-bg); border:1px solid var(--line); border-radius:6px; padding:8px 10px; font-family:ui-monospace, SFMono-Regular, monospace; font-size:11.5px; white-space:pre-wrap; max-height:80px; overflow:hidden; cursor:pointer;">${globalThis.renderMentionsInHtml ? globalThis.renderMentionsInHtml(skill.content) : this.esc(skill.content)}</div>
 
         <div class="skill-footer" style="display:flex; justify-content:space-between; align-items:center; margin-top:10px; padding-top:8px; border-top:1px solid var(--line); font-size:11px; color:var(--muted);">
           <span>ID: <code>${this.esc(skill.id ? skill.id.slice(0, 8) + '…' : '')}</code></span>
@@ -330,6 +348,62 @@ export class SkillsComponent {
       contentInput?.addEventListener("input", updatePreview);
       importInput?.addEventListener("input", updatePreview);
       metaInput?.addEventListener("input", updatePreview);
+
+      // Clean up previous mention listeners
+      if (this.mentionCleanupContent) {
+        this.mentionCleanupContent();
+        this.mentionCleanupContent = null;
+      }
+      if (this.mentionCleanupDesc) {
+        this.mentionCleanupDesc();
+        this.mentionCleanupDesc = null;
+      }
+
+      // Initialize or update MentionController
+      if (globalThis.MentionController && !this.mentionController) {
+        this.mentionController = new globalThis.MentionController({
+          app: this.app,
+          skills: this.skills,
+        });
+      } else if (this.mentionController) {
+        this.mentionController.setSkills(this.skills);
+      }
+
+      // Attach mention auto-complete to content textarea
+      if (this.mentionController && contentInput) {
+        this.mentionCleanupContent = this.mentionController.attach(contentInput, {
+          formatStyle: "bracket",
+          onInsert: () => updatePreview(),
+        });
+      }
+
+      // Attach mention auto-complete to description input
+      if (this.mentionController && descInput) {
+        this.mentionCleanupDesc = this.mentionController.attach(descInput, {
+          formatStyle: "bracket",
+          onInsert: () => updatePreview(),
+        });
+      }
+
+      // Mention button handler
+      document.getElementById("compMentionSkillBtn")?.addEventListener("click", () => {
+        if (contentInput && this.mentionController) {
+          const caret = contentInput.selectionStart || contentInput.value.length;
+          const val = contentInput.value;
+          const needsAt = caret === 0 || !val.slice(0, caret).endsWith("@");
+          if (needsAt) {
+            contentInput.value = val.slice(0, caret) + "@" + val.slice(caret);
+            contentInput.setSelectionRange(caret + 1, caret + 1);
+          }
+          contentInput.focus();
+          contentInput.dispatchEvent(new Event("input", { bubbles: true }));
+        }
+      });
+
+      // Refine button handler
+      document.getElementById("compRefineSkillContentBtn")?.addEventListener("click", () => {
+        this.handleRefineContent();
+      });
 
       document.getElementById("cancelEditSkillBtn")?.addEventListener("click", () => {
         this.isEditing = false;
@@ -409,6 +483,132 @@ export class SkillsComponent {
           await this.handleDeleteSkill(id);
         });
       });
+    }
+  }
+
+  async handleRefineContent() {
+    this.syncEditorStateFromInputs();
+    const contentInput = document.getElementById("compSkillContent");
+    const refineBtn = document.getElementById("compRefineSkillContentBtn");
+    const currentVal = contentInput?.value?.trim();
+
+    const statusEl = document.getElementById("compRefineInlineStatus");
+    const setInlineStatus = (kind, msg) => {
+      if (!statusEl) return;
+      if (!msg) {
+        statusEl.style.display = "none";
+        statusEl.innerHTML = "";
+        return;
+      }
+      statusEl.style.display = "block";
+      if (kind === "err") {
+        statusEl.style.background = "var(--err-bg, #fef2f2)";
+        statusEl.style.color = "var(--err-fg, #dc2626)";
+        statusEl.style.border = "1px solid var(--err-fg, #dc2626)";
+      } else if (kind === "ok") {
+        statusEl.style.background = "var(--ok-bg, #ecfdf5)";
+        statusEl.style.color = "var(--ok-fg, #059669)";
+        statusEl.style.border = "1px solid var(--ok-fg, #059669)";
+      } else {
+        statusEl.style.background = "var(--code-bg, #f8fafc)";
+        statusEl.style.color = "var(--muted, #64748b)";
+        statusEl.style.border = "1px solid var(--line, #e2e8f0)";
+      }
+      statusEl.innerHTML = msg;
+    };
+
+    if (!currentVal) {
+      setInlineStatus("err", "Please enter some skill content to refine first.");
+      return;
+    }
+
+    if (refineBtn) {
+      refineBtn.disabled = true;
+      refineBtn.innerHTML = '<span class="spinner-sm"></span> Refining…';
+    }
+    setInlineStatus("info", '<span class="spinner-sm"></span> Contacting Google Gemini (<code>gemini-3.6-flash</code>) to refine content…');
+
+    const username = (typeof this.getCurrentUsername === "function" ? this.getCurrentUsername() : null) || undefined;
+    const apiKey = (typeof this.getApiKey === "function" ? this.getApiKey() : null) || undefined;
+    const skillsPayload = Array.isArray(this.skills)
+      ? this.skills.map((s) => ({ name: s.name, description: s.description, content: s.content }))
+      : undefined;
+
+    console.log("[SkillsComponent:Refine] Initiating refinement with params:", {
+      username,
+      hasApiKey: Boolean(apiKey),
+      contentLength: currentVal.length,
+      skillsCount: skillsPayload ? skillsPayload.length : 0,
+    });
+
+    try {
+      let res;
+      try {
+        res = await this.app.callServerTool({
+          name: "refine_content",
+          arguments: {
+            content: currentVal,
+            type: "skill",
+            username,
+            apiKey,
+            skills: skillsPayload,
+          },
+        });
+      } catch (callErr) {
+        console.warn("[SkillsComponent:Refine] refine_content call failed, trying skills_refine_content fallback:", callErr);
+        res = await this.app.callServerTool({
+          name: "skills_refine_content",
+          arguments: {
+            content: currentVal,
+            username,
+            apiKey,
+            skills: skillsPayload,
+          },
+        });
+      }
+
+      console.log("[SkillsComponent:Refine] Raw tool response:", res);
+
+      if (res.isError) {
+        throw new Error(res.content?.[0]?.text || "Refinement request failed");
+      }
+
+      let data;
+      try {
+        data = JSON.parse(res.content[0].text);
+      } catch {
+        data = { refinedContent: res.content[0].text };
+      }
+
+      console.log("[SkillsComponent:Refine] Parsed response data:", data);
+
+      if (data.error) {
+        throw new Error(data.error);
+      }
+
+      if (data.refinedContent) {
+        if (contentInput) {
+          contentInput.value = data.refinedContent;
+          contentInput.dispatchEvent(new Event("input", { bubbles: true }));
+        }
+        if (this.currentEditSkill) {
+          this.currentEditSkill.content = data.refinedContent;
+        }
+        setInlineStatus("ok", `✨ Content successfully refined with <strong>${this.esc(data.model || "gemini-3.6-flash")}</strong>!`);
+        this.statusMessage = null;
+      }
+    } catch (err) {
+      console.error("[SkillsComponent:Refine] Refinement failed with error:", err);
+      let errMsg = err.message || "Unknown refinement error";
+      if (errMsg.includes("prepayment credits are depleted") || errMsg.includes("429")) {
+        errMsg = `<strong>Google AI Studio (429):</strong> Your prepayment credits are depleted for this API key. Please add credits at <a href="https://ai.studio/projects" target="_blank" style="color:inherit;text-decoration:underline;font-weight:700;">ai.studio/projects</a> or update your API key in the Connections tab.`;
+      }
+      setInlineStatus("err", `✕ ${errMsg}`);
+    } finally {
+      if (refineBtn) {
+        refineBtn.disabled = false;
+        refineBtn.innerHTML = '<span class="refine-icon">✨</span> Refine';
+      }
     }
   }
 

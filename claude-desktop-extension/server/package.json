@@ -17,10 +17,12 @@
     "validate": "npx --yes @anthropic-ai/mcpb validate ../manifest.json",
     "info": "npx --yes @anthropic-ai/mcpb info ../../dist/my-team-context.mcpb",
     "test": "npx --yes tsx test/api.ts",
+    "test:mention": "npx --yes tsx test/mention-and-refine.ts",
     "smoke": "npx --yes tsx test/smoke.ts",
     "inspect": "npx --yes @modelcontextprotocol/inspector node dist/index.js"
   },
   "dependencies": {
+    "@google/genai": "^2.21.0",
     "@modelcontextprotocol/ext-apps": "^1.7.5",
     "@modelcontextprotocol/sdk": "^1.30.0",
     "mysql2": "^3.24.0",

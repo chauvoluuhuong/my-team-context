@@ -10,6 +10,7 @@ import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { registerAppTool } from "@modelcontextprotocol/ext-apps/server";
 import { text, guarded, RepoContextError } from "../utils/helpers.js";
 import { serializeSkillDocument, serializeDocument } from "../utils/serializer.js";
+import { refineContentWithGemini } from "../services/refine.js";
 import type { SkillDocumentMetadata } from "./types.js";
 import {
   listSkills,
@@ -183,6 +184,58 @@ export function registerSkillsTools(server: McpServer): void {
     guarded(async ({ query, limit }: { query: string; limit?: number }) => {
       const results = await searchSkills(query, limit || 10);
       return text({ status: "ok", query, results });
+    }),
+  );
+
+  registerAppTool(
+    server,
+    "skills_refine_content",
+    {
+      title: "Refine Skill Content",
+      description: "Internal: refine skill markdown content using Gemini 3.6 Flash model.",
+      annotations: { title: "Refine Skill Content", readOnlyHint: true },
+      inputSchema: {
+        content: z.string().min(1).describe("Skill content markdown to refine"),
+        instruction: z.string().optional().describe("Optional refinement instruction"),
+        username: z.string().optional().describe("Optional username for loading config"),
+        apiKey: z.string().optional().describe("Optional explicit Gemini API key override"),
+        skills: z.array(z.object({
+          name: z.string(),
+          description: z.string().optional(),
+          content: z.string().optional(),
+        })).optional().describe("Optional in-memory skills list for mention resolution"),
+      },
+      _meta: { ui: { visibility: ["app"] } },
+    },
+    guarded(async ({
+      content,
+      instruction,
+      username,
+      apiKey,
+      skills,
+    }: {
+      content: string;
+      instruction?: string;
+      username?: string;
+      apiKey?: string;
+      skills?: Array<{ name: string; description?: string; content?: string }>;
+    }) => {
+      console.log(`[Tool:skills_refine_content] Invoked: username="${username || ""}", contentLength=${content?.length}, hasApiKeyOverride=${Boolean(apiKey)}, skillsCount=${skills?.length || 0}`);
+      try {
+        const result = await refineContentWithGemini({
+          content,
+          type: "skill",
+          instruction,
+          username,
+          apiKeyOverride: apiKey,
+          skills,
+        });
+        console.log(`[Tool:skills_refine_content] Success! Refined length: ${result.refinedLength}`);
+        return text(result);
+      } catch (err) {
+        console.error(`[Tool:skills_refine_content] Failed:`, err);
+        throw err;
+      }
     }),
   );
 

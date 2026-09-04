@@ -22,6 +22,8 @@ import { getAuthState, getSessionUser } from "./init.js";
 import { readEnvConfig } from "../utils/env.js";
 import { syncNotionGuideSkill } from "../utils/notion-guide.js";
 import { syncGitHubGuideSkill } from "../utils/github-guide.js";
+import { refineContentWithGemini } from "../services/refine.js";
+import { resolveMentions, formatSkillToolHint } from "../utils/mention.js";
 import {
   getAppConfig,
   saveAppConfig,
@@ -896,6 +898,11 @@ export function registerConfigTools(server: McpServer): void {
           message: `No app configuration found for user "${username}". Call configure_app to configure active repositories and Notion pages.`,
         });
       }
+
+      if (config.systemPrompt && (config.systemPrompt.includes("@") || config.systemPrompt.includes("@["))) {
+        config.systemPrompt = await resolveMentions(config.systemPrompt, (m) => formatSkillToolHint(m.name));
+      }
+
       return text(config);
     }),
   );
@@ -972,6 +979,71 @@ export function registerConfigTools(server: McpServer): void {
           message: `Configuration saved for @${username}`,
           config: saved,
         });
+      },
+    ),
+  );
+
+  /* ------------------- AI Content Refinement Tool ------------------- */
+
+  registerAppTool(
+    server,
+    "refine_content",
+    {
+      title: "Refine Content with Gemini",
+      description:
+        "Refine and optimize skill markdown content or AI system prompt using Gemini 3.6 Flash model.",
+      annotations: { title: "Refine Content", readOnlyHint: true },
+      inputSchema: {
+        content: z.string().min(1).describe("Text or markdown content to refine"),
+        type: z
+          .enum(["skill", "system_prompt", "general"])
+          .optional()
+          .default("skill")
+          .describe("Context type of the content: 'skill', 'system_prompt', or 'general'"),
+        instruction: z.string().optional().describe("Optional custom refinement instruction"),
+        username: z.string().optional().describe("Optional username for loading connection config"),
+        apiKey: z.string().optional().describe("Optional explicit Gemini API key override"),
+        skills: z.array(z.object({
+          name: z.string(),
+          description: z.string().optional(),
+          content: z.string().optional(),
+        })).optional().describe("Optional in-memory skills list for mention resolution"),
+      },
+      _meta: { ui: { visibility: ["app"] } },
+    },
+    guarded(
+      async ({
+        content,
+        type,
+        instruction,
+        username: inputUsername,
+        apiKey,
+        skills,
+      }: {
+        content: string;
+        type?: "skill" | "system_prompt" | "general";
+        instruction?: string;
+        username?: string;
+        apiKey?: string;
+        skills?: Array<{ name: string; description?: string; content?: string }>;
+      }) => {
+        const username = await resolveEffectiveUsername(inputUsername);
+        console.log(`[Tool:refine_content] Invoked: type="${type || "skill"}", username="${username}", contentLength=${content?.length}, hasApiKeyOverride=${Boolean(apiKey)}, skillsCount=${skills?.length || 0}`);
+        try {
+          const result = await refineContentWithGemini({
+            content,
+            type: type || "skill",
+            instruction,
+            username,
+            apiKeyOverride: apiKey,
+            skills,
+          });
+          console.log(`[Tool:refine_content] Success! Refined length: ${result.refinedLength}`);
+          return text(result);
+        } catch (err) {
+          console.error(`[Tool:refine_content] Failed:`, err);
+          throw err;
+        }
       },
     ),
   );

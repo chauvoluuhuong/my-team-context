@@ -81,12 +81,19 @@ export function loadSkillsComponent(): string {
   return readFileSync(compPath, "utf8");
 }
 
+export function loadMentionComponent(): string {
+  const compPath = resolveWidgetPath("components/mention-component.js");
+  return readFileSync(compPath, "utf8");
+}
+
 export function buildPanel(defaultTab: "credentials" | "config" = "credentials"): string {
   const bundle = loadBundle();
+  const mentionComp = loadMentionComponent();
   const skillsComp = loadSkillsComponent();
   const widgetPath = resolveWidgetPath("panel.html");
   let html = readFileSync(widgetPath, "utf8")
     .replace("/*__EXT_APPS_BUNDLE__*/", () => bundle)
+    .replace("/*__MENTION_COMPONENT__*/", () => mentionComp)
     .replace("/*__SKILLS_COMPONENT__*/", () => skillsComp);
   if (defaultTab === "config") {
     html = html.replace('activeTopTab: "credentials"', 'activeTopTab: "config"');
@@ -96,10 +103,12 @@ export function buildPanel(defaultTab: "credentials" | "config" = "credentials")
 
 export function buildSkillsPanel(): string {
   const bundle = loadBundle();
+  const mentionComp = loadMentionComponent();
   const skillsComp = loadSkillsComponent();
   const widgetPath = resolveWidgetPath("skills.html");
   return readFileSync(widgetPath, "utf8")
     .replace("/*__EXT_APPS_BUNDLE__*/", () => bundle)
+    .replace("/*__MENTION_COMPONENT__*/", () => mentionComp)
     .replace("/*__SKILLS_COMPONENT__*/", () => skillsComp);
 }
 
@@ -304,4 +313,5 @@ export function getDefaultSystemPrompt(options?: SystemPromptContextOptions): st
 
 export * from "./notion-guide.js";
 export * from "./github-guide.js";
+export * from "./mention.js";
 

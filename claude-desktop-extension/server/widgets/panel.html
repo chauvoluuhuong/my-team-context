@@ -1076,10 +1076,43 @@
     cursor: not-allowed;
     border-style: dashed;
   }
+
+  .btn-refine {
+    font-size: 11.5px;
+    padding: 3px 8px;
+    background: var(--code-bg);
+    border: 1px solid var(--border);
+    color: var(--fg);
+    border-radius: 6px;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    transition: all 0.15s ease;
+  }
+  .btn-refine:hover:not(:disabled) {
+    background: var(--card-hover);
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+  .btn-refine:disabled {
+    opacity: 0.6;
+    cursor: wait;
+  }
+
+  .mention-menu-popup {
+    background: var(--card-bg, #ffffff);
+    border: 1px solid var(--border, #cbd5e1);
+    color: var(--fg, #111827);
+  }
 </style>
 
 <script>
   /*__EXT_APPS_BUNDLE__*/
+</script>
+
+<script type="module">
+  /*__MENTION_COMPONENT__*/
 </script>
 
 <script type="module">
@@ -1093,6 +1126,8 @@
   const skillsComponent = new globalThis.SkillsComponent({
     app,
     showHeader: false,
+    getCurrentUsername: () => state.currentUser?.name,
+    getApiKey: () => state.connections?.gemini?.credentials?.GEMINI_API_KEY || state.credentials?.GEMINI_API_KEY || null,
     onUpdate: (skills) => {
       state.skills = skills;
       const pill = document.getElementById("pillSkills");
@@ -3175,17 +3210,168 @@ Please confirm you are ready to assist with our team context and give a brief gr
       <div class="card">
         <div class="card-header">
           <span class="card-title">🧠 AI System Prompt (Markdown)</span>
-          <button class="secondary" id="resetPromptBtn" style="font-size:12px;padding:4px 8px;">Reset to Default</button>
+          <div style="display:flex;align-items:center;gap:6px;">
+            <button class="secondary sm" id="mentionPromptSkillBtn" title="Mention a skill (@)" style="font-size:12px;padding:4px 8px;display:inline-flex;align-items:center;gap:4px;">
+              <span>@</span> Mention
+            </button>
+            <button class="secondary sm btn-refine" id="refineSystemPromptBtn" title="Refine system prompt using Gemini 3.6 Flash" style="font-size:12px;padding:4px 8px;display:inline-flex;align-items:center;gap:4px;">
+              <span class="refine-icon">✨</span> Refine
+            </button>
+            <button class="secondary" id="resetPromptBtn" style="font-size:12px;padding:4px 8px;">Reset to Default</button>
+          </div>
         </div>
         <p style="color:var(--muted);font-size:12.5px;margin:0 0 10px;">
-          Define persistent AI behavioral guidelines, response styling, and domain rules.
+          Define persistent AI behavioral guidelines, response styling, and domain rules. Type <code>@</code> to mention skills.
         </p>
-        <textarea id="systemPromptArea" style="min-height:220px;" placeholder="Enter Markdown system prompt…">${esc(state.systemPrompt)}</textarea>
+        <div id="systemPromptInlineStatus" style="display:none;margin-bottom:6px;font-size:11.5px;padding:6px 10px;border-radius:6px;line-height:1.4;"></div>
+        <textarea id="systemPromptArea" style="min-height:220px;" placeholder="Enter Markdown system prompt… (Type @ to mention another skill)">${esc(state.systemPrompt)}</textarea>
       </div>
     `;
 
+    // Attach mention controller if available
+    if (globalThis.MentionController) {
+      if (!state.promptMentionController) {
+        state.promptMentionController = new globalThis.MentionController({
+          app,
+          skills: state.skills,
+        });
+      } else {
+        state.promptMentionController.setSkills(state.skills);
+      }
+      const area = document.getElementById("systemPromptArea");
+      if (area) {
+        if (state.promptMentionCleanup) {
+          state.promptMentionCleanup();
+          state.promptMentionCleanup = null;
+        }
+        state.promptMentionCleanup = state.promptMentionController.attach(area, {
+          formatStyle: "bracket",
+          onInsert: () => {
+            state.systemPrompt = area.value;
+          },
+        });
+      }
+    }
+
     document.getElementById("systemPromptArea")?.addEventListener("input", (e) => {
       state.systemPrompt = e.target.value;
+    });
+
+    document.getElementById("mentionPromptSkillBtn")?.addEventListener("click", () => {
+      const area = document.getElementById("systemPromptArea");
+      if (area && state.promptMentionController) {
+        const caret = area.selectionStart || area.value.length;
+        const val = area.value;
+        const needsAt = caret === 0 || !val.slice(0, caret).endsWith("@");
+        if (needsAt) {
+          area.value = val.slice(0, caret) + "@" + val.slice(caret);
+          area.setSelectionRange(caret + 1, caret + 1);
+        }
+        area.focus();
+        area.dispatchEvent(new Event("input", { bubbles: true }));
+      }
+    });
+
+    document.getElementById("refineSystemPromptBtn")?.addEventListener("click", async () => {
+      const area = document.getElementById("systemPromptArea");
+      const statusEl = document.getElementById("systemPromptInlineStatus");
+      const promptVal = area?.value?.trim() || state.systemPrompt?.trim();
+
+      const setInlineStatus = (kind, msg) => {
+        if (!statusEl) return;
+        if (!msg) {
+          statusEl.style.display = "none";
+          statusEl.innerHTML = "";
+          return;
+        }
+        statusEl.style.display = "block";
+        if (kind === "err") {
+          statusEl.style.background = "var(--err-bg, #fef2f2)";
+          statusEl.style.color = "var(--err-fg, #dc2626)";
+          statusEl.style.border = "1px solid var(--err-fg, #dc2626)";
+        } else if (kind === "ok") {
+          statusEl.style.background = "var(--ok-bg, #ecfdf5)";
+          statusEl.style.color = "var(--ok-fg, #059669)";
+          statusEl.style.border = "1px solid var(--ok-fg, #059669)";
+        } else {
+          statusEl.style.background = "var(--code-bg, #f8fafc)";
+          statusEl.style.color = "var(--muted, #64748b)";
+          statusEl.style.border = "1px solid var(--line, #e2e8f0)";
+        }
+        statusEl.innerHTML = msg;
+      };
+
+      if (!promptVal) {
+        setInlineStatus("err", "Please enter an AI system prompt to refine first.");
+        return;
+      }
+
+      const refineBtn = document.getElementById("refineSystemPromptBtn");
+      if (refineBtn) {
+        refineBtn.disabled = true;
+        refineBtn.innerHTML = '<span class="spinner-sm"></span> Refining…';
+      }
+      setInlineStatus("info", '<span class="spinner-sm"></span> Contacting Google Gemini (<code>gemini-3.6-flash</code>) to refine system prompt…');
+
+      const apiKey = state.connections?.gemini?.credentials?.GEMINI_API_KEY || state.credentials?.GEMINI_API_KEY || undefined;
+      const username = state.currentUser?.name || undefined;
+      const skillsPayload = Array.isArray(state.skills)
+        ? state.skills.map((s) => ({ name: s.name, description: s.description, content: s.content }))
+        : undefined;
+
+      console.log("[Panel:RefinePrompt] Initiating system prompt refine with params:", {
+        username,
+        hasApiKey: Boolean(apiKey),
+        contentLength: promptVal.length,
+        skillsCount: skillsPayload ? skillsPayload.length : 0,
+      });
+
+      try {
+        const res = await app.callServerTool({
+          name: "refine_content",
+          arguments: {
+            content: promptVal,
+            type: "system_prompt",
+            username,
+            apiKey,
+            skills: skillsPayload,
+          },
+        });
+
+        console.log("[Panel:RefinePrompt] Raw tool response:", res);
+
+        if (res.isError) {
+          throw new Error(res.content?.[0]?.text || "Refinement request failed");
+        }
+
+        let data;
+        try {
+          data = JSON.parse(res.content[0].text);
+        } catch {
+          data = { refinedContent: res.content[0].text };
+        }
+
+        if (data.error) {
+          throw new Error(data.error);
+        }
+
+        if (data.refinedContent) {
+          state.systemPrompt = data.refinedContent;
+          if (area) area.value = data.refinedContent;
+          setInlineStatus("ok", `✨ System prompt successfully refined with <strong>${esc(data.model || "gemini-3.6-flash")}</strong>!`);
+        }
+      } catch (err) {
+        let errMsg = err.message || "Unknown refinement error";
+        if (errMsg.includes("prepayment credits are depleted") || errMsg.includes("429")) {
+          errMsg = `<strong>Google AI Studio (429):</strong> Your prepayment credits are depleted for this API key. Please add credits at <a href="https://ai.studio/projects" target="_blank" style="color:inherit;text-decoration:underline;font-weight:700;">ai.studio/projects</a> or update your API key in the Connections tab.`;
+        }
+        setInlineStatus("err", `✕ ${errMsg}`);
+      } finally {
+        if (refineBtn) {
+          refineBtn.disabled = false;
+          refineBtn.innerHTML = '<span class="refine-icon">✨</span> Refine';
+        }
+      }
     });
 
     document.getElementById("resetPromptBtn")?.addEventListener("click", () => {

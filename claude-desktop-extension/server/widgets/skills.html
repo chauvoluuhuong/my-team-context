@@ -153,10 +153,43 @@
   @keyframes spin {
     to { transform: rotate(360deg); }
   }
+
+  .btn-refine {
+    font-size: 11.5px;
+    padding: 3px 8px;
+    background: var(--code-bg);
+    border: 1px solid var(--border);
+    color: var(--fg);
+    border-radius: 6px;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    transition: all 0.15s ease;
+  }
+  .btn-refine:hover:not(:disabled) {
+    background: var(--card-hover);
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+  .btn-refine:disabled {
+    opacity: 0.6;
+    cursor: wait;
+  }
+
+  .mention-menu-popup {
+    background: var(--card-bg, #ffffff);
+    border: 1px solid var(--border, #cbd5e1);
+    color: var(--fg, #111827);
+  }
 </style>
 
 <script>
   /*__EXT_APPS_BUNDLE__*/
+</script>
+
+<script type="module">
+  /*__MENTION_COMPONENT__*/
 </script>
 
 <script type="module">
