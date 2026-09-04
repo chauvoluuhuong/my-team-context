@@ -194,7 +194,7 @@ export async function refineContentWithGemini({
   }
 
   // Build system instruction and prompt depending on context
-  let systemContext = "";
+  let systemContext = "You will help me to refine, write it in markdown format. fix typo, gramma, make it more readable\nOutput ONLY the refined text directly without conversational commentary.";
 if (type === 'system_prompt') {
     systemContext =
       "You are an expert AI prompt engineer specializing in LLM system prompts and behavioral guidelines.\n" +
@@ -203,14 +203,7 @@ if (type === 'system_prompt') {
       "- Keep all specific persona guidelines, tool constraints, project references, tool directives (e.g. '(use get_skill to get it)'), and custom rules intact.\n" +
       "- Ensure markdown formatting is crisp and effective for LLM consumption.\n" +
       "- Do NOT wrap the entire response in a top-level code fence. Output ONLY the refined raw system prompt directly.";
-  } else if (type === 'skill') {
-    systemContext =
-      "You will help me to refine skill. Write it in markdown format. fix typo, gramma, make it more readable\n" 
-  } else {
-    systemContext =
-      "You are an expert technical editor. Refine the provided text for clarity, grammatical precision, and formatting while preserving all original meaning.\n" +
-      "- Output ONLY the refined text directly without conversational commentary.";
-  }
+  } 
 
   if (instruction && instruction.trim()) {
     systemContext += `\nAdditional user instruction: ${instruction.trim()}`;
