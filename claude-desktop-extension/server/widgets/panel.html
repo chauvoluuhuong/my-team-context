@@ -2755,8 +2755,73 @@ Read through the skill (using \`get_skill\`) and find the relevant workflow befo
   }
 
   /* Sub-session: GitHub */
+  function getFilteredGitHubRepos() {
+    const filterText = (state.reposSearch || "").toLowerCase();
+    return state.repos.filter(r => {
+      const name = (typeof r === "string" ? r : (r.fullName || r.full_name || r.name || "")).toLowerCase();
+      const desc = (typeof r === "object" && r.description ? r.description : "").toLowerCase();
+      return name.includes(filterText) || desc.includes(filterText);
+    });
+  }
+
+  function renderRepoListHtml(filteredRepos) {
+    if (filteredRepos.length === 0) {
+      return '<div class="loading-screen" style="padding:20px 0;"><p>No repositories found. Ensure GitHub token is configured and click Refresh.</p></div>';
+    }
+    return filteredRepos.map(r => {
+      const name = typeof r === "string" ? r : (r.fullName || r.full_name || r.name || "");
+      if (!name) return "";
+      const isSelected = state.selectedRepos.has(name);
+      const desc = state.selectedRepos.get(name) || "";
+      const safeId = name.replace(/[^a-zA-Z0-9_-]/g, '_');
+      return `
+        <div class="repo-item ${isSelected ? 'selected' : ''}" data-name="${esc(name)}">
+          <div class="repo-main-row" onclick="window._toggleRepo('${esc(name)}')">
+            <input type="checkbox" class="repo-checkbox" ${isSelected ? 'checked' : ''} />
+            <span class="repo-name">${esc(name)}</span>
+            ${typeof r === "object" && r.private ? '<span class="badge idle" style="font-size:10.5px;padding:1px 6px;">Private</span>' : ''}
+            ${typeof r === "object" && r.language ? `<span class="badge idle" style="font-size:10.5px;padding:1px 6px;">${esc(r.language)}</span>` : ''}
+          </div>
+          ${isSelected ? `
+            <div class="repo-desc-box">
+              <input type="text" placeholder="Custom context description for this repo (e.g. Next.js web client)" value="${esc(desc)}" oninput="window._updateRepoDesc('${esc(name)}', this.value)" />
+              
+              <div class="md-sync-section" style="margin-top:10px;padding:10px 12px;background:var(--code-bg);border:1px solid var(--border);border-radius:8px;">
+                <div style="display:flex;justify-content:space-between;align-items:center;">
+                  <span style="font-size:12px;font-weight:600;display:flex;align-items:center;gap:5px;">📄 Markdown Skills Sync</span>
+                  <button class="secondary" style="font-size:11.5px;padding:3px 9px;" onclick="window._scanMdFiles('${esc(name)}')">
+                    🔍 Find .md Files
+                  </button>
+                </div>
+                <div id="md-list-${safeId}" style="margin-top:4px;"></div>
+              </div>
+            </div>
+          ` : ''}
+        </div>
+      `;
+    }).join('');
+  }
+
+  function restoreMdFilesLists(filteredRepos) {
+    if (window._mdFilesCache) {
+      filteredRepos.forEach(r => {
+        const name = typeof r === "string" ? r : (r.fullName || r.full_name || r.name || "");
+        if (name && window._mdFilesCache[name] && state.selectedRepos.has(name)) {
+          const safeId = name.replace(/[^a-zA-Z0-9_-]/g, '_');
+          renderMdFileList(name, safeId);
+        }
+      });
+    }
+  }
+
   function renderGitHubSession(container) {
+    if (!container) container = document.getElementById("subSessionContent");
+    if (!container) return;
     if (state.activeSubSession !== "github") return;
+    if (skillsComponent) {
+      skillsComponent.unmount();
+    }
+
     if (!SERVICES_CATALOG.github.isConfigured() || state.disabledConnections.has("github")) {
       container.innerHTML = `
         <div class="card" style="text-align:center;padding:32px 16px;">
@@ -2771,19 +2836,29 @@ Read through the skill (using \`get_skill\`) and find the relevant workflow befo
       return;
     }
 
-    const filterText = (state.reposSearch || "").toLowerCase();
-    const filteredRepos = state.repos.filter(r => {
-      const name = (typeof r === "string" ? r : (r.fullName || r.full_name || r.name || "")).toLowerCase();
-      const desc = (typeof r === "object" && r.description ? r.description : "").toLowerCase();
-      return name.includes(filterText) || desc.includes(filterText);
-    });
+    const filteredRepos = getFilteredGitHubRepos();
+    const countText = `${state.selectedRepos.size} of ${state.repos.length} selected`;
+
+    const existingList = container.querySelector("#repoListContainer");
+    const existingSearch = container.querySelector("#repoSearchInput");
+
+    if (existingList && existingSearch) {
+      const countEl = container.querySelector("#repoCountSummary");
+      if (countEl) countEl.textContent = countText;
+      existingList.innerHTML = renderRepoListHtml(filteredRepos);
+      restoreMdFilesLists(filteredRepos);
+      if (document.activeElement !== existingSearch && existingSearch.value !== (state.reposSearch || "")) {
+        existingSearch.value = state.reposSearch || "";
+      }
+      return;
+    }
 
     container.innerHTML = `
       <div class="card">
         <div class="card-header">
           <span class="card-title">🐙 Select Active GitHub Repositories</span>
-          <span style="font-size:12px;color:var(--muted);">
-            ${state.selectedRepos.size} of ${state.repos.length} selected
+          <span id="repoCountSummary" style="font-size:12px;color:var(--muted);">
+            ${countText}
           </span>
         </div>
 
@@ -2795,42 +2870,12 @@ Read through the skill (using \`get_skill\`) and find the relevant workflow befo
         </div>
 
         <div class="repo-list" id="repoListContainer">
-          ${filteredRepos.length === 0 ? '<div class="loading-screen" style="padding:20px 0;"><p>No repositories found. Ensure GitHub token is configured and click Refresh.</p></div>' : ''}
-          ${filteredRepos.map(r => {
-            const name = typeof r === "string" ? r : (r.fullName || r.full_name || r.name || "");
-            if (!name) return "";
-            const isSelected = state.selectedRepos.has(name);
-            const desc = state.selectedRepos.get(name) || "";
-            const safeId = name.replace(/[^a-zA-Z0-9_-]/g, '_');
-            return `
-              <div class="repo-item ${isSelected ? 'selected' : ''}" data-name="${esc(name)}">
-                <div class="repo-main-row" onclick="window._toggleRepo('${esc(name)}')">
-                  <input type="checkbox" class="repo-checkbox" ${isSelected ? 'checked' : ''} />
-                  <span class="repo-name">${esc(name)}</span>
-                  ${typeof r === "object" && r.private ? '<span class="badge idle" style="font-size:10.5px;padding:1px 6px;">Private</span>' : ''}
-                  ${typeof r === "object" && r.language ? `<span class="badge idle" style="font-size:10.5px;padding:1px 6px;">${esc(r.language)}</span>` : ''}
-                </div>
-                ${isSelected ? `
-                  <div class="repo-desc-box">
-                    <input type="text" placeholder="Custom context description for this repo (e.g. Next.js web client)" value="${esc(desc)}" oninput="window._updateRepoDesc('${esc(name)}', this.value)" />
-                    
-                    <div class="md-sync-section" style="margin-top:10px;padding:10px 12px;background:var(--code-bg);border:1px solid var(--border);border-radius:8px;">
-                      <div style="display:flex;justify-content:space-between;align-items:center;">
-                        <span style="font-size:12px;font-weight:600;display:flex;align-items:center;gap:5px;">📄 Markdown Skills Sync</span>
-                        <button class="secondary" style="font-size:11.5px;padding:3px 9px;" onclick="window._scanMdFiles('${esc(name)}')">
-                          🔍 Find .md Files
-                        </button>
-                      </div>
-                      <div id="md-list-${safeId}" style="margin-top:4px;"></div>
-                    </div>
-                  </div>
-                ` : ''}
-              </div>
-            `;
-          }).join('')}
+          ${renderRepoListHtml(filteredRepos)}
         </div>
       </div>
     `;
+
+    restoreMdFilesLists(filteredRepos);
 
     document.getElementById("repoSearchInput")?.addEventListener("input", (e) => {
       state.reposSearch = e.target.value;
@@ -2838,7 +2883,8 @@ Read through the skill (using \`get_skill\`) and find the relevant workflow befo
     });
 
     document.getElementById("selectAllReposBtn")?.addEventListener("click", () => {
-      state.repos.forEach(r => {
+      const targetRepos = (state.reposSearch && state.reposSearch.trim()) ? getFilteredGitHubRepos() : state.repos;
+      targetRepos.forEach(r => {
         const name = typeof r === "string" ? r : (r.fullName || r.full_name || r.name || "");
         if (name && !state.selectedRepos.has(name)) state.selectedRepos.set(name, "");
       });
@@ -2877,6 +2923,10 @@ Read through the skill (using \`get_skill\`) and find the relevant workflow befo
     } finally {
       state.refreshingGithub = false;
       setTabsProcessing(false);
+      if (refreshBtn) {
+        refreshBtn.disabled = false;
+        refreshBtn.innerHTML = '🔄 Refresh';
+      }
       const subContent = document.getElementById("subSessionContent");
       if (subContent && state.activeSubSession === "github") {
         renderGitHubSession(subContent);
@@ -3419,7 +3469,60 @@ Read through the skill (using \`get_skill\`) and find the relevant workflow befo
   }
 
   /* Sub-session: Notion */
+  function getFilteredNotionPages() {
+    const typeFilter = state.notionResourceTypeFilter || "all";
+    const filterText = (state.notionPagesSearch || "").toLowerCase();
+
+    return state.notionPages.filter(p => {
+      const isDb = p.type === "database";
+      if (typeFilter === "page" && isDb) return false;
+      if (typeFilter === "database" && !isDb) return false;
+
+      const title = (p.title || "").toLowerCase();
+      const sel = state.selectedNotionPages.get(p.id);
+      const desc = sel ? (sel.description || "").toLowerCase() : (p.description || "").toLowerCase();
+      return title.includes(filterText) || desc.includes(filterText);
+    });
+  }
+
+  function renderNotionItemsHtml(filteredPages) {
+    if (filteredPages.length === 0) {
+      return '<div class="loading-screen" style="padding:20px 0;"><p>No Notion resources found matching the criteria. Ensure Notion integration token is configured in Connections tab and resources are shared.</p></div>';
+    }
+    return filteredPages.map(p => {
+      const isSelected = state.selectedNotionPages.has(p.id);
+      const selItem = state.selectedNotionPages.get(p.id);
+      const desc = selItem ? (selItem.description || "") : (p.description || "");
+      const isDb = p.type === "database";
+      const icon = p.icon || (isDb ? "🗄️" : "📄");
+      const lastEditedRaw = p.lastEditedTime || p.last_edited_time;
+      const lastEdited = lastEditedRaw ? new Date(lastEditedRaw).toLocaleDateString() : "";
+      const propInfo = isDb && p.properties_count ? `<span style="font-size:11px;color:var(--muted);margin-left:4px;">(${p.properties_count} props)</span>` : "";
+
+      return `
+        <div class="repo-item ${isSelected ? 'selected' : ''}" data-id="${esc(p.id)}">
+          <div class="repo-main-row" onclick="window._toggleNotionPage('${esc(p.id)}')">
+            <input type="checkbox" class="repo-checkbox" ${isSelected ? 'checked' : ''} />
+            <span style="font-size:15px;line-height:1;">${esc(icon)}</span>
+            <span class="repo-name">${esc(p.title || (isDb ? 'Untitled Database' : 'Untitled Page'))}</span>
+            <span class="badge ${isDb ? 'purple' : 'idle'}" style="font-size:10px;padding:1px 6px;">${isDb ? '🗄️ Database' : '📄 Page'}</span>
+            ${propInfo}
+            ${lastEdited ? `<span class="badge idle" style="font-size:10.5px;padding:1px 6px;">${esc(lastEdited)}</span>` : ''}
+            ${p.url ? `<a href="${esc(p.url)}" target="_blank" onclick="event.stopPropagation()" style="font-size:12px;color:var(--accent);text-decoration:none;margin-left:4px;" title="Open in Notion">↗</a>` : ''}
+          </div>
+          ${isSelected ? `
+            <div class="repo-desc-box">
+              <input type="text" placeholder="${isDb ? 'Custom context description for this database (e.g. Sprint Tasks tracker or Engineering Roadmap)' : 'Custom context description for this page (e.g. Product Requirements Document)'}" value="${esc(desc)}" oninput="window._updateNotionDesc('${esc(p.id)}', this.value)" />
+            </div>
+          ` : ''}
+        </div>
+      `;
+    }).join('');
+  }
+
   function renderNotionSession(container) {
+    if (!container) container = document.getElementById("subSessionContent");
+    if (!container) return;
     if (state.activeSubSession !== "notion") return;
     if (!SERVICES_CATALOG.notion.isConfigured() || state.disabledConnections.has("notion")) {
       container.innerHTML = `
@@ -3436,7 +3539,6 @@ Read through the skill (using \`get_skill\`) and find the relevant workflow befo
     }
 
     const typeFilter = state.notionResourceTypeFilter || "all";
-    const filterText = (state.notionPagesSearch || "").toLowerCase();
 
     // Merge any selected items that might be missing from state.notionPages
     const existingIds = new Set(state.notionPages.map(p => p.id));
@@ -3466,39 +3568,58 @@ Read through the skill (using \`get_skill\`) and find the relevant workflow befo
       else selectedPagesCount++;
     });
 
-    const filteredPages = state.notionPages.filter(p => {
-      const isDb = p.type === "database";
-      if (typeFilter === "page" && isDb) return false;
-      if (typeFilter === "database" && !isDb) return false;
-
-      const title = (p.title || "").toLowerCase();
-      const sel = state.selectedNotionPages.get(p.id);
-      const desc = sel ? (sel.description || "").toLowerCase() : (p.description || "").toLowerCase();
-      return title.includes(filterText) || desc.includes(filterText);
-    });
+    const filteredPages = getFilteredNotionPages();
 
     const selectedSummary = state.selectedNotionPages.size > 0
       ? `${state.selectedNotionPages.size} of ${state.notionPages.length} selected (${selectedPagesCount} page${selectedPagesCount === 1 ? '' : 's'}, ${selectedDbsCount} database${selectedDbsCount === 1 ? '' : 's'})`
       : `0 of ${state.notionPages.length} selected`;
 
+    const existingList = container.querySelector("#notionListContainer");
+    const existingSearch = container.querySelector("#notionSearchInput");
+
+    if (existingList && existingSearch) {
+      const countEl = container.querySelector("#notionSummaryCount");
+      if (countEl) countEl.textContent = selectedSummary;
+
+      const typeButtons = container.querySelectorAll("#notionTypeFilters button[data-type]");
+      typeButtons.forEach(btn => {
+        const t = btn.getAttribute("data-type");
+        if (t === typeFilter) {
+          btn.classList.add("active");
+        } else {
+          btn.classList.remove("active");
+        }
+        if (t === "all") btn.textContent = `All (${state.notionPages.length})`;
+        else if (t === "page") btn.textContent = `📄 Pages (${totalPagesCount})`;
+        else if (t === "database") btn.textContent = `🗄️ Databases (${totalDbsCount})`;
+      });
+
+      existingList.innerHTML = renderNotionItemsHtml(filteredPages);
+
+      if (document.activeElement !== existingSearch && existingSearch.value !== (state.notionPagesSearch || "")) {
+        existingSearch.value = state.notionPagesSearch || "";
+      }
+      return;
+    }
+
     container.innerHTML = `
       <div class="card">
         <div class="card-header">
           <span class="card-title">📝 Select Active Notion Resources</span>
-          <span style="font-size:12px;color:var(--muted);">
+          <span id="notionSummaryCount" style="font-size:12px;color:var(--muted);">
             ${selectedSummary}
           </span>
         </div>
 
-        <div style="display:flex;gap:6px;margin:0 0 10px;align-items:center;flex-wrap:wrap;">
+        <div id="notionTypeFilters" style="display:flex;gap:6px;margin:0 0 10px;align-items:center;flex-wrap:wrap;">
           <span style="font-size:12px;color:var(--muted);margin-right:2px;">Resource Type:</span>
-          <button class="sub-pill ${typeFilter === 'all' ? 'active' : ''}" style="font-size:11.5px;padding:3px 8px;" onclick="window._setNotionTypeFilter('all')">
+          <button class="sub-pill ${typeFilter === 'all' ? 'active' : ''}" data-type="all" style="font-size:11.5px;padding:3px 8px;" onclick="window._setNotionTypeFilter('all')">
             All (${state.notionPages.length})
           </button>
-          <button class="sub-pill ${typeFilter === 'page' ? 'active' : ''}" style="font-size:11.5px;padding:3px 8px;" onclick="window._setNotionTypeFilter('page')">
+          <button class="sub-pill ${typeFilter === 'page' ? 'active' : ''}" data-type="page" style="font-size:11.5px;padding:3px 8px;" onclick="window._setNotionTypeFilter('page')">
             📄 Pages (${totalPagesCount})
           </button>
-          <button class="sub-pill ${typeFilter === 'database' ? 'active' : ''}" style="font-size:11.5px;padding:3px 8px;" onclick="window._setNotionTypeFilter('database')">
+          <button class="sub-pill ${typeFilter === 'database' ? 'active' : ''}" data-type="database" style="font-size:11.5px;padding:3px 8px;" onclick="window._setNotionTypeFilter('database')">
             🗄️ Databases (${totalDbsCount})
           </button>
         </div>
@@ -3511,36 +3632,7 @@ Read through the skill (using \`get_skill\`) and find the relevant workflow befo
         </div>
 
         <div class="repo-list" id="notionListContainer">
-          ${filteredPages.length === 0 ? '<div class="loading-screen" style="padding:20px 0;"><p>No Notion resources found matching the criteria. Ensure Notion integration token is configured in Connections tab and resources are shared.</p></div>' : ''}
-          ${filteredPages.map(p => {
-            const isSelected = state.selectedNotionPages.has(p.id);
-            const selItem = state.selectedNotionPages.get(p.id);
-            const desc = selItem ? (selItem.description || "") : (p.description || "");
-            const isDb = p.type === "database";
-            const icon = p.icon || (isDb ? "🗄️" : "📄");
-            const lastEditedRaw = p.lastEditedTime || p.last_edited_time;
-            const lastEdited = lastEditedRaw ? new Date(lastEditedRaw).toLocaleDateString() : "";
-            const propInfo = isDb && p.properties_count ? `<span style="font-size:11px;color:var(--muted);margin-left:4px;">(${p.properties_count} props)</span>` : "";
-
-            return `
-              <div class="repo-item ${isSelected ? 'selected' : ''}" data-id="${esc(p.id)}">
-                <div class="repo-main-row" onclick="window._toggleNotionPage('${esc(p.id)}')">
-                  <input type="checkbox" class="repo-checkbox" ${isSelected ? 'checked' : ''} />
-                  <span style="font-size:15px;line-height:1;">${esc(icon)}</span>
-                  <span class="repo-name">${esc(p.title || (isDb ? 'Untitled Database' : 'Untitled Page'))}</span>
-                  <span class="badge ${isDb ? 'purple' : 'idle'}" style="font-size:10px;padding:1px 6px;">${isDb ? '🗄️ Database' : '📄 Page'}</span>
-                  ${propInfo}
-                  ${lastEdited ? `<span class="badge idle" style="font-size:10.5px;padding:1px 6px;">${esc(lastEdited)}</span>` : ''}
-                  ${p.url ? `<a href="${esc(p.url)}" target="_blank" onclick="event.stopPropagation()" style="font-size:12px;color:var(--accent);text-decoration:none;margin-left:4px;" title="Open in Notion">↗</a>` : ''}
-                </div>
-                ${isSelected ? `
-                  <div class="repo-desc-box">
-                    <input type="text" placeholder="${isDb ? 'Custom context description for this database (e.g. Sprint Tasks tracker or Engineering Roadmap)' : 'Custom context description for this page (e.g. Product Requirements Document)'}" value="${esc(desc)}" oninput="window._updateNotionDesc('${esc(p.id)}', this.value)" />
-                  </div>
-                ` : ''}
-              </div>
-            `;
-          }).join('')}
+          ${renderNotionItemsHtml(filteredPages)}
         </div>
       </div>
     `;
@@ -3551,7 +3643,8 @@ Read through the skill (using \`get_skill\`) and find the relevant workflow befo
     });
 
     document.getElementById("selectAllNotionBtn")?.addEventListener("click", () => {
-      filteredPages.forEach(p => {
+      const curFiltered = getFilteredNotionPages();
+      curFiltered.forEach(p => {
         if (p && p.id && !state.selectedNotionPages.has(p.id)) {
           const isDb = p.type === "database";
           state.selectedNotionPages.set(p.id, {
@@ -3641,6 +3734,10 @@ Read through the skill (using \`get_skill\`) and find the relevant workflow befo
     } finally {
       state.refreshingNotion = false;
       setTabsProcessing(false);
+      if (refreshBtn) {
+        refreshBtn.disabled = false;
+        refreshBtn.innerHTML = '🔄 Refresh';
+      }
       const subContent = document.getElementById("subSessionContent");
       if (subContent && state.activeSubSession === "notion") {
         renderNotionSession(subContent);
