@@ -67,7 +67,7 @@ export async function getActiveNotionKey(): Promise<string> {
   const key = await getEffectiveNotionKey();
   if (!key || !key.trim()) {
     throw new RepoContextError(
-      "Notion API key is not configured. Please open settings (connect_team_context) to configure your Notion token.",
+      "Notion API key is not configured. Please open settings (init_automate_work) to configure your Notion token.",
     );
   }
   return key.trim();

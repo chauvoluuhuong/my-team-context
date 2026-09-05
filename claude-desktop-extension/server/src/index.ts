@@ -38,7 +38,7 @@ import {
 
 const server = new McpServer({ name: "automate-work", version: "0.1.0" });
 
-registerAppResource(server, "Team Context Settings", PANEL_URI, {}, async () => ({
+registerAppResource(server, "Automate Work Settings", PANEL_URI, {}, async () => ({
   contents: [{ uri: PANEL_URI, mimeType: RESOURCE_MIME_TYPE, text: buildPanel() }],
 }));
 

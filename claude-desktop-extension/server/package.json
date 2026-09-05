@@ -13,7 +13,7 @@
     "build:ts": "tsc",
     "build": "npm run build:ts && npm test && npm run validate && npm run build:deps && npm run build:pack && npm install",
     "build:deps": "npm install --omit=dev --no-audit --no-fund",
-    "build:pack": "node -e \"require('node:fs').mkdirSync('../../dist',{recursive:true}); require('node:fs').mkdirSync('../dist',{recursive:true})\" && npx --yes @anthropic-ai/mcpb pack .. ../../dist/automate-work.mcpb && node -e \"require('node:fs').copyFileSync('../../dist/automate-work.mcpb', '../dist/automate-work.mcpb'); require('node:fs').copyFileSync('../../dist/automate-work.mcpb', '../../dist/automate-work.pmcp'); require('node:fs').copyFileSync('../../dist/automate-work.mcpb', '../dist/automate-work.pmcp')\"",
+    "build:pack": "node -e \"require('node:fs').mkdirSync('../../dist',{recursive:true})\" && npx --yes @anthropic-ai/mcpb pack .. ../../dist/automate-work.mcpb",
     "validate": "npx --yes @anthropic-ai/mcpb validate ../manifest.json",
     "info": "npx --yes @anthropic-ai/mcpb info ../../dist/automate-work.mcpb",
     "test": "npx --yes tsx test/api.ts",

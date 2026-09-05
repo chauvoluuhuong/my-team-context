@@ -199,7 +199,7 @@
   const app = new App({ name: "TeamSkillsManagement", version: "1.0.0" }, {}, { autoResize: true });
 
   const root = document.getElementById("root");
-  const component = new globalThis.SkillsComponent({
+  const component = new (globalThis.SkillsComponent || SkillsComponent)({
     app,
     container: root,
     showHeader: true,
@@ -210,13 +210,21 @@
       const data = JSON.parse(content[0].text);
       if (Array.isArray(data.skills)) {
         component.skills = data.skills;
+        component.isLoading = false;
         component.render();
+      } else {
+        await component.loadSkills();
       }
     } catch {
       await component.loadSkills();
     }
   };
 
-  await app.connect();
-  await component.loadSkills();
+  try {
+    await app.connect();
+  } catch (err) {
+    console.warn("ExtApps connection error:", err);
+  }
+
+  await component.mount(root);
 </script>

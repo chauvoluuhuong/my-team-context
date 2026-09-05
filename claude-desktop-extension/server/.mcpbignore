@@ -4,16 +4,16 @@
 .DS_Store
 
 # Ignore test files
-server/test/
+test/
 
 # Unignore compiled server code and node_modules dependencies
-!server/dist
-!server/dist/**
-!server/node_modules
-!server/node_modules/**
-!server/widgets
-!server/widgets/**
-!server/DEFAULT_SYSTEM_PROMPT
+!dist
+!dist/**
+!node_modules
+!node_modules/**
+!widgets
+!widgets/**
+!DEFAULT_SYSTEM_PROMPT
 
 # Always ignore all .env files and local secrets (must remain at bottom after ! unignore rules)
 .env
@@ -24,7 +24,4 @@ server/test/
 **/.env
 **/.env*
 **/.env.*
-server/.env
-server/.env*
-server/.env.*
-server/.env.example
+.env.example

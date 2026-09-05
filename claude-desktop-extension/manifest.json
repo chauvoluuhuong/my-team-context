@@ -7,8 +7,8 @@
   "description": "Unified team context for Claude: GitHub code, Notion workspace, Qdrant vector knowledge base, SQL databases, and active app configuration.",
   "long_description": "Gives Claude full access to your team's live context: browse and search GitHub code, query Notion documentation and tasks, search and manage shared team skills in Qdrant vector database, execute SQL queries, and configure active repositories and AI system prompt with interactive widgets.\n\nCredentials are authenticated and securely stored in your machine's OS keychain and never exposed in conversations.",
   "author": {
-    "name": "Innostaas",
-    "email": "lucas.luu@innostaas.com"
+    "name": "chauvoluuhuong",
+    "email": "chauvoluuhuong@gmail.com"
   },
   "keywords": [
     "automate-work",
@@ -33,7 +33,7 @@
   },
   "tools": [
     {
-      "name": "connect_team_context",
+      "name": "init_automate_work",
       "description": "Open settings panel to configure team connections: GitHub token, Notion workspace, Qdrant cluster, SQL database, and Gemini embeddings"
     },
     {

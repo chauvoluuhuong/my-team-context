@@ -62,11 +62,11 @@ npm test
 # Run smoke test
 npm run smoke
 
-# Build and package Claude Desktop extension (.mcpb & .pmcp)
+# Build and package Claude Desktop extension (.mcpb)
 npm run build
 ```
 
-The compiled extension bundles are generated in `dist/automate-work.mcpb` and `dist/automate-work.pmcp`.
+The compiled extension bundle is generated at `dist/automate-work.mcpb`.
 
 ---
 

@@ -1,7 +1,7 @@
 /**
  * Initialization, panel tools, and unified status tools for Team Context.
  *
- * Provides the main interactive settings panel tool (`connect_team_context`)
+ * Provides the main interactive settings panel tool (`init_automate_work`)
  * and handles loading/saving credentials from/to server/.env and testing connections.
  */
 
@@ -271,30 +271,32 @@ export async function getTeamContextStatus(): Promise<TeamContextStatusResult> {
 export function registerInitTools(server: McpServer): void {
   /* ---------------------- Unified Panel Launcher ---------------------- */
 
+  const handleInitAutomateWork = guarded(async () => {
+    const [status, envConfig, auth] = await Promise.all([
+      getTeamContextStatus(),
+      readEnvConfig(),
+      getAuthState(),
+    ]);
+    return text({
+      status: "ok",
+      auth,
+      teamStatus: status,
+      config: envConfig,
+    });
+  });
+
   server.registerTool(
-    "connect_team_context",
+    "init_automate_work",
     {
-      title: "Connect Team Context",
+      title: "Initialize Automate Work",
       description:
-        "Open the settings panel to configure team connections: GitHub token & active repo, " +
+        "Open the interactive configuration panel to configure credentials and connections for GitHub PAT, " +
         "Notion workspace API key, Qdrant vector database endpoint, and SQL database connection.",
-      annotations: { title: "Connect Team Context", readOnlyHint: false, openWorldHint: true },
+      annotations: { title: "Initialize Automate Work", readOnlyHint: false, openWorldHint: true },
       inputSchema: {},
       _meta: { ui: { resourceUri: PANEL_URI } },
     },
-    guarded(async () => {
-      const [status, envConfig, auth] = await Promise.all([
-        getTeamContextStatus(),
-        readEnvConfig(),
-        getAuthState(),
-      ]);
-      return text({
-        status: "ok",
-        auth,
-        teamStatus: status,
-        config: envConfig,
-      });
-    }),
+    handleInitAutomateWork,
   );
 
   /* ------------------- Panel Internal Support Tools ------------------- */
@@ -316,9 +318,9 @@ export function registerInitTools(server: McpServer): void {
     server,
     "panel_load_config",
     {
-      title: "Load Team Context Settings",
+      title: "Load Automate Work Settings",
       description: "Internal: load .env and existing connection configurations for the settings panel.",
-      annotations: { title: "Load Team Context Settings", readOnlyHint: true },
+      annotations: { title: "Load Automate Work Settings", readOnlyHint: true },
       inputSchema: {},
       _meta: { ui: { visibility: ["app"] } },
     },

@@ -1,7 +1,7 @@
 <div id="root" class="panel-app">
   <div class="loading-screen">
     <div class="spinner"></div>
-    <div class="loading-text">Checking Team Context & Connections…</div>
+    <div class="loading-text">Checking Automate Work & Connections…</div>
   </div>
 </div>
 
@@ -1279,7 +1279,7 @@
       render();
     } catch (err) {
       console.error("Setup check error:", err);
-      state.errorMessage = err.message || "Failed to initialize Team Context.";
+      state.errorMessage = err.message || "Failed to initialize Automate Work.";
       startCountdown();
     }
   }
@@ -1603,7 +1603,7 @@ Read through the skill (using \`get_skill\`) and find the relevant workflow befo
 
   function renderLoading() {
     root.innerHTML = renderLoadingComponent(
-      "Connecting to Team Context & Vector Database…",
+      "Connecting to Automate Work & Vector Database…",
       "Validating cluster status and loading team configurations"
     );
   }
@@ -1614,7 +1614,7 @@ Read through the skill (using \`get_skill\`) and find the relevant workflow befo
     const pct = (state.countdownSeconds / 10) * 100;
     root.innerHTML = `
       <div class="header">
-        <h2>⚡ Team Context</h2>
+        <h2>⚡ Automate Work</h2>
       </div>
       <div class="setup-container">
         <div class="countdown-box">
@@ -1669,7 +1669,7 @@ Read through the skill (using \`get_skill\`) and find the relevant workflow befo
 
     root.innerHTML = `
       <div class="header">
-        <h2>⚡ Team Context Setup</h2>
+        <h2>⚡ Automate Work Setup</h2>
       </div>
 
       <div class="setup-container">
@@ -1788,7 +1788,7 @@ Read through the skill (using \`get_skill\`) and find the relevant workflow befo
 
     root.innerHTML = `
       <div class="header">
-        <h2>⚡ Team Context Setup</h2>
+        <h2>⚡ Automate Work Setup</h2>
         <div class="header-actions">
           <button class="btn-header-secondary" id="btnBackToQdrant">⚙️ Change Qdrant</button>
         </div>
@@ -1972,7 +1972,7 @@ Read through the skill (using \`get_skill\`) and find the relevant workflow befo
 
     root.innerHTML = `
       <div class="header">
-        <h2>⚡ Team Context</h2>
+        <h2>⚡ Automate Work</h2>
         <div class="header-actions">
           <span class="user-badge">
             👤 <strong>${esc(userName)}</strong>
@@ -2337,7 +2337,7 @@ Read through the skill (using \`get_skill\`) and find the relevant workflow befo
             <button class="btn-close" onclick="window._closeConnModal()">✕</button>
           </div>
           <p style="margin:0 0 10px;font-size:12px;color:var(--muted);">
-            Select an integration to connect with your Claude Team Context.
+            Select an integration to connect with your Claude Automate Work.
           </p>
           <div class="catalog-grid">
             ${catalogCards}

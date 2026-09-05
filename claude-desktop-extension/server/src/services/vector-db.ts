@@ -64,7 +64,7 @@ async function getActiveQdrantConfig(): Promise<{ endpoint: string; apiKey?: str
   const config = await readQdrantConfig();
   if (!config.endpoint || !config.endpoint.trim()) {
     throw new RepoContextError(
-      "Qdrant endpoint is not configured. Please open settings (connect_team_context) to configure your Qdrant URL.",
+      "Qdrant endpoint is not configured. Please open settings (init_automate_work) to configure your Qdrant URL.",
     );
   }
   return {

@@ -22,6 +22,7 @@ export class SkillsComponent {
     this.mentionCleanupDesc = null;
     this.getCurrentUsername = options.getCurrentUsername || (() => null);
     this.getApiKey = options.getApiKey || (() => null);
+    this.isActive = Boolean(options.container);
   }
 
   esc(s) {
@@ -71,12 +72,25 @@ export class SkillsComponent {
     }
 
     try {
+      if (!this.app || typeof this.app.callServerTool !== "function") {
+        throw new Error("Application bridge is not connected.");
+      }
       const res = await this.app.callServerTool({
         name: "skills_list",
         arguments: { limit: 100 },
       });
-      const data = JSON.parse(res.content[0].text);
-      this.skills = data.skills || [];
+      if (res?.isError) {
+        const errText = res.content?.[0]?.text || "Failed to load skills from server";
+        throw new Error(errText);
+      }
+      const rawText = res?.content?.[0]?.text || "{}";
+      let data = {};
+      try {
+        data = JSON.parse(rawText);
+      } catch {
+        throw new Error(rawText);
+      }
+      this.skills = Array.isArray(data.skills) ? data.skills : [];
       if (this.mentionController) {
         this.mentionController.setSkills(this.skills);
       }
